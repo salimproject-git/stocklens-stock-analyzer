@@ -1,5 +1,5 @@
-import { MarketOverviewPage } from "@/components/market-overview-page";
+import { redirect } from "next/navigation";
 
 export default function Home() {
-  return <MarketOverviewPage />;
+  redirect("/market");
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 
 type Verdict = "Undervalued" | "Fairly Valued" | "Overvalued";
@@ -161,37 +162,25 @@ export function MarketOverviewPage() {
   const showingCount = visibleStocks.length;
 
   return (
-    <div className="h-screen overflow-hidden bg-[radial-gradient(circle_at_top_right,_rgba(245,192,91,0.14),_transparent_24%),linear-gradient(180deg,_#06111d_0%,_#030914_100%)] text-[#f5f7fb]">
-      <Sidebar />
-      <div
-        className="fixed inset-x-0 inset-y-0 overflow-hidden"
-        style={{
-          left: SIDEBAR_WIDTH,
-        }}
-      >
-        <main className="h-full overflow-y-auto gold-scroll">
-          <div className="min-h-full w-full max-w-[1800px] px-8 pb-12 pt-5">
-            <PageIntro />
-            <Toolbar
-              showingCount={showingCount}
-              totalCount={mockStocks.length}
-              viewMode={viewMode}
-              onViewModeChange={setViewMode}
-            />
-            <StockCollection
-              stocks={visibleStocks}
-              viewMode={viewMode}
-              showDiscoveryCard={currentPage === 1}
-            />
-            <Pagination
-              currentPage={currentPage}
-              totalPages={totalPages}
-              onPageChange={setCurrentPage}
-            />
-          </div>
-        </main>
-      </div>
-    </div>
+    <>
+      <PageIntro />
+      <Toolbar
+        showingCount={showingCount}
+        totalCount={mockStocks.length}
+        viewMode={viewMode}
+        onViewModeChange={setViewMode}
+      />
+      <StockCollection
+        stocks={visibleStocks}
+        viewMode={viewMode}
+        showDiscoveryCard={currentPage === 1}
+      />
+      <Pagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        onPageChange={setCurrentPage}
+      />
+    </>
   );
 }
 
@@ -487,13 +476,13 @@ function StockCard({ stock, compact = false }: { stock: Stock; compact?: boolean
 
         <div className="mt-3.5 flex items-center justify-between gap-4 text-[12px] text-[#9eabbe]">
           <span>Updated {stock.updatedAt}</span>
-          <button
-            type="button"
+          <Link
+            href={`/market/${stock.ticker}`}
             className="flex items-center gap-2 text-sm font-semibold text-[#efbf63] transition hover:text-[#ffd88a]"
           >
             View Analysis
             <ArrowRightIcon className="h-4 w-4" />
-          </button>
+          </Link>
         </div>
       </div>
     </article>
