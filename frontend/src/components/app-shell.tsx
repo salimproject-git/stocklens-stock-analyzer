@@ -58,9 +58,6 @@ function Sidebar() {
 
       <div className="mt-auto rounded-2xl border border-[#d6a24d]/65 bg-[linear-gradient(180deg,_rgba(255,197,92,0.05),_rgba(7,17,29,0.82))] p-4 shadow-[0_20px_60px_rgba(0,0,0,0.35)]">
         <div className="mb-4 flex items-start gap-3">
-          <span className="mt-0.5 flex h-9 w-9 items-center justify-center rounded-full border border-[#d6a24d]/50 bg-[#f2bb5c]/10 text-[#f2bb5c]">
-            <CapIcon className="h-4 w-4" />
-          </span>
           <div>
             <p className="text-[15px] font-semibold text-white">Learn our data</p>
             <p className="mt-1 text-xs leading-5 text-[#9aa9bf]">
@@ -70,7 +67,7 @@ function Sidebar() {
         </div>
         <button
           type="button"
-          className="w-full rounded-xl border border-[#d6a24d]/80 px-3 py-2 text-sm font-semibold text-[#f2bb5c] transition hover:bg-[#f2bb5c]/8"
+          className="w-full rounded-xl border border-[#d6a24d]/80 px-3 py-2 !text-[12px] font-semibold text-[#f2bb5c] transition hover:bg-[#f2bb5c]/8"
         >
           Visit Learning Center
         </button>
@@ -176,12 +173,5 @@ function UserIcon({ className }: { className?: string }) {
   );
 }
 
-function CapIcon({ className }: { className?: string }) {
-  return (
-    <Icon className={className}>
-      <path d="m2 10 10-5 10 5-10 5-10-5Z" />
-      <path d="M6 12v4c0 1.7 2.7 3 6 3s6-1.3 6-3v-4" />
-    </Icon>
-  );
-}
+
 

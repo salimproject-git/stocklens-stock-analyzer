@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
@@ -393,6 +394,8 @@ function StockCollection({
 }
 
 function StockCard({ stock, compact = false }: { stock: Stock; compact?: boolean }) {
+  const router = useRouter();
+
   const isPositive = stock.change >= 0;
   const priceTone = isPositive ? "text-[#49f3ae]" : "text-[#ff5967]";
   const sparklineTone = isPositive ? "#2de49d" : "#ff485f";
@@ -403,10 +406,38 @@ function StockCard({ stock, compact = false }: { stock: Stock; compact?: boolean
         ? "border-[#ff4b5f]/30 bg-[#32161e] text-[#ff5f73]"
         : "border-[#c79d51]/35 bg-[#2f2717] text-[#f1c56d]";
 
+  const handleCardClick = () => {
+    router.push(`/market/${stock.ticker}`);
+  };
+
+  const handleCardKeyDown = (event: React.KeyboardEvent<HTMLElement>) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      handleCardClick();
+    }
+  };
+
+  const handleStarClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.stopPropagation();
+  };
+
+  const handleStarKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>) => {
+    event.stopPropagation();
+  };
+
   return (
     <article
+      role="link"
+      tabIndex={0}
+      onClick={handleCardClick}
+      onKeyDown={handleCardKeyDown}
       className={[
-        "rounded-[20px] border border-white/10 bg-[radial-gradient(circle_at_top,_rgba(44,108,178,0.12),_transparent_35%),linear-gradient(180deg,_rgba(11,23,37,0.96),_rgba(7,16,28,0.96))] shadow-[0_24px_48px_rgba(0,0,0,0.28)]",
+        "group cursor-pointer rounded-[20px] border border-white/10",
+        "bg-[radial-gradient(circle_at_top,_rgba(44,108,178,0.12),_transparent_35%),linear-gradient(180deg,_rgba(11,23,37,0.96),_rgba(7,16,28,0.96))]",
+        "shadow-[0_24px_48px_rgba(0,0,0,0.28)]",
+        "transition duration-200 ease-out",
+        "hover:-translate-y-0.5 hover:border-white/20 hover:shadow-[0_28px_56px_rgba(0,0,0,0.38)]",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f2bb5c]/60",
         compact ? "flex gap-5 p-5" : "p-[14px]",
       ].join(" ")}
     >
@@ -416,13 +447,17 @@ function StockCard({ stock, compact = false }: { stock: Stock; compact?: boolean
             <h2 className="text-[16px] font-semibold tracking-[-0.02em] text-white md:text-[17px]">
               {stock.ticker}
             </h2>
+
             <p className="mt-1 line-clamp-2 text-[13px] leading-5 text-[#b6c2d4]">
               {stock.companyName}
             </p>
           </div>
+
           <button
             type="button"
-            className="text-[#8999af] transition hover:text-white"
+            onClick={handleStarClick}
+            onKeyDown={handleStarKeyDown}
+            className="relative z-10 text-[#8999af] transition hover:text-white"
             aria-label={`Save ${stock.ticker}`}
           >
             <StarIcon className="h-5 w-5" />
@@ -434,55 +469,68 @@ function StockCard({ stock, compact = false }: { stock: Stock; compact?: boolean
           <TagChip label={stock.stockType} tone="slate" />
         </div>
 
-        <div className={compact ? "mt-5 grid grid-cols-[minmax(0,180px)_minmax(0,1fr)] gap-5" : "mt-3.5"}>
+        <div
+          className={
+            compact
+              ? "mt-5 grid grid-cols-[minmax(0,180px)_minmax(0,1fr)] items-end gap-5"
+              : "mt-3.5 grid grid-cols-[minmax(0,0.85fr)_minmax(120px,1.15fr)] items-end gap-4"
+          }
+        >
           <div>
             <p className="text-[16px] font-semibold tracking-[-0.03em] text-white sm:text-[17px]">
               {formatRupiah(stock.price)}
             </p>
+
             <p className={["mt-1 text-[14px] font-semibold", priceTone].join(" ")}>
               {formatSignedRupiah(stock.change)} ({formatPercent(stock.changePercent)})
             </p>
           </div>
+
           <Sparkline
-            className={compact ? "mt-0" : "mt-4"}
+            className="mt-0"
             points={stock.sparkline}
             stroke={sparklineTone}
           />
         </div>
 
-        <div className="mt-4 grid grid-cols-3 overflow-hidden rounded-2xl border border-white/8 bg-[#07111c]/72">
-          <MetricBlock label="Valuation">
-            <span
-              className={[
-                "inline-flex rounded-[10px] border px-3 py-2 text-[13px] font-semibold",
-                verdictTone,
-              ].join(" ")}
-            >
-              {stock.verdict}
-            </span>
-          </MetricBlock>
+        <div className="mt-4 grid grid-cols-2 overflow-hidden rounded-2xl border border-white/8 bg-[#07111c]/72">
+          <div className="col-span-2">
+            <MetricBlock label="Valuation">
+              <span
+                className={[
+                  "inline-flex rounded-[10px] border px-3 py-2 text-[13px] font-semibold",
+                  verdictTone,
+                ].join(" ")}
+              >
+                {stock.verdict}
+              </span>
+            </MetricBlock>
+          </div>
+
           <MetricBlock label="MoS">
             <span className={["text-[16px] font-semibold", priceTone].join(" ")}>
               {formatSignedPercent(stock.mos)}
             </span>
           </MetricBlock>
+
           <MetricBlock label="Historical Evidence">
             <div className="text-[16px] font-semibold text-white">
               {stock.evidenceWins} / {stock.evidenceTotal}
             </div>
-            <div className="mt-0.5 text-[11px] text-[#a4afbf]">successful cases</div>
+
+            <div className="mt-0.5 text-[11px] text-[#a4afbf]">
+              successful cases
+            </div>
           </MetricBlock>
         </div>
 
         <div className="mt-3.5 flex items-center justify-between gap-4 text-[12px] text-[#9eabbe]">
           <span>Updated {stock.updatedAt}</span>
-          <Link
-            href={`/market/${stock.ticker}`}
-            className="flex items-center gap-2 text-sm font-semibold text-[#efbf63] transition hover:text-[#ffd88a]"
-          >
+
+          <span className="flex items-center gap-1.5 text-[12px] font-semibold text-[#efbf63] transition group-hover:text-[#ffd88a]">
             View Analysis
-            <ArrowRightIcon className="h-4 w-4" />
-          </Link>
+            <ArrowRightIcon className="h-3.5 w-3.5 transition-transform duration-200 group-hover:translate-x-0.5" />
+          </span>
         </div>
       </div>
     </article>

@@ -26,6 +26,14 @@ DESIGN:
 - Avoid excessive popups
 - Avoid dashboard clutter
 
+RESPONSIVE & OVERFLOW RULES:
+- Page-level, AppShell, or main content area horizontal overflow is not allowed.
+- Wide tables must scroll horizontally inside their own bounded container (`overflow-x-auto`).
+- The horizontal scrollbar must belong to the table container only, never the whole page.
+- Tables must preserve readable column widths (using `min-w-[...]` where appropriate) rather than forcing excessive compression.
+- Long text inside normal cards must wrap appropriately and must not cause horizontal page overflow.
+- Important content must remain accessible and must not be hidden or clipped just to prevent overflow.
+
 APPLICATION SHELL:
 - Header is fixed
 - Left navigation is fixed
