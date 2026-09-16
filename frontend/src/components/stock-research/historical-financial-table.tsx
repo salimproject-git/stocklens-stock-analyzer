@@ -2,9 +2,11 @@ import React from "react";
 import { StockDetail } from "@/data/mock-stock-details";
 import { SectionCard } from "@/components/ui/section-card";
 
-type FinancialTableData = NonNullable<StockDetail["financialHistory"]>["table"];
+type FinancialTableData = NonNullable<StockDetail["financialHistory"]>["annualTable"];
 
 export function HistoricalFinancialTable({ table }: { table: FinancialTableData }) {
+  const latestPeriodIndex = table.periods.length - 1;
+
   return (
     <SectionCard
       icon={<TableIcon className="h-4 w-4" />}
@@ -15,12 +17,12 @@ export function HistoricalFinancialTable({ table }: { table: FinancialTableData 
           <thead className="border-b border-white/8 bg-white/4 text-[11px] font-semibold text-[#8e9bb0]">
             <tr>
               <th className="px-4 py-3 min-w-[200px]">METRIC</th>
-              {table.years.map((y) => (
-                <th key={y} className="px-3 py-3 text-center">
-                  {y}
+              {table.periods.map((period) => (
+                <th key={period} className="px-3 py-3 text-center">
+                  {period}
                 </th>
               ))}
-              <th className="px-4 py-3 text-right">CAGR (5Y)</th>
+              <th className="px-4 py-3 text-right">{table.changeLabel}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-white/6 text-white">
@@ -32,16 +34,20 @@ export function HistoricalFinancialTable({ table }: { table: FinancialTableData 
                 <td className="px-4 py-3 font-medium text-[#d4dcec]">
                   {row.metric}
                 </td>
-                <td className="px-3 py-3 text-center text-[#9aa9bf]">{row.y2020}</td>
-                <td className="px-3 py-3 text-center text-[#9aa9bf]">{row.y2021}</td>
-                <td className="px-3 py-3 text-center text-[#9aa9bf]">{row.y2022}</td>
-                <td className="px-3 py-3 text-center text-[#9aa9bf]">{row.y2023}</td>
-                <td className="px-3 py-3 text-center text-[#9aa9bf]">{row.y2024}</td>
-                <td className="px-3 py-3 text-center font-semibold text-white">
-                  {row.y2025}
-                </td>
+                {table.periods.map((period, index) => (
+                  <td
+                    key={period}
+                    className={
+                      index === latestPeriodIndex
+                        ? "px-3 py-3 text-center font-semibold text-white"
+                        : "px-3 py-3 text-center text-[#9aa9bf]"
+                    }
+                  >
+                    {row.values[index] ?? "-"}
+                  </td>
+                ))}
                 <td className="px-4 py-3 text-right font-semibold text-[#3ef0a9]">
-                  {row.cagr}
+                  {row.change}
                 </td>
               </tr>
             ))}
@@ -62,4 +68,3 @@ function TableIcon({ className }: { className?: string }) {
     </svg>
   );
 }
-

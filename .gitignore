@@ -5,6 +5,6 @@ node_modules/
 *.log
 *.xlsm
 
-Data/
+/Data/
 Phyton/
 Testing/

@@ -7,59 +7,99 @@ export function ThesisValidatorCard({
 }: {
   validator: StockDetail["thesisValidator"];
 }) {
+  const latestQuarter =
+    validator.quarters[validator.quarters.length - 1] ?? "Latest";
+
+  const revenueRow = validator.rows.find(
+    (row) => row.item === "Revenue YoY (%)",
+  );
+
+  const netIncomeRow = validator.rows.find(
+    (row) => row.item === "Net Income YoY (%)",
+  );
+
+  const grossMarginRow = validator.rows.find(
+    (row) => row.item === "Gross Margin (Actual %)",
+  );
+
+  const ocfNetIncomeRow = validator.rows.find(
+    (row) => row.item === "OCF / NI Ratio (x)",
+  );
+
+  const getTrendClass = (
+    tone: StockDetail["thesisValidator"]["rows"][number]["trendTone"],
+  ) => {
+    if (tone === "green") return "text-[#3ef0a9]";
+    if (tone === "yellow") return "text-[#f59e0b]";
+    if (tone === "red") return "text-[#ef4444]";
+    return "text-[#b6c2d4]";
+  };
+
+  const translateTrend = (trend: string) => {
+    return trend
+      .replace("Naik", "Up")
+      .replace("Turun", "Down")
+      .replace("Stabil", "Stable")
+      .replace("Cukup", "Fair");
+  };
+
+  const renderTrend = (
+    row: StockDetail["thesisValidator"]["rows"][number] | undefined,
+  ) => {
+    if (!row) {
+      return <span className="font-semibold text-white">—</span>;
+    }
+
+    return (
+      <span className={`font-semibold ${getTrendClass(row.trendTone)}`}>
+        {translateTrend(row.trend)}
+      </span>
+    );
+  };
+
   return (
     <SectionCard
       icon={<SparklesIcon className="h-4 w-4" />}
       title="Thesis Validator"
-      subtitle="Quarterly YoY Performance"
+      subtitle={`Latest Quarter · ${latestQuarter}`}
+      actionSlot={
+        <span className="text-xs font-semibold text-[#f4d18b]">
+          Health & Growth
+        </span>
+      }
     >
-      <div className="overflow-x-auto gold-scroll rounded-xl border border-white/8 bg-[#07111c]/60">
-        <table className="w-full min-w-[520px] text-left text-xs">
-          <thead className="border-b border-white/8 bg-white/4 text-[11px] font-semibold text-[#8e9bb0]">
-            <tr>
-              <th className="px-3.5 py-2.5">ITEM</th>
-              {validator.quarters.map((q) => (
-                <th key={q} className="px-3 py-2.5 text-center">
-                  {q}
-                </th>
-              ))}
-              <th className="px-3.5 py-2.5 text-right">TREND / RESULT</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-white/6 text-white">
-            {validator.rows.map((row) => {
-              const trendClass =
-                row.trendTone === "green"
-                  ? "text-[#3ef0a9]"
-                  : row.trendTone === "yellow"
-                    ? "text-[#f59e0b]"
-                    : "text-[#b6c2d4]";
+      <div className="grid grid-cols-2 gap-2.5">
+        <div className="rounded-xl border border-white/6 bg-[#07111c]/60 p-3">
+          <div className="text-[11px] text-[#8e9bb0]">Revenue YoY</div>
 
-              return (
-                <tr key={row.item} className="hover:bg-white/3">
-                  <td className="px-3.5 py-2.5 font-medium text-[#d4dcec]">
-                    {row.item}
-                  </td>
-                  <td className="px-3 py-2.5 text-center text-[#9aa9bf]">{row.q3}</td>
-                  <td className="px-3 py-2.5 text-center text-[#9aa9bf]">{row.q4}</td>
-                  <td className="px-3 py-2.5 text-center text-[#9aa9bf]">{row.q1}</td>
-                  <td className="px-3 py-2.5 text-center font-semibold text-white">
-                    {row.q2}
-                  </td>
-                  <td className={["px-3.5 py-2.5 text-right font-semibold", trendClass].join(" ")}>
-                    {row.trend}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+          <div className="mt-1">
+            {renderTrend(revenueRow)}
+          </div>
+        </div>
 
-      {/* Footnote */}
-      <div className="mt-3.5 flex items-start gap-2.5 rounded-xl border border-white/8 bg-[#091424]/90 p-3 text-[11px] leading-relaxed text-[#9aa9bf]">
-        <span>💡</span>
-        <span>{validator.footnote}</span>
+        <div className="rounded-xl border border-white/6 bg-[#07111c]/60 p-3">
+          <div className="text-[11px] text-[#8e9bb0]">Net Income YoY</div>
+
+          <div className="mt-1">
+            {renderTrend(netIncomeRow)}
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-white/6 bg-[#07111c]/60 p-3">
+          <div className="text-[11px] text-[#8e9bb0]">Gross Margin</div>
+
+          <div className="mt-1">
+            {renderTrend(grossMarginRow)}
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-white/6 bg-[#07111c]/60 p-3">
+          <div className="text-[11px] text-[#8e9bb0]">OCF / Net Income</div>
+
+          <div className="mt-1">
+            {renderTrend(ocfNetIncomeRow)}
+          </div>
+        </div>
       </div>
     </SectionCard>
   );
@@ -67,9 +107,15 @@ export function ThesisValidatorCard({
 
 function SparklesIcon({ className }: { className?: string }) {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className} aria-hidden="true">
-      <path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3L12 3Z" />
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      className={className}
+      aria-hidden="true"
+    >
+      <path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1-1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3L12 3Z" />
     </svg>
   );
 }
-

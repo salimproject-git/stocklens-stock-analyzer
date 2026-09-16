@@ -1,7 +1,7 @@
 import React from "react";
 import { StockDetail } from "@/data/mock-stock-details";
 
-type TrendCardData = NonNullable<StockDetail["financialHistory"]>["trendCards"][number];
+type TrendCardData = NonNullable<StockDetail["financialHistory"]>["annualTrendCards"][number];
 
 export function FinancialTrendCard({ card }: { card: TrendCardData }) {
   const values = card.series.map((s) => s.value);
@@ -87,4 +87,3 @@ function TrendingUpIcon({ className }: { className?: string }) {
     </svg>
   );
 }
-

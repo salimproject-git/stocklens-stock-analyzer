@@ -7,101 +7,109 @@ export function HistoricalEvidencePreviewCard({
 }: {
   evidence: StockDetail["historicalEvidencePreview"];
 }) {
-  const maxReturn = 60;
-
   return (
     <SectionCard
-      icon={<ClockIcon className="h-4 w-4" />}
-      title="Historical Evidence Preview"
-      subtitle="Similar valuation conditions · Historical results over the next 12 months"
+      icon={<HistoryIcon className="h-4 w-4" />}
+      title="Historical Evidence"
+      subtitle={`Similar valuation conditions · historical outcomes · ${evidence.totalCases} Cases`}
       actionSlot={
-        <a
-          href="#backtest"
-          className="flex items-center gap-1 text-xs font-semibold text-[#f2bb5c] transition hover:text-[#ffd68a]"
-        >
-          <span>View Backtest</span>
-          <ArrowRightIcon className="h-3.5 w-3.5" />
-        </a>
+        <span className="text-xs font-semibold text-[#f4d18b]">
+          View Backtest →
+        </span>
       }
     >
-      <div className="flex items-start justify-between gap-6">
-        {/* Left Stats Column */}
-        <div className="w-48 space-y-2 text-xs">
-          <div className="flex items-center justify-between">
-            <span className="text-[#8e9bb0]">Total cases</span>
-            <span className="font-semibold text-white">{evidence.totalCases}</span>
+      <div className="grid gap-3 sm:grid-cols-2">
+        {/* Verdict Based Method */}
+        <div className="rounded-xl border border-white/8 bg-[#07111c]/60 p-3.5">
+          <div className="text-[12px] font-semibold text-[#d4dcec]">
+            Verdict Based Method
           </div>
-          <div className="flex items-center justify-between">
-            <span className="text-[#8e9bb0]">Positive results</span>
-            <span className="font-semibold text-white">{evidence.positiveResults}</span>
+
+          <div className="mt-3 space-y-2 text-xs">
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-[#8e9bb0]">Undervalued</span>
+              <span className="font-semibold text-white">
+                {evidence.verdictMethod.undervalued}
+              </span>
+            </div>
+
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-[#8e9bb0]">Overvalued</span>
+              <span className="font-semibold text-white">
+                {evidence.verdictMethod.overvalued}
+              </span>
+            </div>
           </div>
-          <div className="flex items-center justify-between">
-            <span className="text-[#8e9bb0]">Median return</span>
-            <span className="font-semibold text-[#3ef0a9]">
-              +{evidence.medianReturn.toFixed(1).replace(".", ",")}%
+
+          <div className="mt-3 border-t border-white/8 pt-2.5">
+            <span className="text-xs font-semibold text-[#3ef0a9]">
+              {evidence.verdictMethod.wins} WIN
             </span>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-[#8e9bb0]">Worst result</span>
-            <span className="font-semibold text-[#3ef0a9]">
-              +{evidence.worstResult.toFixed(1).replace(".", ",")}%
-            </span>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-[#8e9bb0]">Best result</span>
-            <span className="font-semibold text-[#3ef0a9]">
-              +{evidence.bestResult.toFixed(1).replace(".", ",")}%
+            <span className="ml-2 text-[11px] text-[#7f8c9f]">
+              · {evidence.verdictMethod.winRate}
             </span>
           </div>
         </div>
 
-        {/* Right Bar Chart Column */}
-        <div className="relative flex-1 rounded-xl border border-white/8 bg-[#07111c]/80 p-4">
-          <div className="flex h-28 items-end justify-around border-b border-white/10 pb-2">
-            {evidence.cases.map((c) => {
-              const heightPct = Math.round((c.returnPercent / maxReturn) * 100);
-              return (
-                <div key={c.caseName} className="flex flex-col items-center gap-1">
-                  <div className="h-20 w-8 flex items-end justify-center rounded-t bg-white/5">
-                    <div
-                      className="w-full rounded-t bg-[#3ef0a9]"
-                      style={{ height: `${heightPct}%` }}
-                    />
-                  </div>
-                  <span className="text-[10px] text-[#7f8c9f]">{c.caseName}</span>
-                </div>
-              );
-            })}
+        {/* Verdict Based MoS */}
+        <div className="rounded-xl border border-white/8 bg-[#07111c]/60 p-3.5">
+          <div className="text-[12px] font-semibold text-[#d4dcec]">
+            Verdict Based MoS
           </div>
 
-          {/* Y Axis Ticks */}
-          <div className="mt-1 flex justify-between text-[9px] text-[#7f8c9f]">
-            <span>-30%</span>
-            <span>0%</span>
-            <span>30%</span>
-            <span>60%</span>
+          <div className="mt-3 space-y-2 text-xs">
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-[#8e9bb0]">Undervalued</span>
+              <span className="font-semibold text-white">
+                {evidence.verdictMos.undervalued}
+              </span>
+            </div>
+
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-[#8e9bb0]">Overvalued</span>
+              <span className="font-semibold text-white">
+                {evidence.verdictMos.overvalued}
+              </span>
+            </div>
+          </div>
+
+          <div className="mt-3 border-t border-white/8 pt-2.5">
+            <span className="text-xs font-semibold text-[#3ef0a9]">
+              {evidence.verdictMos.wins} WIN
+            </span>
+            <span className="ml-2 text-[11px] text-[#7f8c9f]">
+              · {evidence.verdictMos.winRate}
+            </span>
           </div>
         </div>
+      </div>
+
+      <div className="mt-3 flex items-start gap-2.5 rounded-xl border border-[#d6a24d]/40 bg-[#2b2212]/80 p-3 text-[11px] leading-relaxed text-[#f4d18b]">
+        <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-[#d6a24d]/50 bg-[#f2bb5c]/20 text-xs">
+          💡
+        </span>
+
+        <span>
+          A WIN means an undervalued case reached the +20% target before the -20% downside
+        </span>
       </div>
     </SectionCard>
   );
 }
 
-function ClockIcon({ className }: { className?: string }) {
+function HistoryIcon({ className }: { className?: string }) {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className} aria-hidden="true">
-      <circle cx="12" cy="12" r="10" />
-      <polyline points="12 6 12 12 16 14" />
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      className={className}
+      aria-hidden="true"
+    >
+      <path d="M3 12a9 9 0 1 0 3-6.7" />
+      <polyline points="3 4 3 9 8 9" />
+      <polyline points="12 7 12 12 15 14" />
     </svg>
   );
 }
-
-function ArrowRightIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className} aria-hidden="true">
-      <line x1="5" y1="12" x2="19" y2="12" />
-      <polyline points="12 5 19 12 12 19" />
-    </svg>
-  );
-}
-

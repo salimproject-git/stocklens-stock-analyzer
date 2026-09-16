@@ -1,7 +1,7 @@
 import React from "react";
 import { StockDetail } from "@/data/mock-stock-details";
 
-type KeyMetric = NonNullable<StockDetail["financialHistory"]>["keyMetrics"][number];
+type KeyMetric = NonNullable<StockDetail["financialHistory"]>["annualMetrics"][number];
 
 export function FinancialMetricsSummary({ metrics }: { metrics: KeyMetric[] }) {
   return (
@@ -20,9 +20,11 @@ export function FinancialMetricsSummary({ metrics }: { metrics: KeyMetric[] }) {
               {m.value}
             </div>
           </div>
-          <div className="mt-2 text-xs font-medium text-[#3ef0a9] truncate">
-            {m.subtext}
-          </div>
+          {m.subtext && (
+            <div className="mt-2 text-xs font-medium text-[#3ef0a9] truncate">
+              {m.subtext}
+            </div>
+          )}
         </div>
       ))}
     </section>
@@ -38,4 +40,3 @@ function InfoIcon({ className }: { className?: string }) {
     </svg>
   );
 }
-
