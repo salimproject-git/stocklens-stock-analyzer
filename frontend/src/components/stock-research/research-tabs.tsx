@@ -3,14 +3,14 @@ import React from "react";
 export type ResearchTabKey =
   | "Overview"
   | "Financials"
-  | "Health & Growth"
+  | "Growth"
   | "Valuation"
   | "Backtest";
 
 const TABS: ResearchTabKey[] = [
   "Overview",
   "Financials",
-  "Health & Growth",
+  "Growth",
   "Valuation",
   "Backtest",
 ];

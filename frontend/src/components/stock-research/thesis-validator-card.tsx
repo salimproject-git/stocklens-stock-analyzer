@@ -64,7 +64,7 @@ export function ThesisValidatorCard({
       subtitle={`Latest Quarter · ${latestQuarter}`}
       actionSlot={
         <span className="text-xs font-semibold text-[#f4d18b]">
-          Health & Growth
+          Growth
         </span>
       }
     >

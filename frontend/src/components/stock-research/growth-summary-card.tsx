@@ -84,9 +84,9 @@ export function GrowthSummaryCard({
         </span>
       }
     >
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
         {/* Historical Growth */}
-        <div className="rounded-xl border border-white/8 bg-[#07111c]/60 p-3.5">
+        <div className="rounded-xl border border-white/8 bg-[#07111c]/60 p-3.5 lg:col-span-2">
           <div className="text-[12px] font-semibold text-[#d4dcec]">
             Historical Growth
           </div>
@@ -120,7 +120,7 @@ export function GrowthSummaryCard({
         </div>
 
         {/* Latest Performance */}
-        <div className="rounded-xl border border-white/8 bg-[#07111c]/60 p-3.5">
+        <div className="rounded-xl border border-white/8 bg-[#07111c]/60 p-3.5 lg:col-span-3">
           <div className="text-[12px] font-semibold text-[#d4dcec]">
             Latest Performance
           </div>

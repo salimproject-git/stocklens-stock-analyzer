@@ -8,6 +8,7 @@ import { KeyMetricSummary } from "./key-metric-card";
 import { ResearchTabs, ResearchTabKey } from "./research-tabs";
 import { OverviewTabContent } from "./overview-tab-content";
 import { FinancialsTabContent } from "./financials-tab-content";
+import { GrowthTabContent } from "./growth-tab-content";
 import { DisclaimerFooter } from "./disclaimer-footer";
 
 export function StockResearchPage({ ticker }: { ticker: string }) {
@@ -27,6 +28,8 @@ export function StockResearchPage({ ticker }: { ticker: string }) {
         <OverviewTabContent stock={stock} />
       ) : activeTab === "Financials" ? (
         <FinancialsTabContent stock={stock} />
+      ) : activeTab === "Growth" ? (
+        <GrowthTabContent stock={stock} />
       ) : (
         <div className="my-12 flex flex-col items-center justify-center rounded-[20px] border border-white/10 bg-[linear-gradient(180deg,_rgba(11,23,37,0.92),_rgba(7,16,28,0.94))] p-16 text-center shadow-lg">
           <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-[#d6a24d]/40 bg-[#f2bb5c]/10 text-[#f2bb5c]">

@@ -49,6 +49,32 @@ export type StockDetail = {
       subtext: string;
     }[];
   };
+  healthGrowth: {
+    periodOptions: string[];
+    defaultPeriod: string;
+    growth: {
+      revenueHistorical: { value: string; period: string };
+      revenueFiveYear: { value: string; period: string };
+      revenueYoY: { value: string; period: string };
+      revenueMomentum: { value: string; period: string; tone: 'positive' | 'neutral' | 'negative' };
+      epsHistorical: { value: string; period: string };
+      epsFiveYear: { value: string; period: string };
+      epsMomentum: { value: string; period: string; tone: 'positive' | 'neutral' | 'negative' };
+    };
+    growthVisuals: {
+      periods: string[];
+      revenueNetIncome: { revenue: number[]; netIncome: number[] };
+      operatingCashFlow: number[];
+      eps: number[];
+      growthRate: { revenue: number[]; eps: number[] };
+      keyInsights: string[];
+    };
+    profitability: { metrics: { label: string; value: string; context: string; tone: 'positive' | 'neutral' | 'negative' }[] };
+    cashFlow: { metrics: { label: string; value: string; context: string; tone: 'positive' | 'neutral' | 'negative' }[] };
+    forensic: { metrics: { label: string; value: string; context: string; tone: 'positive' | 'neutral' | 'negative' }[] };
+    quarterlyMeaning: string;
+    overall: { score: string; rating: string; clearance: string; context: string };
+  };
   growthSummary: {
     metrics: {
       label: string;
@@ -251,6 +277,38 @@ export const mockStockDetails: Record<string, StockDetail> = {
         },
       ],
     },
+    healthGrowth: {
+      periodOptions: ['All Years', '5 Years', '3 Years'],
+      defaultPeriod: 'All Years',
+      growth: {
+        revenueHistorical: { value: '4,32%', period: '2019 - 2024' },
+        revenueFiveYear: { value: '10,90%', period: '2019 - 2024' },
+        revenueYoY: { value: '4,37%', period: 'Latest annual (2025)' },
+        revenueMomentum: { value: 'Accelerating', period: 'Current', tone: 'positive' },
+        epsHistorical: { value: '19,97%', period: '2019 - 2024' },
+        epsFiveYear: { value: '43255,73%', period: '2019 - 2024' },
+      epsMomentum: { value: 'Accelerating', period: 'Current', tone: 'positive' },
+      },
+    growthVisuals: {
+        periods: ['2019', '2020', '2021', '2022', '2023', '2024', '2025', '2026P'],
+        revenueNetIncome: {
+          revenue: [15444.8, 11869.2, 15151.7, 18579.9, 18649.1, 19073.7, 19906.8, 21705.4],
+          netIncome: [739.7, -1, 611.3, 1326.6, 1842.4, 2033.6, 2205, 2302.9],
+        },
+        operatingCashFlow: [1072.1, 1148.3, 911.7, 708.4, 1836.3, 1532.7, 1944.3, 1500.9],
+        eps: [153.5, -0.2, 126.8, 275.2, 382.3, 421.9, 457.5, 477.8],
+        growthRate: {
+          revenue: [0, -23.2, 27.7, 22.6, 0.4, 2.3, 4.4, 9.0],
+          eps: [0, -100.1, 63500, 117.1, 38.9, 10.4, 8.4, 4.4],
+        },
+        keyInsights: [],
+      },
+      profitability: { metrics: [{ label: 'ROE Avg (Historical)', value: '9,38%', context: 'Historical average', tone: 'neutral' }, { label: 'ROE (Projected)', value: '13,39%', context: 'Above historical average', tone: 'positive' }, { label: 'ROE Trend', value: 'Improving', context: 'Return on equity is trending higher', tone: 'positive' }, { label: 'NPM Avg (Historical)', value: '6,80%', context: 'Historical average', tone: 'neutral' }, { label: 'NPM vs Historical Avg', value: '+4,28 ppt', context: 'Latest margin is above the average', tone: 'positive' }, { label: 'ROE Stability (StdDev)', value: '5,60%', context: 'Lower variation is more stable', tone: 'neutral' }] },
+      cashFlow: { metrics: [{ label: 'Debt to Equity (DER)', value: '0,33x', context: 'Caution: slightly above 0,3x threshold', tone: 'negative' }, { label: 'Current Ratio', value: '2,21x', context: 'Healthy liquidity (target > 2,0x)', tone: 'positive' }, { label: 'Interest Coverage', value: '49,71x', context: 'Strong ability to pay interest', tone: 'positive' }, { label: 'Operating Cash Flow', value: 'Rp1.944 M', context: 'Positive cash generated from operations', tone: 'positive' }, { label: 'OCF / Net Income', value: '88%', context: 'Cash flow supports reported earnings', tone: 'positive' }] },
+      forensic: { metrics: [{ label: 'Return on Equity (ROE)', value: '13,39%', context: 'Projected return on equity', tone: 'positive' }, { label: 'Gross Margin', value: '15,1%', context: 'Latest quarterly gross margin', tone: 'neutral' }, { label: 'Quality: CF vs Net Income', value: 'Strong', context: 'Operating cash flow supports reported earnings', tone: 'positive' }, { label: 'ROE Trend', value: 'Improving', context: 'Return on equity is trending higher', tone: 'positive' }, { label: 'Equity Growth Consistency', value: 'Consistent', context: 'Equity growth has remained consistent', tone: 'positive' }, { label: 'Current Asset Growth (YoY)', value: '12,27%', context: 'Current assets grew faster than revenue', tone: 'negative' }, { label: 'Asset Growth Gap (YoY)', value: '-7,90%', context: 'No excessive current-asset growth signal', tone: 'positive' }, { label: 'NWC / Revenue (Latest)', value: '27,38%', context: 'Working capital intensity', tone: 'neutral' }, { label: 'NWC Intensity Change (YoY)', value: '+4,30 ppt', context: 'Working capital intensity needs monitoring', tone: 'negative' }, { label: 'Cash Flow Check', value: 'OK', context: 'Earnings quality is supported by cash', tone: 'positive' }] },
+      quarterlyMeaning: 'Revenue and net income both accelerated in the latest quarter, while gross margin remains under pressure and OCF conversion is moderate.',
+      overall: { score: '80 / 100', rating: 'Healthy', clearance: 'OK', context: 'No major red flag detected.' },
+    },
     growthSummary: {
       metrics: [
         {
@@ -309,7 +367,7 @@ export const mockStockDetails: Record<string, StockDetail> = {
           q4: "3,9%",
           q1: "7,4%",
           q2: "19,3%",
-          trend: "↑ Naik +19,3%",
+          trend: "↑ Increased +19.3%",
           trendTone: "green",
         },
         {
@@ -318,7 +376,7 @@ export const mockStockDetails: Record<string, StockDetail> = {
           q4: "18,8%",
           q1: "16,0%",
           q2: "15,1%",
-          trend: "➖ GM Stabil 15,1%",
+          trend: "➖ Stable at 15.1%",
           trendTone: "slate",
         },
         {
@@ -327,7 +385,7 @@ export const mockStockDetails: Record<string, StockDetail> = {
           q4: "26,0%",
           q1: "10,6%",
           q2: "36,7%",
-          trend: "↑ Naik +36,7%",
+          trend: "↑ Increased +36.7%",
           trendTone: "green",
         },
         {
@@ -336,7 +394,7 @@ export const mockStockDetails: Record<string, StockDetail> = {
           q4: "0,83x",
           q1: "0,73x",
           q2: "0,57x",
-          trend: "⚠️ Cukup — 0,57x",
+          trend: "⚠ Moderate — 0.57x",
           trendTone: "yellow",
         },
         {
@@ -345,15 +403,15 @@ export const mockStockDetails: Record<string, StockDetail> = {
           q4: "9,8",
           q1: "9,1",
           q2: "9,2",
-          trend: "↓ Turun -15,3%",
+          trend: "↓ Decreased -15.3%",
           trendTone: "green",
         },
       ],
       footnote:
-        "💡 Gross Margin (Actual %) shows the actual margin value each quarter — not YoY change. Compare latest quarter vs earliest quarter to assess trend direction.",
+        "Gross Margin (Actual %) shows the actual margin value each quarter, not the YoY change. Compare the latest quarter with the earliest quarter to assess the trend.",
     },
     dividendConsistency: {
-      averageYield: "13,2%",
+      averageYield: "5,2%",
       years: ["2026 (Proyeksi)", "2025", "2024", "2023", "2022", "Avg (4Y)"],
       rows: [
         {
@@ -376,12 +434,12 @@ export const mockStockDetails: Record<string, StockDetail> = {
         },
         {
           item: "Yield [%]",
-          p2026: "40,9%",
+          p2026: "4,8%",
           y2025: "7,1%",
           y2024: "8,2%",
           y2023: "5,4%",
           y2022: "4,2%",
-          avg4Y: "13,2%",
+          avg4Y: "6,0%",
         },
       ],
       callout:
