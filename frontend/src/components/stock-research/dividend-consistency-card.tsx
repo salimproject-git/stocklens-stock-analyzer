@@ -1,6 +1,7 @@
 import React from "react";
 import { StockDetail } from "@/data/mock-stock-details";
 import { SectionCard } from "@/components/ui/section-card";
+import { formatRupiahValue } from "@/utils/currency";
 
 export function DividendConsistencyCard({
   dividend,
@@ -45,7 +46,7 @@ export function DividendConsistencyCard({
           <div className="text-[11px] text-[#8e9bb0]">DPS</div>
 
           <div className="mt-1 font-semibold text-white">
-            Rp {dpsRow?.p2026 ?? "—"}
+            {dpsRow?.p2026 ? formatRupiahValue(dpsRow.p2026) : "—"}
           </div>
         </div>
       </div>

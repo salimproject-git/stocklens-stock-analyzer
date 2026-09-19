@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { StockDetail } from "@/data/mock-stock-details";
 import { SectionCard } from "@/components/ui/section-card";
+import { formatRupiah } from "@/utils/currency";
 
 const TIMEFRAMES = ["1M", "3M", "1Y", "3Y", "5Y"];
 
@@ -103,7 +104,7 @@ export function PriceChartCard({
             top: `${(lastY / height) * 100 - 15}%`,
           }}
         >
-          Rp 1.950
+          {formatRupiah(points.at(-1)?.value ?? 0)}
         </div>
       </div>
 
@@ -118,13 +119,13 @@ export function PriceChartCard({
       <div className="mt-4 grid grid-cols-5 divide-x divide-white/8 rounded-xl border border-white/8 bg-[#07111c]/80 p-3 text-center">
         <div>
           <div className="text-xs font-semibold text-white">
-            {new Intl.NumberFormat("id-ID").format(chartData.low52W)}
+            {formatRupiah(chartData.low52W)}
           </div>
           <div className="mt-0.5 text-[10px] text-[#7f8c9f]">52W Low</div>
         </div>
         <div>
           <div className="text-xs font-semibold text-white">
-            {new Intl.NumberFormat("id-ID").format(chartData.high52W)}
+            {formatRupiah(chartData.high52W)}
           </div>
           <div className="mt-0.5 text-[10px] text-[#7f8c9f]">52W High</div>
         </div>

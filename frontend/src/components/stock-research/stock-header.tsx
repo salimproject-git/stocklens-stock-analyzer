@@ -1,6 +1,7 @@
 import React from "react";
 import { StockDetail } from "@/data/mock-stock-details";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { formatRupiah as formatCurrencyRupiah, formatRupiahValue } from "@/utils/currency";
 
 export function StockHeader({ stock }: { stock: StockDetail }) {
   const isPositive = stock.change >= 0;
@@ -91,12 +92,12 @@ export function StockHeader({ stock }: { stock: StockDetail }) {
 }
 
 function formatRupiah(val: number) {
-  return `Rp ${new Intl.NumberFormat("id-ID").format(val)}`;
+  return formatCurrencyRupiah(val);
 }
 
 function formatSignedRupiah(val: number) {
   const sign = val > 0 ? "+" : "";
-  return `${sign}${new Intl.NumberFormat("id-ID").format(val)}`;
+  return `${sign}${formatRupiahValue(val).replace(/^Rp/, "")}`;
 }
 
 function formatPercent(val: number) {

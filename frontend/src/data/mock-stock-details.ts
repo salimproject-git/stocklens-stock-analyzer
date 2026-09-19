@@ -105,6 +105,9 @@ export type StockDetail = {
     winRate: string;
   };
 };
+  backtest?: {
+    cases: BacktestCase[];
+  };
   thesisValidator: {
     quarters: string[];
     rows: {
@@ -190,6 +193,43 @@ export type StockDetail = {
   };
 };
 
+export type BacktestConsensus = "UNDERVALUED" | "OVERVALUED" | "MIXED";
+export type BacktestVerdict =
+  | "WIN"
+  | "RISK"
+  | "RECOVERED"
+  | "FLAT"
+  | "CONFIRMED"
+  | "MARKET SURPRISE"
+  | "OBSERVE";
+
+export type BacktestCase = {
+  id: string;
+  ticker: string;
+  quarter: string;
+  analysisDate: string;
+  analysisPrice: number;
+  sector: string;
+  stockType: string;
+  consensus: BacktestConsensus;
+  mosMain: number | null;
+  mosPeter: number | null;
+  mosWeight: number | null;
+  verdict: BacktestVerdict;
+  verdictMos: BacktestVerdict;
+  methods: { method: string; intrinsicValue: number | null }[];
+  context: {
+    revenueYoY: number | null;
+    netIncomeYoY: number | null;
+    epsMomentum: string;
+    revenueMomentum: string;
+    roeTrend: string;
+    yield: number | null;
+    ocfNi: number | null;
+  };
+  pricePath: { date: string; high: number; low: number; close: number }[];
+};
+
 export const mockStockDetails: Record<string, StockDetail> = {
   AUTO: {
     ticker: "AUTO",
@@ -240,7 +280,7 @@ export const mockStockDetails: Record<string, StockDetail> = {
       low52W: 1520,
       high52W: 2350,
       ytdPercent: -12.4,
-      marketCap: "Rp 12,8 T",
+      marketCap: "Rp12 T",
       peTTM: 18.4,
     },
     currentValuation: {
@@ -357,6 +397,64 @@ export const mockStockDetails: Record<string, StockDetail> = {
         wins: 10,
         winRate: "100%",
       },
+    },
+    backtest: {
+      cases: [
+        {
+          id: "AUTO-2024-Q1",
+          ticker: "AUTO",
+          quarter: "2024 Q1",
+          analysisDate: "2024-04-30",
+          analysisPrice: 1820,
+          sector: "Automotive",
+          stockType: "Cyclical",
+          consensus: "UNDERVALUED",
+          mosMain: 0.31,
+          mosPeter: 0.36,
+          mosWeight: 0.22,
+          verdict: "WIN",
+          verdictMos: "WIN",
+          methods: [{ method: "Peter Lynch / Adaptive", intrinsicValue: 2470 }, { method: "Type & Sector Weighted", intrinsicValue: 2220 }, { method: "Mean Reversion PBV", intrinsicValue: 2140 }, { method: "Dividend Discount Model", intrinsicValue: 1660 }, { method: "Discounted Earnings", intrinsicValue: 2350 }],
+          context: { revenueYoY: 0.08, netIncomeYoY: 0.12, epsMomentum: "Improving", revenueMomentum: "Accelerating", roeTrend: "Improving", yield: 0.052, ocfNi: 0.94 },
+          pricePath: [{ date: "2024-05-31", high: 1940, low: 1810, close: 1910 }, { date: "2024-06-28", high: 2070, low: 1890, close: 2040 }, { date: "2024-07-31", high: 2210, low: 2010, close: 2180 }],
+        },
+        {
+          id: "AUTO-2024-Q2",
+          ticker: "AUTO",
+          quarter: "2024 Q2",
+          analysisDate: "2024-07-31",
+          analysisPrice: 2180,
+          sector: "Automotive",
+          stockType: "Cyclical",
+          consensus: "MIXED",
+          mosMain: 0.12,
+          mosPeter: 0.18,
+          mosWeight: 0.04,
+          verdict: "FLAT",
+          verdictMos: "OBSERVE",
+          methods: [{ method: "Peter Lynch / Adaptive", intrinsicValue: 2570 }, { method: "Type & Sector Weighted", intrinsicValue: 2260 }, { method: "Mean Reversion PBV", intrinsicValue: 2110 }, { method: "Dividend Discount Model", intrinsicValue: 1730 }, { method: "Discounted Earnings", intrinsicValue: 2460 }],
+          context: { revenueYoY: 0.04, netIncomeYoY: 0.03, epsMomentum: "Stable", revenueMomentum: "Stable", roeTrend: "Stable", yield: 0.049, ocfNi: 0.82 },
+          pricePath: [{ date: "2024-08-30", high: 2230, low: 2110, close: 2160 }, { date: "2024-09-30", high: 2260, low: 2080, close: 2200 }, { date: "2024-10-31", high: 2290, low: 2130, close: 2240 }],
+        },
+        {
+          id: "AUTO-2024-Q3",
+          ticker: "AUTO",
+          quarter: "2024 Q3",
+          analysisDate: "2024-10-31",
+          analysisPrice: 2240,
+          sector: "Automotive",
+          stockType: "Cyclical",
+          consensus: "OVERVALUED",
+          mosMain: -0.08,
+          mosPeter: -0.03,
+          mosWeight: -0.12,
+          verdict: "CONFIRMED",
+          verdictMos: "CONFIRMED",
+          methods: [{ method: "Peter Lynch / Adaptive", intrinsicValue: 2170 }, { method: "Type & Sector Weighted", intrinsicValue: 2060 }, { method: "Mean Reversion PBV", intrinsicValue: 1980 }, { method: "Dividend Discount Model", intrinsicValue: 1610 }, { method: "Discounted Earnings", intrinsicValue: 2200 }],
+          context: { revenueYoY: 0.01, netIncomeYoY: -0.05, epsMomentum: "Slowing", revenueMomentum: "Decelerating", roeTrend: "Stable", yield: 0.046, ocfNi: 0.71 },
+          pricePath: [{ date: "2024-11-29", high: 2200, low: 2010, close: 2070 }, { date: "2024-12-30", high: 2110, low: 1940, close: 1990 }],
+        },
+      ],
     },
     thesisValidator: {
       quarters: ["Q3 2025", "Q4 2025", "Q1 2026", "Q2 2026"],

@@ -2,6 +2,7 @@ import React from "react";
 import { StockDetail } from "@/data/mock-stock-details";
 import { SectionCard } from "@/components/ui/section-card";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { formatRupiah } from "@/utils/currency";
 
 export function CurrentValuationCard({
   valuation,
@@ -10,9 +11,6 @@ export function CurrentValuationCard({
 }) {
   const currentRatio = valuation.currentPrice / valuation.intrinsicValue;
   const currentHeightPercent = Math.round(currentRatio * 100);
-
-  const formatPrice = (value: number) =>
-    new Intl.NumberFormat("id-ID").format(value);
 
   const formattedMos = valuation.mos.toFixed(1).replace(".", ",");
 
@@ -82,7 +80,7 @@ const mosText = mosUndervalued
       {/* Current Price */}
       <div className="flex w-16 flex-col items-center">
         <span className="mb-2 text-center text-[12px] font-semibold text-[#b6c2d4]">
-          {formatPrice(valuation.currentPrice)}
+          {formatRupiah(valuation.currentPrice)}
         </span>
 
         <div className="flex h-[80px] w-14 items-end overflow-hidden rounded-t-md bg-white/5">
@@ -102,7 +100,7 @@ const mosText = mosUndervalued
       {/* Intrinsic Value */}
       <div className="flex w-16 flex-col items-center">
         <span className="mb-2 text-center text-[12px] font-semibold text-[#f4d18b]">
-          {formatPrice(valuation.intrinsicValue)}
+          {formatRupiah(valuation.intrinsicValue)}
         </span>
 
         <div className="flex h-[80px] w-14 items-end overflow-hidden rounded-t-md bg-white/5">

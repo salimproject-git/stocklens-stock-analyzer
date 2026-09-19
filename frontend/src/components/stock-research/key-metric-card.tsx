@@ -1,5 +1,6 @@
 import React from "react";
 import { StockDetail } from "@/data/mock-stock-details";
+import { formatRupiah } from "@/utils/currency";
 
 function getMainValuationMethod(stockType: string) {
   const normalizedStockType = stockType.trim().toLowerCase();
@@ -13,7 +14,7 @@ export function KeyMetricSummary({ stock }: { stock: StockDetail }) {
       {/* 1. Current Price */}
       <KeyMetricCard
         label="Current Price"
-        value={`Rp ${new Intl.NumberFormat("id-ID").format(stock.price)}`}
+        value={formatRupiah(stock.price)}
         subtext={`+${stock.changePercent.toFixed(2).replace(".", ",")}% today`}
         subtextTone="green"
         icon={<TrendingUpIcon className="h-4 w-4" />}
@@ -23,7 +24,7 @@ export function KeyMetricSummary({ stock }: { stock: StockDetail }) {
       {/* 2. Intrinsic Value */}
       <KeyMetricCard
         label="Intrinsic Value"
-        value={`Rp ${new Intl.NumberFormat("id-ID").format(stock.intrinsicValue)}`}
+        value={formatRupiah(stock.intrinsicValue)}
         subtext="Estimated fair value"
         secondarySubtext={`Method: ${getMainValuationMethod(stock.stockType)}`}
         subtextTone="slate"

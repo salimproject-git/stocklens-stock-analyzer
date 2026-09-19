@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { formatRupiah as formatCurrencyRupiah, formatRupiahValue } from "@/utils/currency";
 
 type Verdict = "Undervalued" | "Fairly Valued" | "Overvalued";
 type ViewMode = "grid" | "list";
@@ -728,12 +729,12 @@ function Sparkline({
 }
 
 function formatRupiah(value: number) {
-  return `Rp ${new Intl.NumberFormat("id-ID").format(value)}`;
+  return formatCurrencyRupiah(value);
 }
 
 function formatSignedRupiah(value: number) {
   const sign = value > 0 ? "+" : "";
-  return `${sign}${new Intl.NumberFormat("id-ID").format(value)}`;
+  return `${sign}${formatRupiahValue(value).replace(/^Rp/, "")}`;
 }
 
 function formatPercent(value: number) {
