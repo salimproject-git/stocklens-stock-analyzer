@@ -1,18 +1,32 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { mockStockDetails } from "@/data/mock-stock-details";
 import { Breadcrumb } from "./breadcrumb";
 import { StockHeader } from "./stock-header";
 import { KeyMetricSummary } from "./key-metric-card";
-import { ResearchTabs, ResearchTabKey } from "./research-tabs";
+import { ResearchTabs, ResearchTabKey, tabFromHash } from "./research-tabs";
 import { OverviewTabContent } from "./overview-tab-content";
 import { FinancialsTabContent } from "./financials-tab-content";
 import { GrowthTabContent } from "./growth-tab-content";
+import { ValuationTabContent } from "./valuation-tab-content";
 import { DisclaimerFooter } from "./disclaimer-footer";
 
 export function StockResearchPage({ ticker }: { ticker: string }) {
   const [activeTab, setActiveTab] = useState<ResearchTabKey>("Overview");
+
+  useEffect(() => {
+    const syncTabWithHash = () => {
+      setActiveTab(tabFromHash(window.location.hash));
+      if (!window.location.hash) {
+        window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}#overview`);
+      }
+    };
+
+    syncTabWithHash();
+    window.addEventListener("hashchange", syncTabWithHash);
+    return () => window.removeEventListener("hashchange", syncTabWithHash);
+  }, []);
 
   // Fallback to AUTO mock data if ticker not found in mock table
   const stock = mockStockDetails[ticker.toUpperCase()] ?? mockStockDetails.AUTO;
@@ -30,6 +44,8 @@ export function StockResearchPage({ ticker }: { ticker: string }) {
         <FinancialsTabContent stock={stock} />
       ) : activeTab === "Growth" ? (
         <GrowthTabContent stock={stock} />
+      ) : activeTab === "Valuation" ? (
+        <ValuationTabContent stock={stock} />
       ) : (
         <div className="my-12 flex flex-col items-center justify-center rounded-[20px] border border-white/10 bg-[linear-gradient(180deg,_rgba(11,23,37,0.92),_rgba(7,16,28,0.94))] p-16 text-center shadow-lg">
           <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-[#d6a24d]/40 bg-[#f2bb5c]/10 text-[#f2bb5c]">

@@ -15,6 +15,11 @@ const TABS: ResearchTabKey[] = [
   "Backtest",
 ];
 
+export function tabFromHash(hash: string): ResearchTabKey {
+  const tab = TABS.find((item) => item.toLowerCase() === hash.replace(/^#/, "").toLowerCase());
+  return tab ?? "Overview";
+}
+
 export function ResearchTabs({
   activeTab,
   onTabChange,
@@ -28,9 +33,9 @@ export function ResearchTabs({
         {TABS.map((tab) => {
           const isActive = activeTab === tab;
           return (
-            <button
+            <a
               key={tab}
-              type="button"
+              href={`#${tab.toLowerCase()}`}
               onClick={() => onTabChange(tab)}
               className={[
                 "relative pb-3 text-sm font-semibold transition",
@@ -43,7 +48,7 @@ export function ResearchTabs({
               {isActive && (
                 <span className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-[#f2bb5c]" />
               )}
-            </button>
+            </a>
           );
         })}
       </div>

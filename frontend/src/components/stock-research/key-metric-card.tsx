@@ -1,6 +1,12 @@
 import React from "react";
 import { StockDetail } from "@/data/mock-stock-details";
 
+function getMainValuationMethod(stockType: string) {
+  const normalizedStockType = stockType.trim().toLowerCase();
+  return normalizedStockType === "stalwart" || normalizedStockType === "fast grower"
+    ? "Type & Sector Weighted"
+    : "Peter Lynch / Adaptive";
+}
 export function KeyMetricSummary({ stock }: { stock: StockDetail }) {
   return (
     <section className="mb-6 grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-5">
@@ -19,6 +25,7 @@ export function KeyMetricSummary({ stock }: { stock: StockDetail }) {
         label="Intrinsic Value"
         value={`Rp ${new Intl.NumberFormat("id-ID").format(stock.intrinsicValue)}`}
         subtext="Estimated fair value"
+        secondarySubtext={`Method: ${getMainValuationMethod(stock.stockType)}`}
         subtextTone="slate"
         icon={<DatabaseIcon className="h-4 w-4" />}
         iconTone="blue"
@@ -29,6 +36,7 @@ export function KeyMetricSummary({ stock }: { stock: StockDetail }) {
         label="Margin of Safety"
         value={`${stock.mos.toFixed(1).replace(".", ",")}%`}
         subtext="Below intrinsic value"
+        secondarySubtext={`Method: ${getMainValuationMethod(stock.stockType)}`}
         subtextTone="green"
         icon={<ShieldCheckIcon className="h-4 w-4" />}
         iconTone="green"

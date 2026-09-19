@@ -1,0 +1,989 @@
+-------Sheet SUMMARY-------
+STOCK ANALYSIS DASHBOARD||||||||||||||||||
+||||||||||||||||||
+COMPANY INFORMATION|||Price Manual|||||||||||||||
+Ticker|ERAA|Sector: Consumer Cyclicals|Base Annual Years|2025||||||||||||||
+Stock Type|CYCLICAL|Current Price: Rp350|Manual Quarter|Q2||||||||||||||
+||||||||||||||||||
+Analysis Date||||||||||||||||||
+Projection Year|Quarter 2 2026|||||||||||||||||
+Data Years Available|7|||||||||||||||||
+||||||||||||||||||
+VALUATION BREAKDOWN (The Price)||||||||||||||||||
+VALUATION METRICS|IV (Ins. Value)|Potential (Gain/Loss)|MoS|Status||||||||||||||
+Peter Lynch (Main Rule)|686.181192100314|0.960517691715182|0.489930642184035|? UNDERVALUED||||||||||||||
+Weighted IV (Optional Rule)|683.43443759851|0.952669821710029|0.487880649927666|? UNDERVALUED||||||||||||||
+Mean Reversion PBV [Asset]|433.354663763162|0.238156182180462|0.192347448252494|? UNDERVALUED||||||||||||||
+Dividend Discount Model (Cash Flow)|268.175174830165|-0.233785214770956|-0.305117075887632|? OVERVALUED||||||||||||||
+Discounted Earnings Model (Growth)|947.483017791499|1.70709433654714|0.630600239341683|? UNDERVALUED||||||||||||||
+||||||||||||||||||
+IV CONSENSUS|? CONSENSUS UNDERVALUED — 4/5 metode valid | Main Rule Undervalued|||||||||||||||||
+||||||||||||||||||
+THESIS VALIDATOR — YoY Performance (Each Quarter vs Same Quarter Prior Year)||||||||||||||||||
+ITEM|Q3 2025 vs Q3 2024|Q4 2025 vs Q4 2024|Q1 2026 vs Q1 2025|Q2 2026 vs Q2 2025|RESULT|||||||||||||
+Revenue YoY (%)|0.117934950977675|0.454094707189979|0.411173511194881|6.88133414551366E-02|? Naik +6.9%|||||||||||||
+Gross Margin (Actual %)|0.108705732022978|0.103334009814275|0.106552175070514|0.117546647715232|? GM Naik: 11.8% vs 10.9%|||||||||||||
+Net Income YoY (%)|-0.188031065742525|0.700192727248006|1.22734059066392|-9.24150078068966E-02|? Turun -9.2%|||||||||||||
+OCF / NI Ratio (x)|19.9834034443117|1.93548384542211|-1.75516212927315|8.02458416409029|? Kuat — OCF/NI = 8.02x|||||||||||||
+Interest Expense (M Rp)|188.717424|167.310143|151.039281|157.913336|?? Beban Bunga Turun -16.3%|||||||||||||
+||||||||||||||||||
+|"Gross Margin (Actual %) shows the actual margin value each quarter — not YoY change. Compare latest quarter vs earliest quarter to assess trend direction."|||||||||||||||||
+||||||||||||||||||
+||||||||||||||||||
+DIVIDEND CONSISTENCY — Year Performance||||||||||||||||||
+ITEM|2026 (Proyeksi)|2025|2024|2023|2022|Avg (4Y)||||||||||||
+DPS [Rp]|21.4798000609161|19|17|19|22.8|19.8559600121832||||||||||||
+DPR [%]|0.218490561787463|0.253392277725642|0.262603113705699|0.366866486613042|0.359038119166758|0.292078111799721||||||||||||
+Yield [%]|6.13708573169032E-02|4.65686274509804E-02|4.20792079207921E-02|4.46009389671361E-02|5.81632653061225E-02|5.05565793923869E-02||||||||||||
+||||||||||||||||||
+HEALTH VITAL SIGNS (The Risk)||||||||||||||||||
+HEALTH CHECKUP|Data|Diagnosa||||||||||||||||
+Total Score|0|?? HIGH RISK||||||||||||||||
+Debt (DER)|1.70670944330542|?? DER Tinggi||||||||||||||||
+Cash (Likuiditas)|1.15957047181137|? Lancar||||||||||||||||
+Cashflow (OCF) [Rp M]|225.153234|? Positif||||||||||||||||
+Fraud Check|-0.321376428189615|? Aman||||||||||||||||
+||||||||||||||||||
+THRESHOLD STATUS||||||||||||||||||
+ITEM|Data|Diagnosa||||||||||||||||
+MoS vs Entry Threshold|49.0%|? MoS Tercapai (+14.0% dari threshold 35%)||||||||||||||||
+Health Score vs Minimum (60)|0|? Di bawah minimum (0/100 — butuh 60)||||||||||||||||
+Ideal Price Gap.|480.326834470219|? Harga sudah di bawah Ideal Price||||||||||||||||
+Yield vs Threshold (4%)|6.1%|? Yield 6.1% — di atas threshold 4%||||||||||||||||
+IV CONSENSUS|4/5|? Lolos (Mayoritas metode Undervalued)||||||||||||||||
+||||||||||||||||||
+BUSINESS QUALITY & MOAT CHECK||||||||||||||||||
+ITEM|Data|Diagnosa||||||||||||||||
+Liquidity Score (Market Interest)|Second Liner (10 - 50 M)|?? AGAK SERET||||||||||||||||
+Brand Power (Moat)|0|?? LEMAH||||||||||||||||
+GCG & Dividend|2|?? ROYAL||||||||||||||||
+TOTAL QUALITY SCORE|3|? STANDARD (1x)||||||||||||||||
+||||||||||||||||||
+MARKET CHECKLIST (CHECK MARKET)||||||||||||||||||
+ITEM|Data|Diagnosa||||||||||||||||
+IHSG vs MA200|Bearish|?? Downtrend (Risk)||||||||||||||||
+Foreign Flow|Outflow|?? Big Money Keluar||||||||||||||||
+BI Rate / Inflasi|BI Rate Turun/Tetap|?? Likuiditas Kering||||||||||||||||
+MARKET MOOD|BEARISH (Winter)|||||||||||||||||
+||||||||||||||||||
+PANEL 3: STRATEGIC EXECUTION (The Action)||||||||||||||||||
+IV Method|Peter Lynch (Current)|||||||||||||||||
+IV Method Manual||||||||||||||||||
+Current Price|350|||||||||||||||||
+Fundamental IV (Baseline)|686.181192100314|||||||||||||||||
+Market-Adj. Price (Mood)|548.944953680251|||||||||||||||||
+Quality-Adj. Target (Final)|548.944953680251|||||||||||||||||
+MoS (vs Fundamental)|0.489930642184035|||||||||||||||||
+MoS (vs Final)|0.362413302730044|||||||||||||||||
+Div. Safety Status|Error 2023|||||||||||||||||
+Payout Ratio Avg Long [x]|0.208474185078623|||||||||||||||||
+Est. Yield vs Avg Yield Hist|6.1% (vs Avg 3.6%)|||||||||||||||||
+Ideal Price|480.326834470219|||||||||||||||||
+||||||||||||||||||
+SYSTEM GENERATED JUDGEMENT (AUTO)||||||||||||||||||
+STRATEGIC CATEGORY|?? CYCLICAL (Discounted)|||||||||||||||||
+||||||||||||||||||
+HOLDING PERIOD|MEDIUM-TERM (1-3 years (Price Recovery))
+Sell if: Overvalued|||||||||||||||||
+||||||||||||||||||
+||||||||||||||||||
+||||||||||||||||||
+RISK PROFILE|Business Risk: MEDIUM
+Financial Risk: VERY HIGH
+Overall Risk: MEDIUM
+Confidence: ? Very Low|||||||||||||||||
+||||||||||||||||||
+||||||||||||||||||
+||||||||||||||||||
+||||||||||||||||||
+INVESTMENT OBJECTIVE|Balanced approach|||||||||||||||||
+||||||||||||||||||
+||||||||||||||||||
+ENTRY CONDITION|Buy when: MoS > 20%|||||||||||||||||
+||||||||||||||||||
+||||||||||||||||||
+Menggunakan Peter Lynch (Current) lebih akurat untuk [Membeli Diskon Saat Ini] (Mispricing), efektif jika masa depan tidak pasti, laba fluktuatif, atau nilai perusahaan tersembunyi di aset (Slow Grower/Cyclical/Asset Play/Turn Around).||||||||||||||||||
+||||||||||||||||||
+||||||||||||||||||
+||||||||||||||||||
+||||||||||||||||||
+?? PRICE ADJUSTMENT:
+• Market Mood: BEARISH (Winter) (0.8x)
+• Business Quality: ? STANDARD (1x)
+
+Harga 36.2% DI BAWAH target (Rp549)
+?? Catatan: Health Score di bawah 50 — fundamental perlu dicermati||||||||||||||||||
+||||||||||||||||||
+||||||||||||||||||
+||||||||||||||||||
+||||||||||||||||||
+||||||||||||||||||
+||||||||||||||||||
+?? MARKET CONTEXT:
+• Kondisi pasar    : BEARISH (Winter)
+• Posisi valuasi   : Harga di bawah target yang disesuaikan
+• Posisi PER       : PER 3.6x — diskon 55% dari rata-rata historis 7.8x
+• Penyesuaian mood : Target diturunkan 20% (×0.8)||||||||||||||||||
+||||||||||||||||||
+||||||||||||||||||
+||||||||||||||||||
+||||||||||||||||||
+||||||||||||||||||
+||||||||||||||||||
+PRICE POSITION SUMMARY:
+• vs IV Dasar (Peter Lynch) : 49.0% DI BAWAH IV (Rp686)
+• vs Target Final : 36.2% DI BAWAH target (Rp549)
+• Jarak ke Ideal Price : Rp130 (27.1%) ? sudah di bawah ideal
+• PER sekarang vs historis  : 3.6x vs avg 7.8x (diskon 55%)
+• Dividend Yield: 6.1% vs rata-rata historis 3.6% (di atas rata-rata ?)||||||||||||||||||
+||||||||||||||||||
+||||||||||||||||||
+||||||||||||||||||
+||||||||||||||||||
+||||||||||||||||||
+||||||||||||||||||
+||||||||||||||||||
+STOCK DATA CONTEXT FOR AI ??:
+Analysis date at 
+
+Latest data From Quarter 2 2026
+
+----------------------------
+??? IDENTITAS SAHAM
+• Ticker      : ERAA | Sektor: Consumer Cyclicals
+• Klasifikasi : CYCLICAL (Confidence: 70%)
+• Harga Kini  : Rp350
+----------------------------
+?? KINERJA PERTUMBUHAN
+------------------------------------------------
+• Status Bisnis : TUMBUH CEPAT (15.1%/thn)
+• Kondisi Sesaat: Makin Kencang ?? | Thn Ini: 17.6%
+• Dinamika Laba : Laba tumbuh lebih cepat dari omzet (EPS 26.3%)
+------------------------------------------------
+?? Cek Forensic : ?? PERLU CEK: Asset Growth Gap -32.1% menunjukkan aset lancar tumbuh jauh lebih cepat dari revenue. OCF hanya 19% dari laba, sehingga kualitas laba perlu diperiksa.
+
+?? CEK HARGA (VALUASI)
+------------------------------------------------
+??? Rasio Laba (PER) : 3.6x (Avg 7.8x) | DISKON GEDE (>25%)
+??? Rasio Aset (PBV) : 0.5x | Below Book Value
+??? Posisi Historis  : PBV berada di bawah seluruh historical PBV valid. (Percentile 0%)
+??? Dividen Yield    : Gede (6.1%)
+------------------------------------------------
+? VERDICT: Valuasi terlihat menarik. Lanjutkan ke consensus & historical validation.
+
+?? KUALITAS BISNIS
+------------------------------------------------
+1?? Kemampuan Putar Modal (ROE)
+   • Status : LUMAYAN (10-15%) | Tren: Naik ??
+   • Posisi : Rata-rata 11.4% vs Sekarang 14.3%
+
+2?? Tebal Margin Laba (NPM)
+   • Status : TIPIS (Kerja Rodi) (1.7%)
+------------------------------------------------
+?? VERDICT: BISNIS LEMAH/BIASA AJA. Susah cari untung.
+
+?? CEK DOMPET & HUTANG
+------------------------------------------------
+?? Uang Kas     : CUKUP (Rasio 1.2x)
+?? Porsi Hutang : Kebanyakan Utang ?? (94% dari Aset)
+?? Arus Uang    : LEMAH (Cuma Angka di Kertas) ?? (19% dari Laba)
+------------------------------------------------
+?? KONDISI: KEUANGAN SAKIT (Perlu Monitor)
+
+?? SCORECARD METRICS:
+   Growth    : ????? (15.1%)
+   Quality   : ????? (ROE 11.4%)
+   Valuation : ????? (PER 3.6x)
+   Stability : ????? (CoV 29%)
+   Forensic  : ????? ??
+   TOTAL SCORE: 15/25 ?????
+
+?? RINGKASAN EKSEKUTIF:
+--------------------------------------------
+?? PERMAINAN SIKLUS. Laba perusahaan ini naik turun drastis mengikuti harga komoditas/ekonomi. ? Strategi: High Risk. BELI saat Kinerja JELEK (Valuasi Murah), JUAL saat Berita BAGUS (Valuasi Mahal). Jangan hold selamanya!
+
+----------------------------
+?? DATA PEMBANDING ANTAR SAHAM (COMPARISON MATRIX):
+
+[GROWTH]
+• Rev CAGR   : 10Y 15.1% | 5Y 17.6% | Momentum: Accelerating ??
+• EPS CAGR   : 10Y 26.3% | 5Y 14.3% | Momentum: Slowing ??
+• PEG Lynch  : 0.14x (< 1x = murah vs pertumbuhan)
+
+[VALUASI]
+• PER        : 3.6x (Avg 10Y: 7.8x)
+• PBV        : 0.5x (Avg 10Y: 1.0x) | Hist Percentile: 0%
+
+[PROFITABILITAS]
+• ROE        : 14.3% (Avg: 11.4%) | Trend: Improving ??
+• Net Margin : 1.7%
+
+[DIVIDEN]
+• Yield Fwd  : 6.14% | Hist Avg: 3.57%
+• DPR (Payout): 20.8% (Porsi laba dibagikan sebagai dividen)
+
+[KESEHATAN KEUANGAN]
+• Health Score: 0/100
+• DER        : 1.71x | CR: 1.16x | ICR: 0.86x
+• OCF        : 225 M vs Net Income: 1,196 M
+• Forensic   : -32.1% (Revenue vs Current Assets Growth Gap)||||||||||||||||||
+
+
+
+-------------------------------------------||||||||||||||||||
+_________________________________
+Bertindaklah sebagai Fund Manager Value Investing yang ketat (seperti Warren Buffett atau Peter Lynch). Berdasarkan data summary fundamental di atas, berikan 'Second Opinion' yang objektif dan tanpa basa-basi:
+1. Analisis Keputusan: Apakah saham ini layak dibeli SEKARANG berdasarkan Margin of Safety (MoS) dan kondisi bisnisnya?
+2. Pemeriksaan Risiko (Red Flags): Evaluasi data forensik (AR, Inventory, Hutang). Apakah ada risiko tersembunyi yang fatal?
+3. Katalis & Sentimen (Web Search): Cari isu/berita terbaru yang berpotensi menjadi katalis positif atau negatif untuk harga saham ini dalam waktu dekat.
+4. Competitor Watchlist (Kualitatif): Sebutkan 1-2 saham kompetitor langsung di sektor yang sama. Berikan opini singkat mengenai kekuatan model bisnis atau keunggulan kompetitif (moat) mereka dibandingkan saham ini secara fundamental bisnis, bukan angka. Jadikan ini sebagai rekomendasi bagi saya untuk menganalisa angka kompetitor tersebut di tahap selanjutnya.
+5. Buat scenario risk/reward numerik untuk saham ini (mis. harga entry, stop-loss, target exit) yang sesuai value investing style. ??||||||||||||||||||
+||||||||||||||||||
+||||||||||||||||||
+||||||||||||||||||
+||||||||||||||||||
+||||||||||||||||||
+||||||||||||||||||
+||||||||||||||||||
+||||||||||||||||||
+||||||||||||||||||
+||||||||||||||||||
+||||||||||||||||||
+||||||||||||||||||
+||||||||||||||||||
+||||||||||||||||||
+||||||||||||||||||
+||||||||||||||||||
+||||||||||||||||||
+||||||||||||||||||
+||||||||||||||||||
+||||||||||||||||||
+||||||||||||||||||
+||||||||||||||||||
+||||||||||||||||||
+||||||||||||||||||
+||||||||||||||||||
+||||||||||||||||||
+||||||||||||||||||
+||||||||||||||||||
+||||||||||||||||||
+||||||||||||||||||
+||||||||||||||||||
+||||||||||||||||||
+||||||||||||||||||
+||||||||||||||||||
+||||||||||||||||||
+||||||||||||||||||
+||||||||||||||||||
+||||||||||||||||||
+||||||||||||||||||
+||||||||||||||||||
+||||||||||||||||||
+||||||||||||||||||
+||||||||||||||||||
+||||||||||||||||||
+||||||||||||||||||
+||||||||||||||||||
+||||||||||||||||||
+||||||||||||||||||
+||||||||||||||||||
+||||||||||||||||||
+||||||||||||||||||
+||||||||||||||||||
+||||||||||||||||||
+||||||||||||||||||
+||||||||||||||||||
+||||||||||||||||||
+||||||||||||||||||
+||||||||||||||||||
+||||||||||||||||||
+||||||||||||||||||
+||||||||||||||||||
+||||||||||||||||||
+||||||||||||||||||
+||||||||||||||||||
+||||||||||||||||||
+||||||||||||||||||
+||||||||||||||||||
+||||||||||||||||||
+||||||||||||||||||
+||||||||||||||||||
+||||||||||||||||||
+||||||||||||||||||
+||||||||||||||||||
+||||||||||||||||||
+||||||||||||||||||
+
+-------Sheet DataInput-------
+DATA INPUT - STOCK FINANCIAL ANALYSIS|||||||||||||||||||||||||
+?? GREEN CELLS ONLY = Input required |BLUE & ORANGE CELLS = Auto-calculated|||||||||||||||||||||||||
+|||||||||||||||||||||||||
+A. COMPANY INFORMATION|||||||||||||||||||||||||
+Date Update|||||||||||||||||||||||||
+Ticker|ERAA||||||||||||||||||||||||
+Nama Perusahaan Company Name|Erajaya Swasembada Tbk||||||||||||||||||||||||
+Sektor Sector|Consumer Cyclicals||||||||||||||||||||||||
+Subsektor Subsector|Retailing||||||||||||||||||||||||
+Harga Saham Base Stock Price [Rp]|350||||||||||||||||||||||||
+Risk Free Rate (Yield SBN 10Y)|0.0633||||||||||||||||||||||||
+Latest Data Years|Quarter 2 2026||||||||||||||||||||||||
+Jumlah Saham Beredar Shares Outstanding [Juta]|15950||||||||||||||||||||||||
+Market Cap [M Rp]|5582.5||||||||||||||||||||||||
+Data Years |7||||||||||||||||||||||||
+Data Years (Manual)|||||||||||||||||||||||||
+|||||||||||||||||||||||||
+B. LAPORAN LABA RUGI HISTORICAL FINANCIAL DATA|||||||||||||||||||||||||
+Item|2026 (Proyeksi)|2025|2024|2023|2022|2021|2020|2019|2018|2017|2016|2015|||||||||||||
+Pendapatan Revenue [M Rp]|85790.729066|76606.896012|65279.684667|60139.405675|49471.483883|43466.976696|34113.454845|32944.902671|0|0|0|0|||||||||||||
+Harga Pokok Penjualan HPP COGS [M Rp]|-76199.153282|-68255.581107|-58003.956179|-53691.636505|-44109.940328|-38661.089888|-30703.442235|0|0|0|0|0|||||||||||||
+Beban Bunga Keuangan Interest Expenses [M Rp]|617.905234|641.890583|649.630996|601.108099|289.668936|184.367208|180.617827|312.703038|0|0|0|0|||||||||||||
+Laba Bersih Net Income* [M Rp]|1568.043984|1195.971727|1032.546782|826.049833|1012.872953|1012.375634|612.004625|295.066452|0|0|0|0|||||||||||||
+Arus Kas Operating Cash Flow* OCF [M Rp]|3728.040786|225.153234|2239.318649|882.342638|436.290597|21.739143|2852.705359|2430.790765|0|0|0|0|||||||||||||
+Harga Saham Stock Price Closing Price Year-End [Rp]|350|408|404|426|392|600|440||||||||||||||||||
+DPS (Dividend Per Share) [Rp]|21.4798000609161|19|17|19|22.8|13.8|0|0|0|0|0|0|||||||||||||
+Laba Kotor Gross Profit [M Rp]|9591.575784|8351.31490499999|7275.728488|6447.76917|5361.543555|4805.886808|3410.01261|32944.902671|0|0|0|0|||||||||||||
+DPR (Dividend Payout Ratio) [%]|0.218490561787463|0.253392277725642|0.262603113705699|0.366866486613042|0.359038119166758|0.217419298339217|0|0|0|0|0|0|||||||||||||
+Hasil Dividen Dividend Yield [%]|6.13708573169032E-02|4.65686274509804E-02|4.20792079207921E-02|4.46009389671361E-02|5.81632653061225E-02|0.023|0|0|0|0|0|0|||||||||||||
+EPS (Earning Per Share) [Rp]|98.3099676489028|74.9825534169279|64.7364753605016|51.7899581818182|63.5030064576803|63.4718265830721|38.3701959247649|18.4994640752351|0|0|0|0|||||||||||||
+PER(Price-to-Earnings Ratio) [x]|3.56016799079789|5.44126575326642|6.24068576100603|8.22553280511347|6.1729360839197|9.45301297127031|11.4672336013801||||||||||||||||||
+|||||||||||||||||||||||||
+C. NERACAALANCE SHEET (Latest Year)|||||||||||||||||||||||||
+Item|2026 (Proyeksi)|2025|2024|2023|2022|2021|2020|2019|2018|2017|2016|2015|||||||||||||
+Modal Kerja Bersih Net Working Capital (NWC) [M Rp]|3822.527013|2737.67521|2432.116322|2634.240061|2195.849403|2344.894866|2404.04455|-4615.531135|0|0|0|0|||||||||||||
+Intensitas Modal Kerja NWC / Revenue [%]|4.45564113350672E-02|3.57366680092503E-02|3.72568638222831E-02|4.38022296933848E-02|4.43861641222079E-02|5.39465829979334E-02|7.04720340089611E-02|-0.140098490534102|||||||||||||||||
+Aset Lancar Current Assets [M Rp]|18275.714982|19894.202849|13308.097366|12964.55647|11217.075937|6624.347489|7546.995255|0|0|0|0|0|||||||||||||
+Liabilitas Lancar Current Liabilities [M Rp]|14453.187969|17156.527639|10875.981044|10330.316409|9021.226534|4279.452623|5142.950705|4615.531135|0|0|0|0|||||||||||||
+Total Liabilitas Total Liabilities [M Rp]|18404.217603|18679.23513|12716.995986|12316.678087|9855.354942|4909.863586|5523.372852|4768.986646|0|0|0|0|||||||||||||
+Total Ekuitas Total Equity* [M Rp]|10944.590014|10177.297005|9057.394273|8130.773615|7202.862872|6462.36167|5687.99619|4978.716552|0|0|0|0|||||||||||||
+Jumlah Saham Beredar Shares Outstanding [Juta]|15950|15950|15950|15950|15950|15950|15950|15950|15950|15950|15950|15950|||||||||||||
+BVPS (Book Value per Share) [Rp]|686.181192100314|638.075047335423|567.861709905956|509.766370846395|451.590148714734|405.163741065831|356.614181191223|312.145238369906|0|0|0|0|||||||||||||
+PBV (Price to Book Value) [x]|0.510069357815965|0.63942321785469|0.711440819045374|0.835676938226991|0.868043736373939|1.48088276216828|1.23382642420511||||||||||||||||||
+*Masukkan minus jika hasil datanya minus|||||||||||||||||||||||||
+|||||||||||||||||||||||||
+|||||||||||||||||||||||||
+PANDUAN:|||||||||||||||||||||||||
+Template|Stockbit||||||||||||||||||||||||
+Pendapatan Revenue [M Rp]|Financials -> Income Statement -> Total Revenue||||||||||||||||||||||||
+Harga Pokok Penjualan HPP COGS [M Rp]|Financials -> Income Statement -> Total Cost of Goods Sold||||||||||||||||||||||||
+Beban Bunga Keuangan Interest Expenses [M Rp]|Financials -> Income Statement -> Non-Operating Income/Expense -> Finance Cost ||||||||||||||||||||||||
+Laba Bersih Net Income [M Rp]|Financials -> Income Statement -> Net Income Attributable To -> Owners Of The Company||||||||||||||||||||||||
+Arus Kas Operating Cash Flow OCF [M Rp]|Financials -> Cash Flow -> Cash From Operating||||||||||||||||||||||||
+Harga Saham Stock Price Closing Price Year-End [Rp]|Investing.com [ERAA] Historical Data||Cek di google kemudian pilih rentang waktu "Monthly"||||||||||||||||||||||
+DPS (Dividend Per Share) [Rp]|https://www.pasardana.id/stock/dividendyield/ERAA||||||||||||||||||||||||
+|||||||||||||||||||||||||
+Piutang Usaha Account Receivable (AR) [M Rp]|Financials -> Balance Sheet -> Current Assets -> Trade Receivables||||||||||||||||||||||||
+Persediaan Inventory [M Rp]|Financials -> Balance Sheet -> Current Assets -> Inventories||||||||||||||||||||||||
+Aset Lancar Current Assets [M Rp]|Financials -> Balance Sheet -> Total Current Assets||||||||||||||||||||||||
+Liabilitas Lancar Current Liabilities [M Rp]|Financials -> Balance Sheet -> Liabilities -> Current Liabilities||||||||||||||||||||||||
+Total Liabilitas Total Liabilities [M Rp]|Financials -> Balance Sheet -> Total Liabilities||||||||||||||||||||||||
+Total Ekuitas Total Equity [M Rp]|Financials -> Balance Sheet -> Total Equity||||||||||||||||||||||||
+Jumlah Saham Beredar Shares Outstanding [Juta]|Financials -> Balance Sheet -> Share Outstanding||||||||||||||||||||||||
+|||||||||||||||||||||||||
+|||||||||||||||||||||||||
+|||||||||||||||||||||||||
+PANDUAN KHUSUS: SEKTOR PERBANKAN (BANKS)|||||||||||||||||||||||||
+Template|Stockbit||||||||||||||||||||||||
+Pendapatan Revenue [M Rp]|Financials -> Income Statement -> Total Revenue||||||||||||||||||||||||
+Harga Pokok Penjualan HPP COGS [M Rp]|Financials -> Income Statement -> Total Cost of Goods Sold||||||||||||||||||||||||
+Bebanunga Keuangan Interest Expenses [M Rp]|KOSONGKAN (Isi 0). Karena beban bunga Bank sudah masuk di HPP/COGS||||||||||||||||||||||||
+Laba Bersih Net Income [M Rp]|Financials -> Income Statement -> Net Income Attributable To -> Owners Of The Company||||||||||||||||||||||||
+Arus Kas Operating Cash Flow OCF [M Rp]|Financials -> Cash Flow -> Cash From Operating||||||||||||||||||||||||
+Harga Saham Stock Price Closing Price Year-End [Rp]|Investing.com [ERAA] Historical Data||Cek di google kemudian pilih rentang waktu "Monthly"||||||||||||||||||||||
+DPS (Dividend Per Share) [Rp]|https://www.pasardana.id/stock/dividendyield/ERAA||Cek di google sisa nya cari di stockbit||||||||||||||||||||||
+|||||||||||||||||||||||||
+Piutang Usaha Account Receivable (AR) [M Rp]|Financials -> Balance Sheet -> Assets -> Loans -> Total Loans||||||||||||||||||||||||
+Persediaan Inventory [M Rp]|Financials -> Balance Sheet -> Assets -> SUM(Cash + Current Accounts + Placements with BI)||||||||||||||||||||||||
+Aset Lancar Current Assets [M Rp]|Financials -> Balance Sheet -> Total Assets||||||||||||||||||||||||
+Liabilitas Lancar Current Liabilities [M Rp]|Financials -> Balance Sheet -> Liabilities -> Deposits From Customers||||||||||||||||||||||||
+Total Liabilitas Total Liabilities [M Rp]|Financials -> Balance Sheet -> Total Liabilities||||||||||||||||||||||||
+Total Ekuitas Total Equity [M Rp]|Financials -> Balance Sheet -> Total Equity||||||||||||||||||||||||
+Jumlah Saham Beredar Shares Outstanding [Juta]|Financials -> Balance Sheet -> Share Outstanding||||||||||||||||||||||||
+|||||||||||||||||||||||||
+|||||||||||||||||||||||||
+PANDUAN KHUSUS: SEKTOR PERBANKAN SYARIAH (BANKS)|||||||||||||||||||||||||
+Template|Stockbit||||||||||||||||||||||||
+Pendapatan Revenue [M Rp]|Financials -> Income Statement -> Total Revenue||||||||||||||||||||||||
+Harga Pokok Penjualan HPP COGS [M Rp]|Financials -> Income Statement -> Total Cost of Goods Sold||||||||||||||||||||||||
+Beban Bunga Keuangan Interest Expenses [M Rp]|KOSONGKAN (Isi 0). Karena beban bunga bank sudah masuk di HPP/COGS||||||||||||||||||||||||
+Laba Bersih Net Income [M Rp]|Financials -> Income Statement -> Net Income Attributable To -> Owners Of The Company||||||||||||||||||||||||
+Arus Kas Operating Cash Flow OCF [M Rp]|Financials -> Cash Flow -> Cash From Operating||||||||||||||||||||||||
+Harga Saham Stock Price Closing Price Year-End [Rp]|Investing.com [ERAA] Historical Data||Cek di google kemudian pilih rentang waktu "Monthly"||||||||||||||||||||||
+DPS (Dividend Per Share) [Rp]|https://www.pasardana.id/stock/dividendyield/ERAA||||||||||||||||||||||||
+|||||||||||||||||||||||||
+Piutang Usaha Account Receivable (AR) [M Rp]|Financials -> Balance Sheet -> Assets -> Others||||||||||||||||||||||||
+Persediaan Inventory [M Rp]|Financials -> Balance Sheet -> Assets -> SUM(Cash And Cash Equivalents + Placements with BI)||||||||||||||||||||||||
+Aset Lancar Current Assets [M Rp]|Financials -> Balance Sheet -> Total Assets||||||||||||||||||||||||
+Liabilitas Lancar Current Liabilities [M Rp]|Financials -> Balance Sheet -> Liabilities -> Temporary Syirkah Funds||||||||||||||||||||||||
+Total Liabilitas Total Liabilities [M Rp]|Financials -> Balance Sheet -> Total Liabilities||||||||||||||||||||||||
+Total Ekuitas Total Equity [M Rp]|Financials -> Balance Sheet -> Total Equity||||||||||||||||||||||||
+Jumlah Saham Beredar Shares Outstanding [Juta]|Financials -> Balance Sheet -> Share Outstanding||||||||||||||||||||||||
+
+-------Sheet DataInputProyeksi-------
+DATA INPUT - PROYEKSI QUARTERLY|||||||||||||
+|||||||||||||
+A. INFORMATION|||||||||||||
+Quarter|Q2||||||||||||
+Base Years|Quarter 2 2026||||||||||||
+Avg DPR (Dividend Payout Ratio) (7Y) [est %]|0.218490561787463||||||||||||
+Manual Dividend Payout Ratio? [est %]|||||||||||||
+Shared Issue (in Million/Juta)|15950||||||||||||   
+|||||||||||||
+B. LAPORAN LABA RUGI QUARTER QUARTER HISTORICAL FINANCIAL DATA|||||||||||||
+Item|Q1|Q2|Q3|Q4|2026 (Proyeksi)||||||||
+Pendapatan Revenue [M Rp]|22412.935967|20482.428566|0|0|85790.729066||||||||
+Harga Pokok Penjualan HPP COGS [M Rp]|-20024.78889|-18074.787751|0|0|-76199.153282||||||||
+Beban Bunga Interest Expenses|151.039281|157.913336|0|0|617.905234||||||||
+Laba Bersih Net Income [M Rp]|452.714205|331.307787|0|0|1568.043984||||||||
+Arus Kas Operating Cash Flow OCF [M Rp]|-794.586828|2658.607221|0|0|3728.040786||||||||
+Potential DPS Dividend Per Share|||||21.4798000609161||||||||
+|||||||||||||
+C. NERACA BALANCE SHEET QUARTER|||||||||||||
+Item|Q1|Q2|Q3|Q4|2026 (Proyeksi)||||||||
+Aset Lancar Total Current Assets|21112.630014|18275.714982|0|0|18275.714982||||||||
+Liabilitas Lancar Current Liabilities|17059.032329|14453.187969|0|0|14453.187969||||||||
+Total Liabilitas Total Liabilities|20633.911952|18404.217603|0|0|18404.217603||||||||
+Total Ekuitas Total Equity [M Rp]|10951.849977|10944.590014|0|0|10944.590014||||||||
+Jumlah Saham Beredar Shares Outstanding [Juta]|||||15950||||||||
+|||||||||||||
+|||||||||||||
+|||||||||||||
+|||||||||||||
+PANDUAN:|||||||||||||
+Template|Stockbit||||||||||||
+Pendapatan Revenue [M Rp]|Financials -> Income Statement -> Total Revenue||||||||||||
+Harga Pokok Penjualan HPP COGS [M Rp]|Financials -> Income Statement -> Total Cost of Goods Sold||||||||||||
+Beban Bunga Keuangan Interest Expenses [M Rp]|Financials -> Income Statement -> Non-Operating Income/Expense -> Finance Cost ||||||||||||
+Laba Bersih Net Income [M Rp]|Financials -> Income Statement -> Net Income Attributable To -> Owners Of The Company||||||||||||
+Arus Kas Operating Cash Flow OCF [M Rp]|Financials -> Cash Flow -> Cash From Operating||||||||||||
+|||||||||||||
+Piutang Usaha Account Receivable (AR) [M Rp]|Financials -> Balance Sheet -> Current Assets -> Trade Receivables||||||||||||
+Persediaan Inventory [M Rp]|Financials -> Balance Sheet -> Current Assets -> Inventories||||||||||||
+Aset Lancar Current Assets [M Rp]|Financials -> Balance Sheet -> Total Current Assets||||||||||||
+Liabilitas Lancar Current Liabilities [M Rp]|Financials -> Balance Sheet -> Liabilities -> Current Liabilities||||||||||||
+Total Liabilitas Total Liabilities [M Rp]|Financials -> Balance Sheet -> Total Liabilities||||||||||||
+Total Ekuitas Total Equity [M Rp]|Financials -> Balance Sheet -> Total Equity||||||||||||
+Jumlah Saham Beredar Shares Outstanding [Juta]|Financials -> Balance Sheet -> Share Outstanding||||||||||||
+|||||||||||||
+C. THESIS VALIDATOR — YoY Performance (Each Quarter vs Same Quarter Prior Year)|||||||||||||
+Item|Q3 2025 vs Q3 2024|Q4 2025 vs Q4 2024|Q1 2026 vs Q1 2025|Q2 2026 vs Q2 2025|Current Status||||||||
+Revenue YoY (%)|0.117934950977675|0.454094707189979|0.411173511194881|6.88133414551366E-02|? Naik +6.9%||||||||
+Gross Margin (% absolut)|0.108705732022978|0.103334009814275|0.106552175070514|0.117546647715232|? GM Naik: 11.8% vs 10.9%||||||||
+Net Income YoY (%)|-0.188031065742525|0.700192727248006|1.22734059066392|-9.24150078068966E-02|? Turun -9.2%||||||||
+OCF / NI Ratio (x)|19.9834034443117|1.93548384542211|-1.75516212927315|8.02458416409029|? Kuat — OCF/NI = 8.02x||||||||
+Interest Expense (M Rp)|188.717424|167.310143|151.039281|157.913336|?? Beban Bunga Turun -16.3%||||||||
+|||||?? MIXED — Revenue tumbuh tapi NI turun||||||||
+|||||||||||||
+|||||||||||||
+|||||||||||||
+|||||||||||||
+PANDUAN KHUSUS: SEKTOR PERBANKAN (BANKS)|||||||||||||
+Template|Stockbit||||||||||||
+Pendapatan Revenue [M Rp]|Financials -> Income Statement -> Total Revenue||||||||||||
+Harga Pokok Penjualan HPP COGS [M Rp]|Financials -> Income Statement -> Total Cost of Goods Sold||||||||||||
+Beban Bunga Keuangan Interest Expenses [M Rp]|KOSONGKAN (Isi 0). Karena beban bunga bank sudah masuk di HPP/COGS||||||||||||
+Laba Bersih Net Income [M Rp]|Financials -> Income Statement -> Net Income Attributable To -> Owners Of The Company||||||||||||
+Arus Kas Operating Cash Flow OCF [M Rp]|Financials -> Cash Flow -> Cash From Operating||||||||||||
+|||||||||||||
+Piutang Usaha Account Receivable (AR) [M Rp]|Financials -> Balance Sheet -> Assets -> Loans -> Total Loans||||||||||||
+Persediaan Inventory [M Rp]|Financials -> Balance Sheet -> Assets -> SUM(Cash + Current Accounts + Placements with BI)||||||||||||
+Aset Lancar Current Assets [M Rp]|Financials -> Balance Sheet -> Total Assets||||||||||||
+Liabilitas Lancar Current Liabilities [M Rp]|Financials -> Balance Sheet -> Liabilities -> Deposits From Customers||||||||||||
+Total Liabilitas Total Liabilities [M Rp]|Financials -> Balance Sheet -> Total Liabilities||||||||||||
+Total Ekuitas Total Equity [M Rp]|Financials -> Balance Sheet -> Total Equity||||||||||||
+Jumlah Saham Beredar Shares Outstanding [Juta]|Financials -> Balance Sheet -> Share Outstanding||||||||||||
+|||||||||||||
+|||||||||||||
+PANDUAN KHUSUS: SEKTOR PERBANKAN SYARIAH (BANKS)|||||||||||||
+Template|Stockbit||||||||||||
+Pendapatan Revenue [M Rp]|Financials -> Income Statement -> Total Revenue||||||||||||
+Harga Pokok Penjualan HPP COGS [M Rp]|Financials -> Income Statement -> Total Cost of Goods Sold||||||||||||
+Beban Bunga Keuangan Interest Expenses [M Rp]|KOSONGKAN (Isi 0). Karena beban bunga bank sudah masuk di HPP/COGS||||||||||||
+Laba Bersih Net Income [M Rp]|Financials -> Income Statement -> Net Income Attributable To -> Owners Of The Company||||||||||||
+Arus Kas Operating Cash Flow OCF [M Rp]|Financials -> Cash Flow -> Cash From Operating||||||||||||
+|||||||||||||
+Piutang Usaha Account Receivable (AR) [M Rp]|Financials -> Balance Sheet -> Assets -> Others||||||||||||
+Persediaan Inventory [M Rp]|Financials -> Balance Sheet -> Assets -> SUM(Cash And Cash Equivalents + Placements with BI)||||||||||||
+Aset Lancar Current Assets [M Rp]|Financials -> Balance Sheet -> Total Assets||||||||||||
+Liabilitas Lancar Current Liabilities [M Rp]|Financials -> Balance Sheet -> Liabilities -> Temporary Syirkah Funds||||||||||||
+Total Liabilitas Total Liabilities [M Rp]|Financials -> Balance Sheet -> Total Liabilities||||||||||||
+Total Ekuitas Total Equity [M Rp]|Financials -> Balance Sheet -> Total Equity||||||||||||
+Jumlah Saham Beredar Shares Outstanding [Juta]|Financials -> Balance Sheet -> Share Outstanding||||||||||||
+
+-------Sheet MetricsClassification-------
+AUTOMATIC STOCK CLASSIFICATION ENGINE|||||||||
+Saham|ERAA||||||||
+GROWTH & MOMENTUM|||||||||
+Years Available|7||?? KINERJA PERTUMBUHAN
+------------------------------------------------
+• Status Bisnis : TUMBUH CEPAT (15.1%/thn)
+• Kondisi Sesaat: Makin Kencang ?? | Thn Ini: 17.6%
+• Dinamika Laba : Laba tumbuh lebih cepat dari omzet (EPS 26.3%)
+------------------------------------------------
+?? Cek Forensic : ?? PERLU CEK: Asset Growth Gap -32.1% menunjukkan aset lancar tumbuh jauh lebih cepat dari revenue. OCF hanya 19% dari laba, sehingga kualitas laba perlu diperiksa.||||||
+Comparison Period (Years)|5||||||||
+Kinerja Pendapatan (Revenue Trajectory)|||||||||
+Revenue CAGR (Historical) [%]|0.151012233362676||||||||
+Revenue CAGR (5Y) [%]|0.175623969422475||||||||
+Revenue Momentum|Accelerating ??||||||||
+Revenue Volatility (CoV) [%]|0.293221131704517||||||||
+Revenue Growth (YoY) [%]|0.173518168826666||||||||
+Kinerja Laba Per Saham (Earnings Power)|||||||||
+EPS Growth/Recovery (Historical) [%]|0.262699997860723||||||||
+EPS Growth / Recovery (5Y) [%]|0.143386978048671||||||||
+EPS Momentum|Slowing ??||||||||
+Kualitas Laba & Forensik (Forensic Check)|||||||||
+Current Asset Growth (YoY) [%]|0.494894597016281||||||||
+Asset Growth Gap (YoY) [%]|-0.321376428189615||||||||
+NWC / Revenue (Latest) [%]|3.57366680092503E-02||||||||
+NWC Intensity Change (YoY) [ppt]|-1.52019581303283E-03||||||||
+?? KINERJA PERTUMBUHAN
+------------------------------------------------
+• Status Bisnis : TUMBUH CEPAT (15.1%/thn)
+• Kondisi Sesaat: Makin Kencang ?? | Thn Ini: 17.6%
+• Dinamika Laba : Laba tumbuh lebih cepat dari omzet (EPS 26.3%)
+------------------------------------------------
+?? Cek Forensic : ?? PERLU CEK: Asset Growth Gap -32.1% menunjukkan aset lancar tumbuh jauh lebih cepat dari revenue. OCF hanya 19% dari laba, sehingga kualitas laba perlu diperiksa.|||||||||
+VALUATION (CURRENT vs HISTORY)|||||||||
+Harga & Fundamental Dasar (Basic Share Data)|||?? CEK HARGA (VALUASI)
+------------------------------------------------
+??? Rasio Laba (PER) : 3.6x (Avg 7.8x) | DISKON GEDE (>25%)
+??? Rasio Aset (PBV) : 0.5x | Below Book Value
+??? Posisi Historis  : PBV berada di bawah seluruh historical PBV valid. (Percentile 0%)
+??? Dividen Yield    : Gede (6.1%)
+------------------------------------------------
+? VERDICT: Valuasi terlihat menarik. Lanjutkan ke consensus & historical validation.||||||
+Stock Price (Current) [Rp]|350||||||||
+EPS Annualized (Proj) [Rp]|98.3099676489028||||||||
+BVPS Q2 (Proj) [Rp]|686.181192100314||||||||
+Rasio Valuasi Utama (Valuation Multiples)|||||||||
+PER (Proj) [x]|3.56016799079789||||||||
+PBV (Proj) [x]|0.510069357815965||||||||
+PEG (Growth Adj) [x]|0.135522193368475||||||||
+Dividen (Income Analysis)|||||||||
+Dividend Yield Avg (Historical) [%]|3.57353399408385E-02||||||||
+Dividend Yield (Proj) [%]|6.13708573169032E-02||||||||
+Payout Ratio Avg (Historical) [x]|0.208474185078623||||||||
+Konteks Historis (Historical Comparison / Mean Reversion)|||||||||
+PER Avg (Historical) [x]|7.83344449599266||||||||
+PBV Avg (Historical) [x]|0.961548982979064||||||||
+PBV Avg (5Y) [x]|0.907093494733854||||||||
+PBV Percentile|0||||||||
+?? CEK HARGA (VALUASI)
+------------------------------------------------
+??? Rasio Laba (PER) : 3.6x (Avg 7.8x) | DISKON GEDE (>25%)
+??? Rasio Aset (PBV) : 0.5x | Below Book Value
+??? Posisi Historis  : PBV berada di bawah seluruh historical PBV valid. (Percentile 0%)
+??? Dividen Yield    : Gede (6.1%)
+------------------------------------------------
+? VERDICT: Valuasi terlihat menarik. Lanjutkan ke consensus & historical validation.|||||||||
+QUALITY REVENUE & MANAGEMENT|||||||||
+Profitabilitas & Efisiensi Bisnis (Profitability & Efficiency)|||?? KUALITAS BISNIS
+------------------------------------------------
+1?? Kemampuan Putar Modal (ROE)
+   • Status : LUMAYAN (10-15%) | Tren: Naik ??
+   • Posisi : Rata-rata 11.4% vs Sekarang 14.3%
+
+2?? Tebal Margin Laba (NPM)
+   • Status : TIPIS (Kerja Rodi) (1.7%)
+------------------------------------------------
+?? VERDICT: BISNIS LEMAH/BIASA AJA. Susah cari untung.||||||
+ROE Avg (Historical) [%]|0.113892726774579||||||||
+ROE (Proj) [%]|0.143271148758812||||||||
+ROE Trend|Improving ??||||||||
+GPM Range [ppt]|90.0039071812165||||||||
+NPM Avg (Historical) [%]|1.65465504444245E-02||||||||
+Konsistensi Kualitas Bisnis (Quality Consistency of Business)|||||||||
+NPM vs Historical Avg [ppt]|-9.34747992427791E-04||||||||
+ROE Stability (StdDev)|2.86139817392162E-02||||||||
+Equity Growth Consistency|Consistent ??||||||||
+?? KUALITAS BISNIS
+------------------------------------------------
+1?? Kemampuan Putar Modal (ROE)
+   • Status : LUMAYAN (10-15%) | Tren: Naik ??
+   • Posisi : Rata-rata 11.4% vs Sekarang 14.3%
+
+2?? Tebal Margin Laba (NPM)
+   • Status : TIPIS (Kerja Rodi) (1.7%)
+------------------------------------------------
+?? VERDICT: BISNIS LEMAH/BIASA AJA. Susah cari untung.|||||||||
+LIQUIDITY & CASH FLOW LATEST ANNUAL|||||||||
+Posisi Neraca & Arus Kas (Balance Sheet & Cash Flow)|||?? CEK DOMPET & HUTANG
+------------------------------------------------
+?? Uang Kas     : CUKUP (Rasio 1.2x)
+?? Porsi Hutang : Kebanyakan Utang ?? (94% dari Aset)
+?? Arus Uang    : LEMAH (Cuma Angka di Kertas) ?? (19% dari Laba)
+------------------------------------------------
+?? KONDISI: KEUANGAN SAKIT (Perlu Monitor)||||||
+Current Assets [M Rp]|19894.202849||||||||
+Current Liabilities [M Rp]|17156.527639||||||||
+Total Liabilities [M Rp]|18679.23513||||||||
+Interest Expense [M Rp]|641.890583||||||||
+Operating Cash Flow [M Rp]|225.153234||||||||
+Net Income [M Rp]|1195.971727||||||||
+?? CEK DOMPET & HUTANG
+------------------------------------------------
+?? Uang Kas     : CUKUP (Rasio 1.2x)
+?? Porsi Hutang : Kebanyakan Utang ?? (94% dari Aset)
+?? Arus Uang    : LEMAH (Cuma Angka di Kertas) ?? (19% dari Laba)
+------------------------------------------------
+?? KONDISI: KEUANGAN SAKIT (Perlu Monitor)|||||||||
+RED FLAGS (FORENSIC CHECK)|||||||||
+Analisis Kualitas Laba Jangka Panjang (5Y Earnings Quality)|||||||||
+Revenue Growth (5Y) [%]|0.175623969422475||||||||
+Current Asset Growth (5Y) [%]|0.213921191476568||||||||
+Asset Growth Gap (5Y) [%]|-3.82972220540923E-02||||||||
+NWC Intensity (Start)|7.04720340089611E-02||||||||
+NWC Intensity (Latest)|3.57366680092503E-02||||||||
+Cash Flow Check|OK||||||||
+|||||||||
+CLASSIFICATION RULES|||?? SCORECARD METRICS:
+   Growth    : ????? (15.1%)
+   Quality   : ????? (ROE 11.4%)
+   Valuation : ????? (PER 3.6x)
+   Stability : ????? (CoV 29%)
+   Forensic  : ????? ??
+   TOTAL SCORE: 15/25 ?????
+
+?? RINGKASAN EKSEKUTIF:
+--------------------------------------------
+?? PERMAINAN SIKLUS. Laba perusahaan ini naik turun drastis mengikuti harga komoditas/ekonomi. ? Strategi: High Risk. BELI saat Kinerja JELEK (Valuasi Murah), JUAL saat Berita BAGUS (Valuasi Mahal). Jangan hold selamanya!||||||
+SLOW GROWER|False||||||||
+STALWART|True||||||||
+FAST GROWER|False||||||||
+CYCLICAL|True||||||||
+ASSET PLAY|True||||||||
+TURN AROUND|False||||||||
+|||||||||
+FINAL CLASSIFICATION|||||||||
+?? System Rec.|CYCLICAL||||||||
+?? Manual Override|||||||||
+?? FINAL TYPE|CYCLICAL||||||||
+Confidence Level|0.7||||||||
+|||||||||
+?? SCORECARD METRICS:
+   Growth    : ????? (15.1%)
+   Quality   : ????? (ROE 11.4%)
+   Valuation : ????? (PER 3.6x)
+   Stability : ????? (CoV 29%)
+   Forensic  : ????? ??
+   TOTAL SCORE: 15/25 ?????
+
+?? RINGKASAN EKSEKUTIF:
+--------------------------------------------
+?? PERMAINAN SIKLUS. Laba perusahaan ini naik turun drastis mengikuti harga komoditas/ekonomi. ? Strategi: High Risk. BELI saat Kinerja JELEK (Valuasi Murah), JUAL saat Berita BAGUS (Valuasi Mahal). Jangan hold selamanya!|||||||||
+|||||||||
+|||||||||
+DESCRIPTION:|||||||||
+SLOW GROWER (Si Lambat) ~ Perusahaan mapan di industri jenuh, laba susah naik. Strategi: Beli hanya jika Dividend Yield tinggi (Persentasenya di atas bunga deposito/obligasi) dan target MoS 30% - 50%. Karena laba tidak tumbuh, keuntungan murni dari beli di harga diskon dan rutin terima dividen. Jangan sentuh jika harga wajar (Fair Value)|||||||||
+|||||||||
+|||||||||
+|||||||||
+|||||||||
+|||||||||
+|||||||||
+STALWART (Si Tangguh) ~ Perusahaan Raksasa (Blue Chip) yang tahan banting saat krisis dengan kualitas laba premium. Strategi: Buy and Hold jangka panjang. Target MoS: 10% - 20%. Barang kualitas super jarang diskon besar. Dapat diskon 15% saja sudah kesempatan emas ("Wonderful Company at a Fair Price").|||||||||
+|||||||||
+|||||||||
+|||||||||
+|||||||||
+|||||||||
+FAST GROWER (Si Pelari Cepat) ~ Perusahaan agresif dengan laba tumbuh >20% per tahun. Risiko utama valuasi mahal. Strategi: Gunakan PEG Ratio < 1.0x (Artinya harga saham masih "tertinggal" dibanding kecepatan lari pertumbuhan labanya, alias masih murah). Target MoS: Keamanan ada pada keberlanjutan pertumbuhannya (Sustainability Growth).|||||||||
+|||||||||
+|||||||||
+|||||||||
+|||||||||
+|||||||||
+|||||||||
+CYCLICAL (Si Siklus) ~ Laba naik-turun drastis mengikuti harga komoditas/ekonomi. Strategi: Masuk saat "Darah di Jalanan" (Market panik, berita jelek semua, harga komoditas hancur). Target MoS: 30% - 40% dari Laba Rata-Rata (Mid-Cycle). Tanda Bottom Cycle: Saat Laba perusahaan rugi/anjlok parah, TAPI harga saham sudah sideways/tidak mau turun lagi (Tanda badai sudah lewat).|||||||||
+|||||||||
+|||||||||
+|||||||||
+|||||||||
+|||||||||
+|||||||||
+|||||||||
+ASSET PLAY (Harta Karun) ~ Saham salah harga! Nilai asetnya (Tanah/Uang Kas/Properti) jika dijual eceran jauh lebih mahal dari harga sahamnya di pasar. Strategi: Deep Value Investing (Beli Rp500 untuk uang Rp1.000). Target MoS: 40% - 60%. Wajib diskon besar sebagai kompensasi waktu menunggu pasar sadar ("Value Trap Risk").|||||||||
+|||||||||
+|||||||||
+|||||||||
+|||||||||
+|||||||||
+|||||||||
+TURNAROUND (Bangkit dari Kubur) ~ Perusahaan sakit (rugi/skandal) yang mencoba bangkit. Strategi: High Risk High Reward (Spekulasi Terukur dengan data perbaikan, bukan judi). Target MoS: Tidak Relevan. Fokus pada Upside > 100% (Potensi harga balik ke level normal masa lalu jika perusahaan "sembuh"). Jika gagal sembuh, uang bisa hilang total.|||||||||
+|||||||||
+|||||||||
+|||||||||
+|||||||||
+|||||||||
+|||||||||
+
+-------Sheet FinancialHealth-------
+ANALISIS KESEHATAN KEUANGAN||||
+||||
+Analisis ini sebagai "Medical Checkup" sebelum membeli saham||||
+Agar tidak terjebak saham "Murah tapi Penyakitan" (Value Trap)||||
+"Murah" (Valuasi rendah) karena perusahaannya gak sehat||||
+||||
+GENERAL CHECKUP (THE BIG 4)||||
+Debt to Equity Ratio (DER) [x]|1.70670944330542||?? DER Tinggi (1.71x) - Risiko di atas batas 0.3x|
+Current Ratio (Liquidity) [x]|1.15957047181137||?? CR Seret (1.16x) - Aset lancar tipis (Target >2.0x)|
+Interest Coverage Ratio (ICR) [x]|0.863201858189591||?? ICR Kritis (0.9x) - Laba mepet (Target >5.0x)|
+Operating Cash Flow Check [M Rp]|225.153234||? Cashflow Positif - Bisnis menghasilkan uang tunai|
+||||
+FORENSIC CHECK (RED FLAGS)||||
+Asset Growth Gap (Revenue vs Current Assets)|-0.321376428189615||?? Current Assets tumbuh jauh lebih cepat dari Revenue (32.1% gap)|
+NWC Intensity Change (YoY)|-1.52019581303283E-03||? NWC Intensity membaik 0.2 ppt - kebutuhan modal kerja relatif turun|
+Check: Debt vs Profit Growth|0.13255505811349||?? DEBT DRIVEN - Hutang tumbuh 13.3% lebih cepat dari Laba|
+Check: Margin Spike (GPM)|-0.126211255241772||? Normal - Margin stabil (-12.6% var)|
+Quality: Cash Flow vs Net Income|Weak||?? Kualitas Laba Buruk - Laba hanya di kertas (OCF < Net Income)|
+Operating Cash Flow [M Rp]|225.153234|||
+Net Income [M Rp]|1195.971727|||
+||||
+FINAL SAFETY GATEKEEPER (RISK FILTER)||||
+??? CLEARANCE STATUS|WARNING||?? HATI-HATI! Periksa lebih lanjut sebelum mengambil keputusan.|
+||||
+OVERALL HEALTH SCORE||||
+TOTAL HEALTH SCORE|0|||
+RISK RATING|?? HIGH RISK|||
+||||
+TREND ANALYSIS (YoY Annual)||||
+Net Income Trend (3Y)|?? NAIK 2 THN (Improving)|||
+EPS Trend (3Y)|?? NAIK 2 THN (Turnaround Signal)|||
+Revenue Short vs Long CAGR|?? ACCELERATING (17.6% > 15.1%)|||
+||||
+||||
+||||
+PANDUAN:||||
+Debt to Equity (DER) ~ Perbandingan antara total hutang dengan modal sendiri. Jika angkanya tinggi (misal > 1x), artinya perusahaan hidup dari hutang. Jika ekonomi sulit, risiko bangkrut tinggi. Semakin kecil semakin bagus (Aman jika di bawah 1x atau di bawah rata-rata industri)||||
+Current Ratio (CR) ~ Kemampuan bayar tagihan. Apakah perusahaan punya cukup uang kas (aset lancar) untuk membayar tagihan tahun ini. Jika di bawah 1x, artinya uang kas kurang untuk bayar hutang jangka pendek. Bisa gagal bayar. Aman jika di atas 1.5x atau 2x||||
+Interest Coverage Ratio (ICR) ~ Kemampuan Bayar Bunga. Berapa kali lipat laba perusahaan bisa dipakai untuk menutup bunga bank. Jika angkanya kecil (< 2x), artinya laba perusahaan habis cuma buat bayar bunga (Kritis!). Di atas 5x dianggap sangat aman||||
+Operating Cash Flow (OCF) ~ Oksigen bisnis. Adalah uang tunai asli yang masuk ke rekening dari hasil jualan. Jika Negatif, artinya perusahaan sedang "bakar duit" untuk operasional. Wajib Positif (+) agar bisnis berkelanjutan||||
+Gap: Sales vs AR (Piutang) ~ Mendeteksi penjualan fiktif. Jika Penjualan naik sedikit tapi Piutang meledak, artinya barang dipaksa keluar tapi belum dibayar. Idealnya kenaikan piutang seirama dengan penjualan. Jika Gap positif besar (>10% atau >20%), artinya Piutang meledak jauh lebih tinggi daripada Sales||||
+Gap: Sales vs Inventory (Stok) ~ Idealnya selisih pertumbuhan di bawah 10%. Stok tidak boleh menumpuk drastis saat penjualan stagnan. Jika Gap positif besar (>10% atau >20%), artinya Inventory naik jauh lebih cepat daripada Sales (Tanda barang usang/susah dijual). Berpotensi kerugian besar di masa depan karena barang harus dibuang/diskon ||||
+Quality: Cash Flow vs Net Income ~ Mendeteksi "Laba Kertas". Membandingkan Laba Bersih dengan Uang Kas (OCF). Jika Laba Bersih besar tapi OCF kecil/minus, artinya perusahaan untung di pembukuan saja tapi aslinya tidak pegang uang tunai. Sehat jika OCF > Net Income||||
+||||
+||||
+||||
+||||
+||||
+||||
+||||
+||||
+||||
+||||
+||||
+||||
+||||
+||||
+||||
+||||
+||||
+||||
+||||
+||||
+||||
+||||
+||||
+||||
+||||
+||||
+||||
+||||
+
+-------Sheet ValuationCurrent-------
+STOCK VALUATION CURRENT||||||||
+||||||||
+1. Peter Lynch Framework (Growth only)||||||||
+PER Fair Value (Bottom)|0|||||||
+PER Fair Value (Top)|0|||||||
+Liquidation Value [Rp]|76.1735247021944|||||||
+Asset Play Target (PBV) [Rp]|343.090596050157|||||||
+Cyclical Target (PBV) [Rp]|686.181192100314|||||||
+||||||||
+?? CYCLICAL METHOD: 
+CYCLICAL ASSET (Focus on Book Value).
+Mengabaikan PER. Fokus membeli di harga dasar aset (PBV 1x) saat siklus bawah.||||||||
+||||||||
+||||||||
+||||||||
+||||||||
+||||||||
+2. Type & Sector Weighted Framework||||||||
+EPS|98.3099676489028|||||||
+BVPS|686.181192100314|||||||
+PE Proj|770.105674980515|||||||
+PBV Proj|659.796827403418|||||||
+Weight PE|1.5|||||||
+Weight PBV|5.5|||||||
+||||||||
+Method Comparison|IV (Ins. Value)|Gap / Potential|Status|Description||||
+Peter Lynch Algo [Adaptive Stock Type]|686.181192100314|0.960517691715182|? UNDERVALUED|?? Metode: PBV (Asset) ? BVPS Rp686 × Target PBV 1.0x = Rp686. Untuk CYCLICAL, yang relevan adalah nilai aset fisik||||
+Type & Sector Weighted [Blended Rule]|683.43443759851|0.952669821710029|? UNDERVALUED|?? Komponen PER: Rp770 × weight 1.5 = Rp1,155. Komponen PBV: Rp660 × weight 5.5 = Rp3,629. Weighted Avg: Total / 7 = Rp683||||
+Mean Reversion PBV [Asset]|433.354663763162|0.238156182180462|? UNDERVALUED|?? BVPS Rp686 × PBV Hist. Avg 0.96x = Rp433. Harga wajar berdasarkan pembalikan nilai ke rata-rata aset (mean reversion)||||
+Dividend Discount Model [Cash Flow]|268.175174830165|-0.233785214770956|? OVERVALUED|?? DPS Rp21 / (12.3% - 4.0%) = Rp268. Nilai tunai masa depan dari dividen yang didiskon ke hari ini||||
+Discounted Earnings Model [Growth]|947.483017791499|1.70709433654714|? UNDERVALUED|?? EPS Proj (5Y): Rp316 (Growth 26.3%) Discounted at 12% to PV = Rp947. Menghitung harga sekarang berdasarkan potensi laba masa depan||||
+||||||||
+||||||||
+||||||||
+||||||||
+||||||||
+||||||||
+||||||||
+||||||||
+||||||||
+||||||||
+||||||||
+STRATEGIC SUMMARY||||||||
+Financial Health Check|?? HIGH RISK|||||||
+Intrinsic Value (Fair Price)|686.181192100314|||||||
+Intrinsic Value Top (Fundamental)|1029.27178815047|||||||
+Hard Floor (Liquidation Value)|76.1735247021944|||||||
+Current Price|350|||||||
+Margin of Safety (MoS)|0.489930642184035|||||||
+||||||||
+||||||||
+? VALUASI UTAMA: Harga pasar saat ini berada dalam range wajar (Undervalued) sesuai standar kategori CYCLICAL. Risk-to-Reward menarik untuk entry.||||||||
+||||||||
+||||||||
+||||||||
+? Sisi Aset (Graham): Terdiskon signifikan terhadap Nilai Intrinsik (BVPS & EPS). Ada 'Margin of Safety' tebal dari sisi fundamental aset.||||||||
+||||||||
+||||||||
+||||||||
+? Sisi Cashflow (Dividen): Valuasi mahal. Yield saat ini (6.1%) sudah tergerus di bawah Rata-rata Historis (3.6%).||||||||
+||||||||
+||||||||
+||||||||
+?? KONFIRMASI GROWTH: PEG Ratio < 1.0. Kecepatan pertumbuhan laba (17%%) SANGAT KUAT, membenarkan harga premium saat ini. Sejalan dengan Valuasi Utama.||||||||
+||||||||
+||||||||
+||||||||
+||||||||
+||||||||
+||||||||
+PANDUAN:||||||||
+Peter Lynch Algo [Adaptive Stock Type] ~ Valuasi Adaptif. Metode ini menilai saham berdasarkan tipe sahamnya. Jika saham Grower (bertumbuh), ia dinilai dari kemampuan mencetak Laba (PER). Jika saham Cyclical/Asset (Siklikal/Aset), ia dinilai dari Harta Fisiknya (PBV/Likuidasi).
+
+Cara Baca: Ikuti ini sebagai Sinyal Utama. Jika statusnya Undervalued, artinya secara umum saham ini murah sesuai karakteristik bisnisnya.||||||||
+||||||||
+||||||||
+||||||||
+||||||||
+||||||||
+||||||||
+Mean Reversion PBV [Asset] ~  Valuasi Aset Statistik (Batas Bawah). "Jaring Pengaman"  Dengan menggunakan statistik data 5 tahun untuk mencari "Lantai Harga" (Floor Price). Rumus ini menghitung di level PBV berapa saham ini biasanya dianggap "Murah Banget" (diskon) oleh pasar secara historis 
+(CYCLICAL, ASSET PLAY, TURN AROUND)
+
+Cara Baca: Sangat akurat untuk Saham Komoditas (Cyclical) & Bank. Jika harga pasar < nilai ini, artinya risiko turun sudah sangat kecil (Downside Risk rendah) karena harga sudah di dasar siklus.||||||||
+||||||||
+||||||||
+||||||||
+||||||||
+||||||||
+||||||||
+||||||||
+||||||||
+Dividend Discount Model (Cash Flow) ~ "Mesin Uang Tunai ~ Valuasi Arus Kas (Strict)." Menilai harga wajar murni dari Dividen, tapi dengan standar tinggi. Rumus ini membandingkan dividen saham dengan Bunga Obligasi Negara. Jika dividennya kecil/biasa saja, metode ini akan bilang "Mahal".
+(SLOW GROWER)
+
+Cara Baca: Hanya untuk investor Income/Dividen. Jika statusnya Undervalued, artinya saham ini adalah "Mesin Uang" yang memberikan yield jauh di atas bunga deposito/obligasi, bahkan setelah memperhitungkan risiko.||||||||
+||||||||
+||||||||
+||||||||
+||||||||
+||||||||
+||||||||
+||||||||
+||||||||
+Discounted Earnings Model (Growth) ~ "Membeli Masa Depan ~ Valuasi Pertumbuhan (Time Value)" Menghitung nilai hari ini dari potensi laba perusahaan 5 tahun ke depan. Rumus ini sudah menyunat (diskon) nilai masa depan dengan inflasi & risiko, supaya kita tidak membeli mimpi yang kemahalan.
+(FAST GROWER, STALWART)
+
+Cara Baca: Wajib dilihat untuk saham Consumer & Tech (Growth). Jika ini Undervalued, artinya potensi pertumbuhan labanya sangat tinggi sehingga harga mahal saat ini sebenarnya wajar (Justified).||||||||
+||||||||
+||||||||
+||||||||
+||||||||
+||||||||
+||||||||
+||||||||
+||||||||
+||||||||
+||||||||
+?? LEGEND: SYSTEM LOGIC & PARAMETERS||||||||
+||||||||
+FAIR VALUE ENGINE LOGIC (Metode Penilaian)||||||||
+Tipe Saham|Metode Valuasi Utama|Rumus / Logika Dasar||||||
+?? SLOW GROWER|Earnings Power (PER)|Target PER 5x - 10x. (Valuasi Dividen/Defensif).||||||
+?? STALWART|Earnings Power (PER)|Target PER 10x - 16x. (Valuasi Bluechip Wajar).||||||
+?? FAST GROWER|PEG Ratio (Growth)|Target PER = Growth Rate. (Fair Value jika PEG = 1.0).||||||
+?? CYCLICAL|Asset Base (PBV)|Target PBV 1.0x (Book Value). Mengabaikan Laba (PER) yang volatil.||||||
+?? ASSET PLAY|Deep Value (Diskon)|Target PBV 0.5x. Mencari diskon 50% dari nilai buku aset.||||||
+?? TURNAROUND|Liquidation Value|(Aset Lancar - Total Hutang). Nilai sisa jika perusahaan tutup besok.||||||
+||||||||
+COMPARISON METHODS (Metode Pembanding)||||||||
+Metode|Fokus Analisis|Kapan Valid Dipakai?||||||
+Peter Lynch (Main)|Adaptive (Otomatis)|SELALU VALID. Ini adalah acuan utama keputusan Buy/Sell sistem.||||||
+Graham Value|Aset + Laba (Konservatif)|Valid untuk saham mapan/industrial. Kurang cocok untuk Tech/Service.||||||
+Dividend Model|Cashflow (Yield)|Valid untuk Income Investor. Membandingkan Yield sekarang vs Historis.||||||
+PEG Ratio|Growth vs Price|Valid HANYA untuk Growth Stock. Tidak valid (N/A) untuk Cyclical/Asset Play.||||||
+||||||||
+||||||||
+||||||||
+||||||||
+||||||||
+Primary Signal. Adapts valuation logic based on stock characteristics.
+?? It prices the stock at Rp686 by automatically choosing the best metric (earnings, assets, or liquidation value) depending on what type of company this is (CYCLICAL).||||||||
+Moderate Balancer. Blends Earnings (PER) & Asset (PBV) approach using sector weights.
+?? It prices the stock at Rp683 by calculating a 'fair price' from its profits and a 'fair price' from its physical assets, then mixing both together based on what matters most for its industry.||||||||
+Safety Floor. Statistical bottom price based on historical asset cycles.
+?? It prices the stock at Rp433 by multiplying its current book value by its historically 'safest' normal PBV. This acts as your bargain-hunting safety net.||||||||
+Income Validator. Income/Dividend Investor, Strict cash-flow check against Gov Bond Yields.
+?? It prices the stock at Rp268 by treating the stock like an ATM. It calculates the present value of all future cash dividends you will receive, assuming you demand a return higher than safe government bonds.||||||||
+Growth Validator. Future earnings potential discounted by risk & inflation.
+?? It prices the stock at Rp947 by projecting how much profit the company will make in 5 years (driven by its 15.1% revenue growth), and then pulls that future money back to today's value.||||||||
+||||||||
+||||||||
+||||||||
+||||||||
+||||||||
+||||||||
+||||||||
+||||||||
+||||||||
+||||||||
+||||||||
+||||||||
+||||||||
+||||||||
+||||||||
+||||||||
+||||||||
+||||||||
+||||||||
+||||||||
+||||||||
+||||||||
+||||||||
+||||||||
+||||||||
+||||||||
+||||||||
+||||||||
+||||||||
+||||||||
+||||||||
+||||||||
+||||||||
+||||||||
+||||||||
+||||||||
+||||||||
+||||||||
+||||||||
+||||||||
+||||||||
+||||||||
+||||||||
+||||||||
+||||||||
+
