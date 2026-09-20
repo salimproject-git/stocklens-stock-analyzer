@@ -6,6 +6,7 @@ type BadgeTone =
   | "overvalued"
   | "healthy"
   | "positive"
+  | "info"
   | "stable"
   | "cukup"
   | "caution";
@@ -23,6 +24,7 @@ export function StatusBadge({
     undervalued: "border-[#1fcf86]/40 bg-[#0d2b22] text-[#3ef0a9]",
     healthy: "border-[#1fcf86]/40 bg-[#0d2b22] text-[#3ef0a9]",
     positive: "border-[#1fcf86]/40 bg-[#0d2b22] text-[#3ef0a9]",
+    info: "border-[#3892d0]/45 bg-[#102b43] text-[#75c5ff]",
     "fairly-valued": "border-[#c79d51]/40 bg-[#2f2717] text-[#f1c56d]",
     stable: "border-[#c79d51]/40 bg-[#2f2717] text-[#f1c56d]",
     cukup: "border-[#d9a23c]/40 bg-[#2b2212] text-[#eab308]",
@@ -33,7 +35,7 @@ export function StatusBadge({
   return (
     <span
       className={[
-        "inline-flex items-center rounded-lg border px-2.5 py-1 text-xs font-semibold tracking-wide transition",
+        "inline-flex max-w-full items-center rounded-lg border px-2.5 py-1 text-xs font-semibold tracking-wide transition",
         toneClasses[tone] ?? toneClasses.positive,
         className,
       ].join(" ")}
@@ -42,4 +44,3 @@ export function StatusBadge({
     </span>
   );
 }
-
