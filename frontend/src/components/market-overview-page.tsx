@@ -444,12 +444,12 @@ function StockCard({ stock, compact = false }: { stock: Stock; compact?: boolean
     >
       <div className={compact ? "flex-1" : undefined}>
         <div className="flex items-start justify-between gap-3">
-          <div>
+          <div className="min-w-0 flex-1">
             <h2 className="text-[16px] font-semibold tracking-[-0.02em] text-white md:text-[17px]">
               {stock.ticker}
             </h2>
 
-            <p className="mt-1 line-clamp-2 text-[13px] leading-5 text-[#b6c2d4]">
+            <p className="mt-1 truncate text-[13px] leading-5 text-[#b6c2d4]">
               {stock.companyName}
             </p>
           </div>
@@ -699,12 +699,13 @@ function Sparkline({
   const areaPath = `M 0 ${height} L ${polyline.replace(/ /g, " L ")} L ${width} ${height} Z`;
 
   return (
-    <div className={["flex items-end justify-between gap-3", className ?? ""].join(" ")}>
+    <div className={["flex min-w-0 w-full items-end justify-end gap-3", className ?? ""].join(" ")}>
       <svg
         width={width}
         height={height}
         viewBox={`0 0 ${width} ${height}`}
-        className="overflow-visible"
+        preserveAspectRatio="none"
+        className="h-11 min-w-0 flex-1 overflow-visible"
         aria-hidden="true"
       >
         <defs>

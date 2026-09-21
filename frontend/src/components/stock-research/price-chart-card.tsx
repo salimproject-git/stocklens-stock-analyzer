@@ -5,16 +5,17 @@ import { StockDetail } from "@/data/mock-stock-details";
 import { SectionCard } from "@/components/ui/section-card";
 import { formatRupiah } from "@/utils/currency";
 
-const TIMEFRAMES = ["1M", "3M", "1Y", "3Y", "5Y"];
+const TIMEFRAMES = ["3M", "6M", "9M", "12M"] as const;
+type Timeframe = (typeof TIMEFRAMES)[number];
 
 export function PriceChartCard({
   chartData,
 }: {
   chartData: StockDetail["priceChart"];
 }) {
-  const [activeTimeframe, setActiveTimeframe] = useState(chartData.timeframe);
+  const [activeTimeframe, setActiveTimeframe] = useState<Timeframe>("12M");
 
-  const points = chartData.points;
+  const points = chartData.points.slice(-Number.parseInt(activeTimeframe, 10));
   const width = 500;
   const height = 180;
   const values = points.map((p) => p.value);
@@ -23,7 +24,7 @@ export function PriceChartCard({
   const range = max - min || 1;
 
   const svgPoints = points.map((p, idx) => {
-    const x = (idx / (points.length - 1)) * (width - 40) + 20;
+    const x = (idx / Math.max(points.length - 1, 1)) * (width - 40) + 20;
     const y = height - ((p.value - min) / range) * (height - 40) - 20;
     return `${x},${y}`;
   });
@@ -41,11 +42,12 @@ export function PriceChartCard({
       title="Price Chart"
       actionSlot={
         <div className="flex items-center gap-1 rounded-xl border border-white/10 bg-[#091322]/80 p-1 text-xs">
-          {TIMEFRAMES.map((tf) => (
-            <button
-              key={tf}
-              type="button"
-              onClick={() => setActiveTimeframe(tf)}
+            {TIMEFRAMES.map((tf) => (
+              <button
+                key={tf}
+                type="button"
+                onClick={() => setActiveTimeframe(tf)}
+                aria-pressed={activeTimeframe === tf}
               className={[
                 "rounded-lg px-2.5 py-1 font-semibold transition",
                 activeTimeframe === tf
@@ -60,10 +62,11 @@ export function PriceChartCard({
       }
     >
       {/* SVG Chart */}
-      <div className="relative mt-2 h-[190px] w-full">
+      <div className="relative mt-2 h-[190px] min-w-0 w-full">
         <svg
           viewBox={`0 0 ${width} ${height}`}
-          className="h-full w-full overflow-visible"
+          preserveAspectRatio="none"
+          className="block h-full w-full overflow-visible"
           aria-hidden="true"
         >
           <defs>
@@ -101,7 +104,7 @@ export function PriceChartCard({
           className="absolute rounded-lg border border-[#1fcf86]/50 bg-[#0d2b22] px-2 py-0.5 text-xs font-bold text-[#3ef0a9] shadow-lg"
           style={{
             right: 0,
-            top: `${(lastY / height) * 100 - 15}%`,
+            top: `${Math.min(78, Math.max(0, (lastY / height) * 100 - 15))}%`,
           }}
         >
           {formatRupiah(points.at(-1)?.value ?? 0)}
@@ -109,10 +112,16 @@ export function PriceChartCard({
       </div>
 
       {/* X-Axis Month Labels */}
-      <div className="mt-1 flex justify-between px-2 text-[11px] text-[#7f8c9f]">
-        {points.filter((_, i) => i % 2 === 0).map((p) => (
-          <span key={p.date}>{p.date}</span>
-        ))}
+      <div className="mt-2 flex justify-between gap-2 px-2 text-[11px] text-[#7f8c9f]">
+        {getAxisPoints(points).map((p) => {
+          const [month, year] = p.date.split(" ");
+          return (
+            <span key={p.date} className="flex min-w-0 flex-col items-center text-center leading-tight">
+              <span>{month}</span>
+              <span className="mt-0.5">{year}</span>
+            </span>
+          );
+        })}
       </div>
 
       {/* Bottom Key Stats Bar */}
@@ -150,6 +159,12 @@ export function PriceChartCard({
       </div>
     </SectionCard>
   );
+}
+
+function getAxisPoints(points: { date: string; value: number }[]) {
+  const step = Math.max(1, Math.ceil((points.length - 1) / 6));
+
+  return points.filter((_, index) => index % step === 0 || index === points.length - 1);
 }
 
 function TrendingUpIcon({ className }: { className?: string }) {
