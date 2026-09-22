@@ -90,7 +90,7 @@ export function HistoricalEvidencePreviewCard({
         </span>
 
         <span>
-          A WIN means an undervalued case reached the +20% target before the -20% downside
+          {evidence.outcomeExplanation}
         </span>
       </div>
     </SectionCard>

@@ -3,154 +3,15 @@
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { mockMarketOverviewStocks, type MarketOverviewStock } from "@/data/mock-stock-details";
 import { formatRupiah as formatCurrencyRupiah, formatRupiahValue } from "@/utils/currency";
 
-type Verdict = "Undervalued" | "Fairly Valued" | "Overvalued";
 type ViewMode = "grid" | "list";
-
-type Stock = {
-  ticker: string;
-  companyName: string;
-  sector: string;
-  stockType: string;
-  price: number;
-  change: number;
-  changePercent: number;
-  sparkline: number[];
-  verdict: Verdict;
-  mos: number;
-  evidenceWins: number;
-  evidenceTotal: number;
-  updatedAt: string;
-};
 
 const SIDEBAR_WIDTH = 240;
 const PAGE_SIZE = 5;
 
-const mockStocks: Stock[] = [
-  {
-    ticker: "BBCA",
-    companyName: "Bank Central Asia Tbk",
-    sector: "Financials",
-    stockType: "Large Cap",
-    price: 9200,
-    change: 100,
-    changePercent: 1.1,
-    sparkline: [24, 29, 27, 34, 36, 35, 42, 40, 45, 51, 49, 55],
-    verdict: "Fairly Valued",
-    mos: 12.3,
-    evidenceWins: 5,
-    evidenceTotal: 8,
-    updatedAt: "12 Sep 2026",
-  },
-  {
-    ticker: "AUTO",
-    companyName: "Astra Otoparts Tbk",
-    sector: "Automotive",
-    stockType: "Cyclical",
-    price: 1950,
-    change: 50,
-    changePercent: 2.63,
-    sparkline: [18, 21, 23, 27, 30, 29, 34, 35, 33, 38, 43, 46],
-    verdict: "Undervalued",
-    mos: 38.4,
-    evidenceWins: 4,
-    evidenceTotal: 4,
-    updatedAt: "12 Sep 2026",
-  },
-  {
-    ticker: "ERAA",
-    companyName: "Erajaya Swasembada Tbk",
-    sector: "Consumer Cyclical",
-    stockType: "Mid Cap",
-    price: 450,
-    change: -10,
-    changePercent: -2.17,
-    sparkline: [44, 48, 45, 47, 43, 42, 44, 39, 41, 37, 36, 38],
-    verdict: "Fairly Valued",
-    mos: 8.7,
-    evidenceWins: 3,
-    evidenceTotal: 6,
-    updatedAt: "12 Sep 2026",
-  },
-  {
-    ticker: "SIDO",
-    companyName: "Industri Jamu dan Farmasi Sido Muncul Tbk",
-    sector: "Consumer Defensive",
-    stockType: "Large Cap",
-    price: 640,
-    change: 15,
-    changePercent: 2.4,
-    sparkline: [20, 18, 22, 21, 24, 29, 33, 36, 35, 40, 45, 43],
-    verdict: "Undervalued",
-    mos: 28.1,
-    evidenceWins: 6,
-    evidenceTotal: 8,
-    updatedAt: "12 Sep 2026",
-  },
-  {
-    ticker: "PTBA",
-    companyName: "Bukit Asam Tbk",
-    sector: "Energy",
-    stockType: "Cyclical",
-    price: 2350,
-    change: -40,
-    changePercent: -1.67,
-    sparkline: [40, 41, 39, 43, 42, 40, 38, 41, 45, 43, 37, 35],
-    verdict: "Overvalued",
-    mos: -12.4,
-    evidenceWins: 2,
-    evidenceTotal: 6,
-    updatedAt: "12 Sep 2026",
-  },
-  {
-    ticker: "WIFI",
-    companyName: "Solusi Sinergi Digital Tbk",
-    sector: "Telecommunication",
-    stockType: "Growth",
-    price: 1490,
-    change: 80,
-    changePercent: 5.67,
-    sparkline: [16, 19, 22, 25, 30, 35, 34, 39, 44, 47, 49, 54],
-    verdict: "Undervalued",
-    mos: 31.6,
-    evidenceWins: 4,
-    evidenceTotal: 5,
-    updatedAt: "11 Sep 2026",
-  },
-  {
-    ticker: "INDF",
-    companyName: "Indofood Sukses Makmur Tbk",
-    sector: "Consumer Staples",
-    stockType: "Large Cap",
-    price: 6850,
-    change: 75,
-    changePercent: 1.11,
-    sparkline: [31, 32, 30, 29, 33, 36, 39, 38, 40, 42, 43, 45],
-    verdict: "Fairly Valued",
-    mos: 10.4,
-    evidenceWins: 5,
-    evidenceTotal: 7,
-    updatedAt: "11 Sep 2026",
-  },
-  {
-    ticker: "JSMR",
-    companyName: "Jasa Marga Tbk",
-    sector: "Infrastructure",
-    stockType: "Value",
-    price: 4780,
-    change: -60,
-    changePercent: -1.24,
-    sparkline: [45, 44, 46, 43, 42, 41, 40, 39, 38, 40, 37, 35],
-    verdict: "Overvalued",
-    mos: -6.8,
-    evidenceWins: 2,
-    evidenceTotal: 5,
-    updatedAt: "10 Sep 2026",
-  },
-];
-
-const totalPages = Math.ceil(mockStocks.length / PAGE_SIZE);
+const totalPages = Math.ceil(mockMarketOverviewStocks.length / PAGE_SIZE);
 
 export function MarketOverviewPage() {
   const [currentPage, setCurrentPage] = useState(1);
@@ -158,7 +19,7 @@ export function MarketOverviewPage() {
 
   const visibleStocks = useMemo(() => {
     const start = (currentPage - 1) * PAGE_SIZE;
-    return mockStocks.slice(start, start + PAGE_SIZE);
+    return mockMarketOverviewStocks.slice(start, start + PAGE_SIZE);
   }, [currentPage]);
 
   const showingCount = visibleStocks.length;
@@ -168,7 +29,7 @@ export function MarketOverviewPage() {
       <PageIntro />
       <Toolbar
         showingCount={showingCount}
-        totalCount={mockStocks.length}
+        totalCount={mockMarketOverviewStocks.length}
         viewMode={viewMode}
         onViewModeChange={setViewMode}
       />
@@ -369,7 +230,7 @@ function StockCollection({
   viewMode,
   showDiscoveryCard,
 }: {
-  stocks: Stock[];
+  stocks: MarketOverviewStock[];
   viewMode: ViewMode;
   showDiscoveryCard: boolean;
 }) {
@@ -394,7 +255,7 @@ function StockCollection({
   );
 }
 
-function StockCard({ stock, compact = false }: { stock: Stock; compact?: boolean }) {
+function StockCard({ stock, compact = false }: { stock: MarketOverviewStock; compact?: boolean }) {
   const router = useRouter();
 
   const isPositive = stock.change >= 0;

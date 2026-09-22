@@ -3,6 +3,7 @@ import { StockDetail } from "@/data/mock-stock-details";
 import { SectionCard } from "@/components/ui/section-card";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { formatRupiah } from "@/utils/currency";
+import { classifyCurrentValuationMos } from "@/lib/analysis";
 
 export function CurrentValuationCard({
   valuation,
@@ -19,7 +20,7 @@ export function CurrentValuationCard({
       ? "Most valuation methods indicate the stock is trading below its estimated value"
       : "Most valuation methods indicate the stock is trading above its estimated value";
 
-  const mosUndervalued = valuation.mos > 30;
+  const mosUndervalued = classifyCurrentValuationMos(valuation.mos) === "UNDERVALUED";
 
 const mosText = mosUndervalued
   ? `Margin of safety is ${formattedMos}%, indicating undervalued with discount to intrinsic value.`

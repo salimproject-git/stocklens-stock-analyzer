@@ -1,5 +1,6 @@
 ﻿import React from "react";
 import { StockDetail } from "@/data/mock-stock-details";
+import { analyzeHistoricalGrowth } from "@/lib/analysis";
 
 type AnnualTrendCard = NonNullable<StockDetail["financialHistory"]>["annualTrendCards"][number];
 type AnnualTable = NonNullable<StockDetail["financialHistory"]>["annualTable"];
@@ -304,59 +305,6 @@ function HistoricalGrowthTable({ table }: { table: AnnualTable }) {
   );
 }
 
-function buildInsights(cards: AnnualTrendCard[], table: AnnualTable) {
-  const insights: string[] = [];
-
-  const measured = cards
-    .map((card) => ({ card, value: parseNumeric(card.cagrValue) }))
-    .filter((entry) => !Number.isNaN(entry.value));
-
-  if (measured.length >= 2) {
-    const ranked = [...measured].sort((a, b) => b.value - a.value);
-    const leader = ranked[0];
-    const laggard = ranked[ranked.length - 1];
-
-    if (leader.value !== laggard.value) {
-      insights.push(
-        `${leader.card.title} is the strongest available growth measure at ${leader.card.cagrValue}, while ${laggard.card.title} is the slowest.`,
-      );
-    }
-  }
-
-  const revenue = measured.find((entry) => /revenue/i.test(entry.card.title));
-  const netIncome = measured.find((entry) => /net income/i.test(entry.card.title));
-
-  if (revenue && netIncome && revenue.value !== netIncome.value) {
-    insights.push(
-      netIncome.value > revenue.value
-        ? "Net income compounded faster than revenue across the available periods."
-        : "Revenue compounded faster than net income across the available periods.",
-    );
-  }
-
-  table.rows
-    .filter((row) => /margin/i.test(row.metric))
-    .forEach((row) => {
-      const first = row.values[0];
-      const last = row.values[row.values.length - 1];
-      const firstNumeric = parseNumeric(first);
-      const lastNumeric = parseNumeric(last);
-
-      if (Number.isNaN(firstNumeric) || Number.isNaN(lastNumeric)) return;
-      if (firstNumeric === lastNumeric) return;
-
-      insights.push(
-        `${row.metric} moved from ${first} to ${last} between the earliest and latest available periods.`,
-      );
-    });
-
-  if (measured.length > 0 && measured.every((entry) => entry.value > 0)) {
-    insights.push("All available growth measures are positive across the reported periods.");
-  }
-
-  return insights.slice(0, 4);
-}
-
 export function HistoricalGrowthSection({ stock }: { stock: StockDetail }) {
   const history = stock.financialHistory;
   const cards = history?.annualTrendCards ?? [];
@@ -379,7 +327,7 @@ export function HistoricalGrowthSection({ stock }: { stock: StockDetail }) {
   const netIncomeSeries = toSeries("netIncome", NET_INCOME_COLOR);
   const epsSeries = toSeries("eps", EPS_COLOR);
 
-  const insights = table ? buildInsights(cards, table) : [];
+  const insights = table ? analyzeHistoricalGrowth(cards, table).insights : [];
 
   return (
     <div className="space-y-5">

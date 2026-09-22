@@ -5,6 +5,7 @@ import { StockDetail } from "@/data/mock-stock-details";
 import { FinancialTrendCard } from "./financial-trend-card";
 import { FinancialMetricsSummary } from "./financial-metrics-summary";
 import { HistoricalFinancialTable } from "./historical-financial-table";
+import { classifyFinancialMetric } from "@/lib/analysis";
 
 type PeriodType = "annual" | "quarterly";
 type FinancialMetric = NonNullable<StockDetail["financialHistory"]>["annualMetrics"][number];
@@ -21,62 +22,27 @@ function getLatestQuarters<T extends { year: string }>(series: T[]) {
     .slice(-5);
 }
 
-function parseMetricValue(value: string) {
-  return Number(value.replace(",", ".").replace("%", "").replace("x", ""));
-}
-
-function getMetricRow(table: FinancialTable | undefined, label: string) {
-  return table?.rows.find((row) => row.metric.startsWith(label));
-}
-
-function getMarginContext(table: FinancialTable | undefined, label: string, improvingLabel: string, decliningLabel: string) {
-  const values = getMetricRow(table, label)?.values ?? [];
-  const latestValue = parseMetricValue(values.at(-1) ?? "0");
-  const previousValue = parseMetricValue(values.at(-2) ?? "0");
-  const change = latestValue - previousValue;
-
-  if (change > 0.5) return improvingLabel;
-  if (change < -0.5) return decliningLabel;
-  return "Stable margin";
-}
-
-function getCashConversionContext(ratioValue: string | undefined) {
-  const ratio = parseMetricValue(ratioValue ?? "0");
-  if (ratio >= 1) return "Strong cash conversion";
-  if (ratio >= 0.5) return "Moderate cash conversion";
-  return "Weak cash conversion";
-}
-
 function getMetricContext(
   metric: FinancialMetric,
   table: FinancialTable | undefined,
   quarterlyOcfRatio?: string,
 ) {
-  if (metric.label === "Return on Equity (ROE)") {
-    const values = getMetricRow(table, metric.label)?.values ?? [];
-    const latestValue = parseMetricValue(values.at(-1) ?? "0");
-    const previousValues = values.slice(0, -1).map(parseMetricValue);
-    const fiveYearAverage = previousValues.reduce((sum, value) => sum + value, 0) / previousValues.length;
-
-    if (latestValue > fiveYearAverage) return "Above 5-year average";
-    if (latestValue < fiveYearAverage) return "Below 5-year average";
-    return "In line with 5-year average";
-  }
-
-  if (metric.label === "Gross Margin") {
-    return getMarginContext(table, metric.label, "Expanding margin", "Contracting margin");
-  }
-
-  if (metric.label === "Net Margin") {
-    return getMarginContext(table, metric.label, "Improving margin", "Declining margin");
-  }
-
-  if (metric.label === "OCF / Net Income") {
-    return getCashConversionContext(metric.value);
-  }
-
-  if (metric.label === "Operating Cash Flow") {
-    return getCashConversionContext(quarterlyOcfRatio);
+  const status = classifyFinancialMetric(metric, table, quarterlyOcfRatio);
+  if (status) {
+    const labels = {
+      EXPANDING: "Expanding margin",
+      CONTRACTING: "Contracting margin",
+      STABLE_MARGIN: "Stable margin",
+      IMPROVING: "Improving margin",
+      DECLINING: "Declining margin",
+      STRONG_CASH_CONVERSION: "Strong cash conversion",
+      MODERATE_CASH_CONVERSION: "Moderate cash conversion",
+      WEAK_CASH_CONVERSION: "Weak cash conversion",
+      ABOVE_AVERAGE: "Above 5-year average",
+      BELOW_AVERAGE: "Below 5-year average",
+      IN_LINE_WITH_AVERAGE: "In line with 5-year average",
+    } as const;
+    return labels[status];
   }
 
   const units: Record<string, string> = {

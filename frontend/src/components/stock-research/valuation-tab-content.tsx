@@ -3,38 +3,24 @@ import { StockDetail } from '@/data/mock-stock-details'
 import { SectionCard } from '@/components/ui/section-card'
 import { StatusBadge } from '@/components/ui/status-badge'
 import { formatRupiah } from '@/utils/currency'
+import { getMainValuationMethod } from '@/lib/analysis'
 
-type Tone = 'positive' | 'neutral' | 'soft-positive'
+const toneClass: Record<string, string> = { 'EPS (TTM)': 'text-white', BVPS: 'text-white', 'P/E Ratio': 'text-[#3ef0a9]', 'P/BV Ratio': 'text-[#3ef0a9]', 'PEG Ratio': 'text-[#3ef0a9]', 'Dividend Yield': 'text-[#d8f4e7]' }
 
-const cards = [
-  { label: 'Current Price', value: formatRupiah(1950), note: '+2,63% today', tone: 'positive' as Tone },
-  { label: 'EPS (TTM)', value: formatRupiah(477.8), note: 'Trailing twelve months', tone: 'neutral' as Tone },
-  { label: 'BVPS', value: formatRupiah(2780), note: 'Book value per share', tone: 'neutral' as Tone },
-  { label: 'P/E Ratio', value: '4,92x', note: 'Below sector average', tone: 'positive' as Tone },
-  { label: 'P/BV Ratio', value: '0,66x', note: 'Below historical avg', tone: 'positive' as Tone },
-  { label: 'PEG Ratio', value: '0,25x', note: 'Attractive', tone: 'positive' as Tone },
-  { label: 'Dividend Yield', value: '4,83%', note: 'Above market avg', tone: 'soft-positive' as Tone },
-]
-
-const methods = [
-  ['Peter Lynch / Adaptive', formatRupiah(1568), '+51,82%', '34,13%', 'UNDERVALUED', 'Asset-based (PEG + growth)', 'undervalued'],
-  ['Type & Sector Weighted', formatRupiah(2537), '+7,94%', '7,36%', 'UNDERVALUED', 'Blended (sector & type multiple)', 'undervalued'],
-  ['Mean Reversion PBV', formatRupiah(1740), '-25,95%', '-35,04%', 'OVERVALUED', 'Historical asset valuation (PBV)', 'overvalued'],
-  ['Dividend Discount Model', formatRupiah(1418), '-39,65%', '-65,70%', 'OVERVALUED', 'Dividend-based (Dividend Discount Model)', 'overvalued'],
-  ['Discounted Earnings', formatRupiah(2305), '-1,92%', '-1,96%', 'OVERVALUED', 'Earnings-based (DCF)', 'overvalued'],
-] as const
-
-const toneClass: Record<Tone, string> = { positive: 'text-[#3ef0a9]', neutral: 'text-white', 'soft-positive': 'text-[#d8f4e7]' }
-
-function getMainMethod(stockType: string) {
-  const normalizedStockType = stockType.trim().toLowerCase();
-  return normalizedStockType === 'stalwart' || normalizedStockType === 'fast grower'
-    ? 'Type & Sector Weighted'
-    : 'Peter Lynch / Adaptive';
+function formatChangePercent(value: number) {
+  const sign = value > 0 ? '+' : '';
+  return `${sign}${new Intl.NumberFormat('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value)}% today`;
 }
 
 export function ValuationTabContent({ stock }: { stock: StockDetail }) {
-  const mainMethod = getMainMethod(stock.stockType);
+  const mainMethod = getMainValuationMethod(stock.stockType);
+  const valuation = stock.currentValuation;
+  const methods = valuation.methods;
+  const points = methods.map((method) => ({
+    method: method.method,
+    value: method.intrinsicValue,
+    color: method.method === 'Peter Lynch / Adaptive' ? 'bg-[#3ecf9d]' : method.method === 'Type & Sector Weighted' ? 'bg-[#42bfd0]' : method.method === 'Mean Reversion PBV' ? 'bg-[#c79d51]' : method.method === 'Dividend Discount Model' ? 'bg-[#d66f65]' : 'bg-[#78a8c8]',
+  }));
 
   return <div className='space-y-6'>
     <header className='flex flex-col justify-between gap-4 md:flex-row md:items-center'>
@@ -45,16 +31,17 @@ export function ValuationTabContent({ stock }: { stock: StockDetail }) {
     </header>
     <SectionCard icon={<SectionIcon kind='current' />} title='Current Valuation' subtitle='Key valuation metrics based on the latest available data.' className='p-5 md:p-6'>
       <div className='grid grid-cols-1 gap-px overflow-hidden rounded-xl border border-white/[0.08] bg-white/[0.08] sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7'>
-        {cards.map(card => <div key={card.label} className='min-w-0 bg-[#081523] px-4 py-4'><div className='text-[11px] font-medium text-[#aebbd0]'>{card.label}</div><div className={`mt-5 whitespace-nowrap text-[22px] font-semibold ${toneClass[card.tone]}`}>{card.value}</div><div className='mt-1.5 text-[11px] text-[#8090a7]'>{card.note}</div></div>)}
+        <div className='min-w-0 bg-[#081523] px-4 py-4'><div className='text-[11px] font-medium text-[#aebbd0]'>Current Price</div><div className='mt-5 whitespace-nowrap text-[22px] font-semibold text-[#3ef0a9]'>{formatRupiah(valuation.currentPrice)}</div><div className='mt-1.5 text-[11px] text-[#8090a7]'>{formatChangePercent(stock.changePercent)}</div></div>
+        {valuation.metrics.map(card => <div key={card.label} className='min-w-0 bg-[#081523] px-4 py-4'><div className='text-[11px] font-medium text-[#aebbd0]'>{card.label}</div><div className={`mt-5 whitespace-nowrap text-[22px] font-semibold ${toneClass[card.label] ?? 'text-white'}`}>{typeof card.value === 'number' ? formatRupiah(card.value) : card.value}</div><div className='mt-1.5 text-[11px] text-[#8090a7]'>{card.note}</div></div>)}
       </div>
     </SectionCard>
     <SectionCard icon={<SectionIcon kind='spectrum' />} title='Price vs Estimated Value' subtitle='Current price compared to intrinsic value estimates from different valuation methods.' className='p-5 md:p-6'>
-       <div className='grid items-stretch gap-4 xl:grid-cols-[minmax(0,7fr)_minmax(280px,3fr)]'><EqualSpacedSpectrum currentPrice={stock.price} /><div className='h-full rounded-2xl border border-[#d6a24d]/25 bg-[#1d1b15] p-4'><div className='flex items-center gap-2 text-sm font-semibold text-[#f2d18f]'><InsightIcon />Key Takeaway</div><p className='mt-3 text-xs leading-6 text-[#d2dbea]'>Current Price berada di antara Mean Reversion PBV dan Discounted Earnings.</p><ul className='mt-4 space-y-2 text-xs text-[#b9c6d8]'><li>- 2 dari 5 metode menunjukkan Undervalued</li><li>- Highest intrinsic value: Rp3.568</li><li>- Lowest intrinsic value: Rp1.418</li></ul></div></div>
+       <div className='grid items-stretch gap-4 xl:grid-cols-[minmax(0,7fr)_minmax(280px,3fr)]'><EqualSpacedSpectrum currentPrice={valuation.currentPrice} points={points} /><div className='h-full rounded-2xl border border-[#d6a24d]/25 bg-[#1d1b15] p-4'><div className='flex items-center gap-2 text-sm font-semibold text-[#f2d18f]'><InsightIcon />Key Takeaway</div><p className='mt-3 text-xs leading-6 text-[#d2dbea]'>{valuation.comparison.takeaway}</p><ul className='mt-4 space-y-2 text-xs text-[#b9c6d8]'>{valuation.comparison.readouts.map((readout) => <li key={readout}>- {readout}</li>)}</ul></div></div>
     </SectionCard>
     <SectionCard icon={<SectionIcon kind='methods' />} title='Valuation Methods' subtitle='Intrinsic value estimates using different valuation approaches.' className='p-5 md:p-6'>
-      <div className='overflow-x-auto rounded-xl border border-white/[0.08]'><table className='w-full min-w-[900px] border-collapse text-left text-xs'><thead className='bg-[#081523] text-[10px] uppercase tracking-[0.1em] text-[#7f8fa6]'><tr>{['Method', 'Intrinsic Value', 'Potential', 'Margin of Safety', 'Status', 'How it works'].map(heading => <th key={heading} className='px-4 py-3'>{heading}</th>)}</tr></thead><tbody>{methods.map(([method, value, potential, safety, status, works, tone]) => <tr key={method} className='border-t border-white/[0.07]'><td className='whitespace-nowrap px-4 py-4 font-medium text-white'><span className='inline-flex items-center gap-2'>{method}{method === mainMethod && <span className='rounded-md border border-[#d6a24d]/45 bg-[#f2bb5c]/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#f2d18f]'>Main</span>}</span></td><td className='px-4 py-4 font-semibold text-[#f2d18f]'>{value}</td><td className={`px-4 py-4 font-semibold ${potential.startsWith('+') ? 'text-[#3ef0a9]' : 'text-[#ff8b82]'}`}>{potential}</td><td className={`px-4 py-4 font-semibold ${safety.startsWith('-') ? 'text-[#ff8b82]' : 'text-[#3ef0a9]'}`}>{safety}</td><td className='px-4 py-4'><StatusBadge tone={tone}>{status}</StatusBadge></td><td className='whitespace-nowrap px-4 py-4 text-[#9aa9bf]'>{works}</td></tr>)}</tbody></table></div>
+      <div className='overflow-x-auto rounded-xl border border-white/[0.08]'><table className='w-full min-w-[900px] border-collapse text-left text-xs'><thead className='bg-[#081523] text-[10px] uppercase tracking-[0.1em] text-[#7f8fa6]'><tr>{['Method', 'Intrinsic Value', 'Potential', 'Margin of Safety', 'Status', 'How it works'].map(heading => <th key={heading} className='px-4 py-3'>{heading}</th>)}</tr></thead><tbody>{methods.map(({ method, intrinsicValue, potential, marginOfSafety, status, description }) => <tr key={method} className='border-t border-white/[0.07]'><td className='whitespace-nowrap px-4 py-4 font-medium text-white'><span className='inline-flex items-center gap-2'>{method}{method === mainMethod && <span className='rounded-md border border-[#d6a24d]/45 bg-[#f2bb5c]/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#f2d18f]'>Main</span>}</span></td><td className='px-4 py-4 font-semibold text-[#f2d18f]'>{formatRupiah(intrinsicValue)}</td><td className={`px-4 py-4 font-semibold ${potential.startsWith('+') ? 'text-[#3ef0a9]' : 'text-[#ff8b82]'}`}>{potential}</td><td className={`px-4 py-4 font-semibold ${marginOfSafety.startsWith('-') ? 'text-[#ff8b82]' : 'text-[#3ef0a9]'}`}>{marginOfSafety}</td><td className='px-4 py-4'><StatusBadge tone={status === 'UNDERVALUED' ? 'undervalued' : 'overvalued'}>{status}</StatusBadge></td><td className='whitespace-nowrap px-4 py-4 text-[#9aa9bf]'>{description}</td></tr>)}</tbody></table></div>
     </SectionCard>
-    <SectionCard icon={<SectionIcon kind='compare' />} title='Why the Methods Differ?' subtitle='Each valuation method looks at the company from a different perspective, which leads to different intrinsic value estimates.' className='p-5 md:p-6'><div className='grid gap-3 md:grid-cols-3'><Explain title='Asset-based' text='Uses book value, assets, or historical multiples such as PBV to estimate value.' tags={['Mean Reversion PBV']} /><Explain title='Income-based' text='Uses future earnings or dividends, such as Dividend Discount Model and discounted earnings. More sensitive to growth and earnings assumptions.' tags={['Dividend Discount Model', 'Discounted Earnings']} /><Explain title='Blended' text='Combines multiple valuation lenses, adjusted for sector and company type.' tags={['Peter Lynch', 'Type & Sector Weighted']} /></div></SectionCard>
+    <SectionCard icon={<SectionIcon kind='compare' />} title='Why the Methods Differ?' subtitle='Each valuation method looks at the company from a different perspective, which leads to different intrinsic value estimates.' className='p-5 md:p-6'><div className='grid gap-3 md:grid-cols-3'>{valuation.explanations.map((explanation) => <Explain key={explanation.title} title={explanation.title} text={explanation.text} tags={explanation.methods} />)}</div></SectionCard>
   </div>
 }
 
@@ -71,22 +58,16 @@ function SectionIcon({ kind }: { kind: 'current' | 'spectrum' | 'methods' | 'com
   return <svg viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='1.8' strokeLinecap='round' strokeLinejoin='round' className='h-4 w-4' aria-hidden='true'>{paths[kind]}</svg>;
 }
 
-function EqualSpacedSpectrum({ currentPrice }: { currentPrice: number }) {
-  const points = [
-    { method: 'Dividend Discount Model', value: 1418, color: 'bg-[#d66f65]' },
-    { method: 'Mean Reversion PBV', value: 1740, color: 'bg-[#c79d51]' },
-    { method: 'Discounted Earnings', value: 2305, color: 'bg-[#78a8c8]' },
-    { method: 'Type & Sector Weighted', value: 2537, color: 'bg-[#42bfd0]' },
-    { method: 'Peter Lynch / Adaptive', value: 3568, color: 'bg-[#3ecf9d]' },
-  ].sort((left, right) => left.value - right.value);
-  const anchors = points.map((_, index) => 15 + index * 17.5);
-  const currentPosition = currentPrice <= points[0].value ? 10 + ((currentPrice - points[0].value) / points[0].value) * 10 : currentPrice >= points[points.length - 1].value ? 80 + ((currentPrice - points[points.length - 1].value) / points[points.length - 1].value) * 10 : (() => {
-    const upperIndex = points.findIndex(point => point.value >= currentPrice);
-    const lower = points[upperIndex - 1];
-    const upper = points[upperIndex];
+function EqualSpacedSpectrum({ currentPrice, points }: { currentPrice: number; points: { method: string; value: number; color: string }[] }) {
+  const sortedPoints = [...points].sort((left, right) => left.value - right.value);
+  const anchors = sortedPoints.map((_, index) => 15 + index * 17.5);
+  const currentPosition = currentPrice <= sortedPoints[0].value ? 10 + ((currentPrice - sortedPoints[0].value) / sortedPoints[0].value) * 10 : currentPrice >= sortedPoints[sortedPoints.length - 1].value ? 80 + ((currentPrice - sortedPoints[sortedPoints.length - 1].value) / sortedPoints[sortedPoints.length - 1].value) * 10 : (() => {
+    const upperIndex = sortedPoints.findIndex(point => point.value >= currentPrice);
+    const lower = sortedPoints[upperIndex - 1];
+    const upper = sortedPoints[upperIndex];
     return anchors[upperIndex - 1] + ((currentPrice - lower.value) / (upper.value - lower.value)) * 15;
   })();
-  return <div className='flex min-w-0 flex-col rounded-2xl border border-white/[0.08] bg-[#07111c]/65 p-3'><div className='relative mt-7 h-36'><div className='absolute left-[8%] right-[8%] top-[30px] h-px bg-white/[0.18]' />{points.map((point, index) => <div key={point.method} className='absolute top-0 -translate-x-1/2 text-center' style={{ left: anchors[index] + '%' }}><div className='mb-2 text-xs font-bold leading-4 text-white'>{formatRupiah(point.value)}</div><div className={`mx-auto h-3 w-3 rounded-full ${point.color}`} /><div className='mx-auto mt-2 w-24 text-[10px] leading-4 text-[#8e9db3]'>{point.method === 'Dividend Discount Model' ? <>Dividend<br />Discount Model</> : point.method === 'Mean Reversion PBV' ? <>Mean Reversion<br />PBV</> : point.method === 'Discounted Earnings' ? <>Discounted<br />Earnings</> : point.method === 'Type & Sector Weighted' ? <>Type & Sector<br />Weighted</> : <>Peter Lynch<br />/ Adaptive</>}</div></div>)}<div className='absolute -top-5 bottom-12 w-0.5 border-l border-dashed border-[#f2bb5c]' style={{ left: currentPosition + '%' }}><div className='absolute top-[calc(100%+2px)] left-1/2 -translate-x-1/2 whitespace-nowrap text-center text-xs font-bold text-[#f2d18f]'>{formatRupiah(currentPrice)}</div><div className='absolute top-[calc(100%+19px)] left-1/2 -translate-x-1/2 whitespace-nowrap text-center text-[10px] text-[#c79d51]'>Current Price</div></div></div></div>;
+  return <div className='flex min-w-0 flex-col rounded-2xl border border-white/[0.08] bg-[#07111c]/65 p-3'><div className='relative mt-7 h-36'><div className='absolute left-[8%] right-[8%] top-[30px] h-px bg-white/[0.18]' />{sortedPoints.map((point, index) => <div key={point.method} className='absolute top-0 -translate-x-1/2 text-center' style={{ left: anchors[index] + '%' }}><div className='mb-2 text-xs font-bold leading-4 text-white'>{formatRupiah(point.value)}</div><div className={`mx-auto h-3 w-3 rounded-full ${point.color}`} /><div className='mx-auto mt-2 w-24 text-[10px] leading-4 text-[#8e9db3]'>{point.method === 'Dividend Discount Model' ? <>Dividend<br />Discount Model</> : point.method === 'Mean Reversion PBV' ? <>Mean Reversion<br />PBV</> : point.method === 'Discounted Earnings' ? <>Discounted<br />Earnings</> : point.method === 'Type & Sector Weighted' ? <>Type & Sector<br />Weighted</> : <>Peter Lynch<br />/ Adaptive</>}</div></div>)}<div className='absolute -top-5 bottom-12 w-0.5 border-l border-dashed border-[#f2bb5c]' style={{ left: currentPosition + '%' }}><div className='absolute top-[calc(100%+2px)] left-1/2 -translate-x-1/2 whitespace-nowrap text-center text-xs font-bold text-[#f2d18f]'>{formatRupiah(currentPrice)}</div><div className='absolute top-[calc(100%+19px)] left-1/2 -translate-x-1/2 whitespace-nowrap text-center text-[10px] text-[#c79d51]'>Current Price</div></div></div></div>;
 }
 
 function Explain({ title, text, tags }: { title: string; text: string; tags: string[] }) {

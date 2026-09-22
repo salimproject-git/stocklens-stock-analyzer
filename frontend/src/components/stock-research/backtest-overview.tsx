@@ -1,5 +1,6 @@
-import type { BacktestCase, BacktestConsensus, BacktestVerdict } from "@/data/mock-stock-details";
+import type { aggregateBacktestOverview } from "@/lib/analysis/backtest-overview";
 
+type Aggregates = ReturnType<typeof aggregateBacktestOverview>;
 type SignalView = {
   title: string;
   subtitle: string;
@@ -17,12 +18,24 @@ const overvaluedColors = { REPRICE: "#a882ff", CONFIRMED: "#55c7f2", OBSERVE: "#
 function percentage(value: number, total: number) { return total > 0 ? (value / total) * 100 : 0; }
 function formatPercentage(value: number, total: number) { const result = percentage(value, total); return result === 0 ? "0%" : `${result.toFixed(1)}%`; }
 
-function deriveView(cases: BacktestCase[], classify: (item: BacktestCase) => BacktestConsensus, outcome: (item: BacktestCase) => BacktestVerdict, title: string, subtitle: string, icon: "method" | "mos"): SignalView {
-  const undervaluedCases = cases.filter((item) => classify(item) === "UNDERVALUED");
-  const overvaluedCases = cases.filter((item) => classify(item) !== "UNDERVALUED");
-  const count = <T extends string>(items: BacktestCase[], keys: readonly T[]) => Object.fromEntries(keys.map((key) => [key, items.filter((item) => outcome(item) === key).length])) as Record<T, number>;
-  const undervaluedOutcomes = count(undervaluedCases, ["WIN", "RECOVERED", "FLAT", "RISK"]);
-  return { title, subtitle, icon, total: cases.length, undervalued: undervaluedCases.length, overvalued: overvaluedCases.length, undervaluedOutcomes: count(undervaluedCases, ["WIN", "RECOVERED", "FLAT", "RISK"]), overvaluedOutcomes: count(overvaluedCases, ["REPRICE", "CONFIRMED", "OBSERVE"]) };
+function makeSignalView(
+  aggregate: Aggregates["byMethod"],
+  undervaluedOutcomes: SignalView["undervaluedOutcomes"],
+  overvaluedOutcomes: SignalView["overvaluedOutcomes"],
+  title: string,
+  subtitle: string,
+  icon: SignalView["icon"],
+): SignalView {
+  return {
+    title,
+    subtitle,
+    icon,
+    total: aggregate.totalCases,
+    undervalued: aggregate.valuationSignal.undervalued,
+    overvalued: aggregate.valuationSignal.overvaluedMixed,
+    undervaluedOutcomes,
+    overvaluedOutcomes,
+  };
 }
 
 export function BacktestOverviewIcon({ kind }: { kind: "method" | "mos" | "history" }) {
@@ -33,10 +46,6 @@ export function BacktestOverviewIcon({ kind }: { kind: "method" | "mos" | "histo
   };
   return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4" aria-hidden="true">{paths[kind]}</svg>;
 }
-function Glyph({ type }: { type: "method" | "mos" | "analytics" | "info" | "bulb" }) {
-  return <span aria-hidden="true">{type === "analytics" ? "▥" : type === "bulb" ? "◉" : type === "info" ? "i" : type === "mos" ? "◈" : "⌁"}</span>;
-}
-
 function OutcomeRows({ values, total, colors }: { values: Record<string, number>; total: number; colors: Record<string, string> }) {
   return <div className="space-y-1.5">{Object.entries(values).map(([label, count]) => <div key={label} className="grid grid-cols-[76px_minmax(0,1fr)_42px_48px] items-center gap-2 text-[10px]"><span className="flex items-center gap-2 font-semibold text-[#cbd5e3]"><i className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: colors[label] }} />{label}</span><span className="h-1.5 min-w-0 overflow-hidden rounded-full bg-[#172536]"><i className="block h-full rounded-full" style={{ width: `${percentage(count, total)}%`, backgroundColor: colors[label] }} /></span><span className="whitespace-nowrap rounded-md bg-[#111e2d] px-1 py-1 text-center font-medium text-[#d8e0eb]">{count} / {total}</span><span className="whitespace-nowrap rounded-md bg-[#111e2d] px-1 py-1 text-center font-medium text-[#91a0b4]">{formatPercentage(count, total)}</span></div>)}</div>;
 }
@@ -50,8 +59,26 @@ function SignalCard({ view }: { view: SignalView }) {
   return <article className="flex flex-col rounded-[20px] border border-white/10 bg-[linear-gradient(180deg,rgba(11,23,37,0.92),rgba(7,16,28,0.94))] p-5 shadow-[0_24px_48px_rgba(0,0,0,0.28)] transition-colors hover:border-white/20 md:p-6"><header className="mb-5 flex items-start justify-between gap-4"><div className="flex items-center gap-3"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-[#d6a24d]/40 bg-[#f2bb5c]/10 text-[#f2bb5c]"><BacktestOverviewIcon kind={view.icon} /></span><div><h3 className="text-[17px] font-semibold tracking-[-0.01em] text-white">{view.title}</h3><p className="mt-0.5 text-xs text-[#9aa9bf]">{view.subtitle}</p></div></div></header><section><h4 className="mb-3 flex items-center gap-2 text-[13px] font-semibold text-[#e7edf7]">Valuation Signal <small className="text-[11px] font-normal text-[#74839a]">({view.total} cases)</small></h4><div className="flex h-[34px] overflow-hidden rounded-lg bg-[#172536] text-[10px] font-semibold text-white"><div className="flex items-center justify-center bg-[#219d71]" style={{ width: `${undervaluedShare}%` }}>{view.undervalued} ({formatPercentage(view.undervalued, view.total)})</div><div className="flex items-center justify-center bg-[#3892d0]" style={{ width: `${100 - undervaluedShare}%` }}>{view.overvalued} ({formatPercentage(view.overvalued, view.total)})</div></div><div className="mt-2 flex gap-4 text-[10px]"><span className="text-[#219d71]">● Undervalued</span><span className="text-[#3892d0]">● Overvalued</span></div></section><div className="my-4 border-t border-white/[0.08]" /><div className="grid gap-3 xl:grid-cols-2"><OutcomePanel title="Undervalued Outcome" total={view.undervalued} values={view.undervaluedOutcomes} colors={undervaluedColors} /><OutcomePanel title="Overvalued Outcome" total={view.overvalued} values={view.overvaluedOutcomes} colors={overvaluedColors} /></div></article>;
 }
 
-export function BacktestOverview({ cases, analysisPrices }: { cases: BacktestCase[]; analysisPrices: Record<string, number> }) {
-  const method = deriveView(cases, (item) => { const price = analysisPrices[item.id] ?? item.analysisPrice; return item.methods.filter((entry) => entry.intrinsicValue !== null && entry.intrinsicValue > price).length >= 3 ? "UNDERVALUED" : "OVERVALUED"; }, (item) => item.verdict, "By Method", "Historical results based on the combined valuation methods.", "method");
-  const mos = deriveView(cases, (item) => item.mosMain !== null && item.mosMain >= 0.3 ? "UNDERVALUED" : "OVERVALUED", (item) => item.verdictMos, "By MoS Main", "Historical results based on the main Margin of Safety signal.", "mos");
+export function BacktestOverview({ aggregates }: { aggregates: Aggregates }) {
+  const method = makeSignalView(aggregates.byMethod, {
+    WIN: aggregates.undervaluedCases.byMethod.outcomes.WIN,
+    RECOVERED: aggregates.undervaluedCases.byMethod.outcomes.RECOVERED,
+    FLAT: aggregates.undervaluedCases.byMethod.outcomes.FLAT,
+    RISK: aggregates.undervaluedCases.byMethod.outcomes.RISK,
+  }, {
+    REPRICE: aggregates.overvaluedCases.byMethod.outcomes.REPRICE,
+    CONFIRMED: aggregates.overvaluedCases.byMethod.outcomes.CONFIRMED,
+    OBSERVE: aggregates.overvaluedCases.byMethod.outcomes.OBSERVE,
+  }, "By Method", "Historical results based on the combined valuation methods.", "method");
+  const mos = makeSignalView(aggregates.byMosMain, {
+    WIN: aggregates.undervaluedCases.byMosMain.outcomes.WIN,
+    RECOVERED: aggregates.undervaluedCases.byMosMain.outcomes.RECOVERED,
+    FLAT: aggregates.undervaluedCases.byMosMain.outcomes.FLAT,
+    RISK: aggregates.undervaluedCases.byMosMain.outcomes.RISK,
+  }, {
+    REPRICE: aggregates.overvaluedCases.byMosMain.outcomes.REPRICE,
+    CONFIRMED: aggregates.overvaluedCases.byMosMain.outcomes.CONFIRMED,
+    OBSERVE: aggregates.overvaluedCases.byMosMain.outcomes.OBSERVE,
+  }, "By MoS Main", "Historical results based on the main Margin of Safety signal.", "mos");
   return <div className="grid items-stretch gap-4 md:grid-cols-2"><SignalCard view={method} /><SignalCard view={mos} /></div>;
 }

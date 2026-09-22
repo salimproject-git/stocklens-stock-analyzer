@@ -1,13 +1,7 @@
 import React from "react";
 import { StockDetail } from "@/data/mock-stock-details";
 import { formatRupiah } from "@/utils/currency";
-
-function getMainValuationMethod(stockType: string) {
-  const normalizedStockType = stockType.trim().toLowerCase();
-  return normalizedStockType === "stalwart" || normalizedStockType === "fast grower"
-    ? "Type & Sector Weighted"
-    : "Peter Lynch / Adaptive";
-}
+import { getMainValuationMethod } from "@/lib/analysis";
 export function KeyMetricSummary({ stock }: { stock: StockDetail }) {
   return (
     <section className="mb-6 grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-5">

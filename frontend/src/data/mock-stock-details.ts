@@ -1,3 +1,41 @@
+import { buildBacktestOutcomeExplanation } from "@/lib/analysis";
+
+export type ValuationMetric = {
+  label: string;
+  value: string | number;
+  note: string;
+};
+
+export type ValuationMethodResult = {
+  method: string;
+  intrinsicValue: number;
+  potential: string;
+  marginOfSafety: string;
+  status: "UNDERVALUED" | "OVERVALUED";
+  description: string;
+};
+
+export type ValuationExplanation = {
+  title: string;
+  text: string;
+  methods: string[];
+};
+
+export type MarketOverviewStock = {
+  ticker: string;
+  companyName: string;
+  sector: string;
+  stockType: string;
+  price: number;
+  change: number;
+  changePercent: number;
+  sparkline: number[];
+  verdict: "Undervalued" | "Fairly Valued" | "Overvalued";
+  mos: number;
+  evidenceWins: number;
+  evidenceTotal: number;
+  updatedAt: string;
+};
 export type StockDetail = {
   ticker: string;
   companyName: string;
@@ -40,6 +78,13 @@ export type StockDetail = {
     currentPrice: number;
     intrinsicValue: number;
     mos: number;
+    metrics: ValuationMetric[];
+    methods: ValuationMethodResult[];
+    comparison: {
+      takeaway: string;
+      readouts: string[];
+    };
+    explanations: ValuationExplanation[];
   };
   financialHealth: {
     metrics: {
@@ -104,9 +149,14 @@ export type StockDetail = {
     wins: number;
     winRate: string;
   };
+  outcomeExplanation: string;
 };
+
   backtest?: {
     cases: BacktestCase[];
+    methodology: {
+      processSteps: { number: string; title: string; text: string }[];
+    };
   };
   thesisValidator: {
     quarters: string[];
@@ -193,6 +243,129 @@ export type StockDetail = {
   };
 };
 
+export const mockMarketOverviewStocks: MarketOverviewStock[] = [
+  {
+    ticker: "BBCA",
+    companyName: "Bank Central Asia Tbk",
+    sector: "Financials",
+    stockType: "Large Cap",
+    price: 9200,
+    change: 100,
+    changePercent: 1.1,
+    sparkline: [24, 29, 27, 34, 36, 35, 42, 40, 45, 51, 49, 55],
+    verdict: "Fairly Valued",
+    mos: 12.3,
+    evidenceWins: 5,
+    evidenceTotal: 8,
+    updatedAt: "12 Sep 2026",
+  },
+  {
+    ticker: "AUTO",
+    companyName: "Astra Otoparts Tbk",
+    sector: "Automotive",
+    stockType: "Cyclical",
+    price: 1950,
+    change: 50,
+    changePercent: 2.63,
+    sparkline: [18, 21, 23, 27, 30, 29, 34, 35, 33, 38, 43, 46],
+    verdict: "Undervalued",
+    mos: 38.4,
+    evidenceWins: 4,
+    evidenceTotal: 4,
+    updatedAt: "12 Sep 2026",
+  },
+  {
+    ticker: "ERAA",
+    companyName: "Erajaya Swasembada Tbk",
+    sector: "Consumer Cyclical",
+    stockType: "Mid Cap",
+    price: 450,
+    change: -10,
+    changePercent: -2.17,
+    sparkline: [44, 48, 45, 47, 43, 42, 44, 39, 41, 37, 36, 38],
+    verdict: "Fairly Valued",
+    mos: 8.7,
+    evidenceWins: 3,
+    evidenceTotal: 6,
+    updatedAt: "12 Sep 2026",
+  },
+  {
+    ticker: "SIDO",
+    companyName: "Industri Jamu dan Farmasi Sido Muncul Tbk",
+    sector: "Consumer Defensive",
+    stockType: "Large Cap",
+    price: 640,
+    change: 15,
+    changePercent: 2.4,
+    sparkline: [20, 18, 22, 21, 24, 29, 33, 36, 35, 40, 45, 43],
+    verdict: "Undervalued",
+    mos: 28.1,
+    evidenceWins: 6,
+    evidenceTotal: 8,
+    updatedAt: "12 Sep 2026",
+  },
+  {
+    ticker: "PTBA",
+    companyName: "Bukit Asam Tbk",
+    sector: "Energy",
+    stockType: "Cyclical",
+    price: 2350,
+    change: -40,
+    changePercent: -1.67,
+    sparkline: [40, 41, 39, 43, 42, 40, 38, 41, 45, 43, 37, 35],
+    verdict: "Overvalued",
+    mos: -12.4,
+    evidenceWins: 2,
+    evidenceTotal: 6,
+    updatedAt: "12 Sep 2026",
+  },
+  {
+    ticker: "WIFI",
+    companyName: "Solusi Sinergi Digital Tbk",
+    sector: "Telecommunication",
+    stockType: "Growth",
+    price: 1490,
+    change: 80,
+    changePercent: 5.67,
+    sparkline: [16, 19, 22, 25, 30, 35, 34, 39, 44, 47, 49, 54],
+    verdict: "Undervalued",
+    mos: 31.6,
+    evidenceWins: 4,
+    evidenceTotal: 5,
+    updatedAt: "11 Sep 2026",
+  },
+  {
+    ticker: "INDF",
+    companyName: "Indofood Sukses Makmur Tbk",
+    sector: "Consumer Staples",
+    stockType: "Large Cap",
+    price: 6850,
+    change: 75,
+    changePercent: 1.11,
+    sparkline: [31, 32, 30, 29, 33, 36, 39, 38, 40, 42, 43, 45],
+    verdict: "Fairly Valued",
+    mos: 10.4,
+    evidenceWins: 5,
+    evidenceTotal: 7,
+    updatedAt: "11 Sep 2026",
+  },
+  {
+    ticker: "JSMR",
+    companyName: "Jasa Marga Tbk",
+    sector: "Infrastructure",
+    stockType: "Value",
+    price: 4780,
+    change: -60,
+    changePercent: -1.24,
+    sparkline: [45, 44, 46, 43, 42, 41, 40, 39, 38, 40, 37, 35],
+    verdict: "Overvalued",
+    mos: -6.8,
+    evidenceWins: 2,
+    evidenceTotal: 5,
+    updatedAt: "10 Sep 2026",
+  },
+];
+
 export type BacktestConsensus = "UNDERVALUED" | "OVERVALUED" | "MIXED";
 export type BacktestVerdict =
   | "WIN"
@@ -211,7 +384,6 @@ export type BacktestCase = {
   analysisPrice: number;
   sector: string;
   stockType: string;
-  consensus: BacktestConsensus;
   mosMain: number | null;
   mosPeter: number | null;
   mosWeight: number | null;
@@ -266,7 +438,6 @@ function makeAutoBacktestCase(seed: AutoBacktestSeed): BacktestCase {
     analysisPrice: seed.analysisPrice,
     sector: "Automotive",
     stockType: "Cyclical",
-    consensus: seed.methods.filter((value) => value > seed.analysisPrice).length >= 3 ? "UNDERVALUED" : "OVERVALUED",
     mosMain: seed.mos[0],
     mosPeter: seed.mos[1],
     mosWeight: seed.mos[2],
@@ -350,6 +521,34 @@ export const mockStockDetails: Record<string, StockDetail> = {
       currentPrice: 1950,
       intrinsicValue: 2780,
       mos: 29.9,
+      metrics: [
+        { label: "EPS (TTM)", value: 477.8, note: "Trailing twelve months" },
+        { label: "BVPS", value: 2780, note: "Book value per share" },
+        { label: "P/E Ratio", value: "4,92x", note: "Below sector average" },
+        { label: "P/BV Ratio", value: "0,66x", note: "Below historical avg" },
+        { label: "PEG Ratio", value: "0,25x", note: "Attractive" },
+        { label: "Dividend Yield", value: "4,83%", note: "Above market avg" },
+      ],
+      methods: [
+        { method: "Peter Lynch / Adaptive", intrinsicValue: 3567.704684, potential: "+51,82%", marginOfSafety: "34,13%", status: "UNDERVALUED", description: "Asset-based (PEG + growth)" },
+        { method: "Type & Sector Weighted", intrinsicValue: 2536.600367, potential: "+7,94%", marginOfSafety: "7,36%", status: "UNDERVALUED", description: "Blended (sector & type multiple)" },
+        { method: "Mean Reversion PBV", intrinsicValue: 1740.273242, potential: "-25,95%", marginOfSafety: "-35,04%", status: "OVERVALUED", description: "Historical asset valuation (PBV)" },
+        { method: "Dividend Discount Model", intrinsicValue: 1418.193101, potential: "-39,65%", marginOfSafety: "-65,70%", status: "OVERVALUED", description: "Dividend-based (Dividend Discount Model)" },
+        { method: "Discounted Earnings", intrinsicValue: 2304.882793, potential: "-1,92%", marginOfSafety: "-1,96%", status: "OVERVALUED", description: "Earnings-based (DCF)" },
+      ],
+      comparison: {
+        takeaway: "Current Price berada di antara Mean Reversion PBV dan Discounted Earnings.",
+        readouts: [
+          "2 dari 5 metode menunjukkan Undervalued",
+          "Highest intrinsic value: Rp3.568",
+          "Lowest intrinsic value: Rp1.418",
+        ],
+      },
+      explanations: [
+        { title: "Asset-based", text: "Uses book value, assets, or historical multiples such as PBV to estimate value.", methods: ["Mean Reversion PBV"] },
+        { title: "Income-based", text: "Uses future earnings or dividends, such as Dividend Discount Model and discounted earnings. More sensitive to growth and earnings assumptions.", methods: ["Dividend Discount Model", "Discounted Earnings"] },
+        { title: "Blended", text: "Combines multiple valuation lenses, adjusted for sector and company type.", methods: ["Peter Lynch", "Type & Sector Weighted"] },
+      ],
     },
     financialHealth: {
       metrics: [
@@ -459,8 +658,16 @@ export const mockStockDetails: Record<string, StockDetail> = {
         wins: 10,
         winRate: "100%",
       },
+      outcomeExplanation: buildBacktestOutcomeExplanation(),
     },
     backtest: {
+      methodology: {
+      processSteps: [
+          { number: "01", title: "Identify the Condition", text: "Each historical quarter is classified as Undervalued, Overvalued, or Mixed using the valuation framework available on the analysis date." },
+          { number: "02", title: "Track Price Movement", text: "After the analysis date, price movement is observed for up to 12 months against predefined upside and downside thresholds." },
+          { number: "03", title: "Determine the Outcome", text: "The first threshold reached determines the historical outcome. This is evidence of past behavior, not a prediction or recommendation." },
+        ],
+      },
       cases: [
         makeAutoBacktestCase({ quarter: "2022 Q1", analysisDate: "2022-03-31", analysisPrice: 1125, methods: [2505.247668, 1297.503507, 988.3189914, -100228.7124, 1041.622105], mos: [0.5509, 0.5509, 0.133], revenueYoY: 0.2669, netIncomeYoY: 0.3747, epsMomentum: "Slowing", revenueMomentum: "Slowing", roeTrend: "Improving", ranges: [[1285, 1080], [1375, 1085], [1590, 1155], [1855, 1335]], peakPrice: 1855, peakMonth: 11, verdict: "REPRICE", verdictMos: "WIN" }),
         makeAutoBacktestCase({ quarter: "2022 Q2", analysisDate: "2022-06-30", analysisPrice: 1140, methods: [2504.534761, 1282.526122, 1022.072242, -96187.68041, 999.6258733], mos: [0.5448, 0.5448, 0.1111], revenueYoY: 0.1314, netIncomeYoY: 1.0085, epsMomentum: "Slowing", revenueMomentum: "Slowing", roeTrend: "Improving", ranges: [[1375, 1085], [1590, 1155], [1855, 1335], [2560, 1580]], peakPrice: 2560, peakMonth: 11, verdict: "REPRICE", verdictMos: "WIN" }),
@@ -491,7 +698,7 @@ export const mockStockDetails: Record<string, StockDetail> = {
           q4: "3,9%",
           q1: "7,4%",
           q2: "19,3%",
-          trend: "↑ Increased +19.3%",
+          trend: "â†‘ Increased +19.3%",
           trendTone: "green",
         },
         {
@@ -500,7 +707,7 @@ export const mockStockDetails: Record<string, StockDetail> = {
           q4: "18,8%",
           q1: "16,0%",
           q2: "15,1%",
-          trend: "➖ Stable at 15.1%",
+          trend: "âž– Stable at 15.1%",
           trendTone: "slate",
         },
         {
@@ -509,7 +716,7 @@ export const mockStockDetails: Record<string, StockDetail> = {
           q4: "26,0%",
           q1: "10,6%",
           q2: "36,7%",
-          trend: "↑ Increased +36.7%",
+          trend: "â†‘ Increased +36.7%",
           trendTone: "green",
         },
         {
@@ -518,7 +725,7 @@ export const mockStockDetails: Record<string, StockDetail> = {
           q4: "0,83x",
           q1: "0,73x",
           q2: "0,57x",
-          trend: "⚠ Moderate — 0.57x",
+          trend: "âš  Moderate â€” 0.57x",
           trendTone: "yellow",
         },
         {
@@ -527,7 +734,7 @@ export const mockStockDetails: Record<string, StockDetail> = {
           q4: "9,8",
           q1: "9,1",
           q2: "9,2",
-          trend: "↓ Decreased -15.3%",
+          trend: "â†“ Decreased -15.3%",
           trendTone: "green",
         },
       ],
