@@ -12,9 +12,12 @@ from typing import Any
 
 import requests
 
+from raw_storage_source import ProvenanceIndex, RawStorageSource
+
 DEFAULT_RAW_ROOT = Path(r'D:\Stock Analyzer\Data\Raw')
 BUCKET = 'stocklens_raw'
 ANNUAL_FILE = 'company_report_annual.json'
+ANNUAL_CATEGORY = 'annual'
 EXPECTED_YEARS = tuple(range(2019, 2026))
 PERIOD_TYPE = 'ANNUAL'
 STATEMENT_SCOPE = 'UNKNOWN'
@@ -59,6 +62,7 @@ def expected_period_end(year: int) -> str:
 
 
 def load_annual_source(raw_root: Path, ticker: str) -> tuple[dict[str, Any], Path, str]:
+    """DEBUG/VERIFICATION ONLY. Local disk is not the pipeline source."""
     path = raw_root / ticker / ANNUAL_FILE
     if not path.is_file():
         raise LoaderError(f'ANNUAL_SOURCE_NOT_FOUND: {path}')
@@ -70,6 +74,24 @@ def load_annual_source(raw_root: Path, ticker: str) -> tuple[dict[str, Any], Pat
     if not isinstance(payload, dict):
         raise LoaderError(f'ANNUAL_SOURCE_INVALID_SHAPE: {path} must contain an object')
     return payload, path, hashlib.sha256(content).hexdigest()
+
+
+def load_annual_source_from_storage(ticker: str) -> tuple[dict[str, Any], str, str]:
+    """
+    PRIMARY source: Supabase Storage.
+
+    Returns (payload, storage_path, sha256) reading the exact stored bytes.
+    """
+    source = RawStorageSource(ticker)
+    storage_path = source.storage_path(ANNUAL_CATEGORY, ANNUAL_FILE)
+    content = source.read(ANNUAL_CATEGORY, ANNUAL_FILE)
+    try:
+        payload = json.loads(content.decode('utf-8'))
+    except (UnicodeDecodeError, json.JSONDecodeError) as error:
+        raise LoaderError(f'ANNUAL_SOURCE_INVALID_JSON: {BUCKET}/{storage_path}: {error}') from error
+    if not isinstance(payload, dict):
+        raise LoaderError(f'ANNUAL_SOURCE_INVALID_SHAPE: {BUCKET}/{storage_path} must contain an object')
+    return payload, storage_path, hashlib.sha256(content).hexdigest()
 
 
 def validate_source(payload: dict[str, Any], ticker: str) -> tuple[list[dict[str, Any]], dict[str, Any]]:
@@ -228,8 +250,6 @@ def verify_provenance(db: Supabase, run_id: str, ticker: str, checksum: str) -> 
     if metadata.get('checksum_sha256') != checksum:
         raise LoaderError(f'PROVENANCE_CHECKSUM_CONFLICT: {storage_path}')
     return metadata['id']
-
-
 def resolve_instrument(db: Supabase, ticker: str) -> str:
     rows = db.get_all('instruments', {
         'exchange_code': 'eq.IDX', 'ticker': 'eq.' + ticker,
@@ -319,18 +339,33 @@ def print_conflicts(conflicts: list[dict[str, Any]]) -> None:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description='Load local annual financial JSON into canonical Supabase tables')
+    parser = argparse.ArgumentParser(description='Load annual financial JSON (Storage-first) into canonical Supabase tables')
     parser.add_argument('ticker')
-    parser.add_argument('--ingestion-run-id', required=True)
-    parser.add_argument('--raw-root', default=str(DEFAULT_RAW_ROOT))
+    parser.add_argument('--ingestion-run-id', help='Optional raw-storage ingestion_runs.id cross-check')
+    parser.add_argument('--source', choices=['storage', 'local'], default='storage',
+                        help='Pipeline source. Default storage (local is debug-only).')
+    parser.add_argument('--raw-root', default=str(DEFAULT_RAW_ROOT), help='Debug-only local root')
     args = parser.parse_args()
     ticker = args.ticker.upper().replace('.JK', '')
-    payload, local_path, checksum = load_annual_source(Path(args.raw_root), ticker)
+
+    if args.source == 'storage':
+        payload, storage_path, checksum = load_annual_source_from_storage(ticker)
+        source_label = f'{BUCKET}/{storage_path}'
+    else:
+        payload, local_path, checksum = load_annual_source(Path(args.raw_root), ticker)
+        storage_path = f'sectors/{ticker}/annual/{ANNUAL_FILE}'
+        source_label = str(local_path)
+
     rows, financials = validate_source(payload, ticker)
     period_plans = [make_period_plan(row['year']) for row in rows]
     fact_plans = make_fact_plans(rows, financials)
     db = Supabase(required_env('SUPABASE_URL'), required_env('SUPABASE_SERVICE_ROLE_KEY'))
-    verify_provenance(db, args.ingestion_run_id, ticker, checksum)
+    provenance_id = ProvenanceIndex(
+        required_env('SUPABASE_URL'),
+        required_env('SUPABASE_SERVICE_ROLE_KEY'),
+    ).resolve(storage_path, checksum)
+    if args.ingestion_run_id:
+        verify_provenance(db, args.ingestion_run_id, ticker, checksum)
     instrument_id = resolve_instrument(db, ticker)
     existing_by_year, new_years, existing_fact_keys, conflicts = preflight(db, instrument_id, period_plans, fact_plans)
     if conflicts:
@@ -369,9 +404,11 @@ def main() -> None:
     final_periods = db.get_all('financial_periods', {'instrument_id': 'eq.' + instrument_id, 'period_type': 'eq.' + PERIOD_TYPE, 'select': 'period_end'})
     final_dates = sorted(row['period_end'] for row in final_periods)
     print('ticker=' + ticker)
+    print('source=' + args.source)
+    print('raw_source=' + source_label)
     print('instrument_id=' + instrument_id)
-    print('ingestion_run_id=' + args.ingestion_run_id)
-    print('raw_file=' + str(local_path))
+    print('identity_ingestion_file_id=' + provenance_id)
+    print('raw_file=' + str(storage_path))
     print('checksum_sha256=' + checksum)
     print('period_count=' + str(len(period_plans)))
     print('fact_count=' + str(len(fact_plans)))

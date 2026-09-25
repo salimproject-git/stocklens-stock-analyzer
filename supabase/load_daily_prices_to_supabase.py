@@ -13,9 +13,12 @@ from typing import Any
 
 import requests
 
+from raw_storage_source import ProvenanceIndex, RawStorageSource
+
 DEFAULT_RAW_ROOT = Path(r'D:\Stock Analyzer\Data\Raw')
 BUCKET = 'stocklens_raw'
 EXPECTED_FIELDS = ('open', 'high', 'low', 'close', 'volume', 'market_cap')
+DAILY_CATEGORY = 'daily'
 
 def required_env(name: str) -> str:
     value = os.getenv(name, '').strip()
@@ -54,6 +57,7 @@ def normalized_record(record: Any, path: Path, index: int, ticker: str) -> dict[
     return row
 
 def discover_daily(raw_root: Path, ticker: str) -> tuple[dict[str, dict[str, Any]], int]:
+    """DEBUG/VERIFICATION ONLY. Local disk is not the pipeline source."""
     folder = raw_root / ticker / 'daily'
     files = sorted(folder.glob('*.json')) if folder.is_dir() else []
     if not files:
@@ -74,6 +78,50 @@ def discover_daily(raw_root: Path, ticker: str) -> tuple[dict[str, dict[str, Any
             elif any(previous[field] != row[field] for field in ('date',) + EXPECTED_FIELDS):
                 raise RuntimeError(f'SOURCE_CONFLICT: duplicate date {row[date]} has different values')
     return dates, len(files)
+
+
+def collect_daily_from_storage(
+    source: RawStorageSource,
+    ticker: str,
+) -> tuple[dict[str, dict[str, Any]], int, dict[str, str]]:
+    """
+    PRIMARY source: Supabase Storage.
+
+    Returns (records_by_date, file_count, checksums_by_storage_path).
+    `_source_file` holds the Storage object name so provenance can be resolved
+    per raw file.
+    """
+    names = source.names(DAILY_CATEGORY)
+    if not names:
+        raise RuntimeError(
+            f'No daily JSON objects found under: {BUCKET}/sectors/{ticker}/{DAILY_CATEGORY}/'
+        )
+
+    dates: dict[str, dict[str, Any]] = {}
+    checksums: dict[str, str] = {}
+    total_records = 0
+
+    for name in names:
+        content = source.read(DAILY_CATEGORY, name)
+        checksums[source.storage_path(DAILY_CATEGORY, name)] = hashlib.sha256(content).hexdigest()
+        try:
+            payload = json.loads(content.decode('utf-8'))
+        except (UnicodeDecodeError, json.JSONDecodeError) as error:
+            raise RuntimeError(f'INVALID_JSON: {BUCKET}/{name}: {error}') from error
+        if not isinstance(payload, list):
+            raise RuntimeError(f'INVALID_FILE: {name} must contain a top-level list')
+
+        for index, record in enumerate(payload, start=1):
+            total_records += 1
+            row = normalized_record(record, Path(name), index, ticker)
+            previous = dates.get(row['date'])
+            if previous is None:
+                row['_source_file'] = name
+                dates[row['date']] = row
+            elif any(previous[field] != row[field] for field in ('date',) + EXPECTED_FIELDS):
+                raise RuntimeError(f'SOURCE_CONFLICT: duplicate date {row["date"]} has different values')
+
+    return dates, len(names), checksums
 
 class Supabase:
     def __init__(self, url: str, key: str):
@@ -119,6 +167,7 @@ def resolve_instrument(db: Supabase, ticker: str) -> str:
     return rows[0]['id']
 
 def resolve_provenance(db: Supabase, run_id: str, ticker: str, files: list[Path]) -> dict[str, str]:
+    """DEBUG/VERIFICATION ONLY (local disk)."""
     rows = db.get_all('ingestion_files', {'ingestion_run_id': 'eq.' + run_id, 'storage_bucket': 'eq.' + BUCKET, 'select': 'id,storage_path,status,checksum_sha256'})
     expected = {f'sectors/{ticker}/daily/{path.name}' for path in files}
     actual = {row['storage_path']: row for row in rows}
@@ -136,6 +185,25 @@ def resolve_provenance(db: Supabase, run_id: str, ticker: str, files: list[Path]
             raise RuntimeError(f'PROVENANCE_CHECKSUM_CONFLICT: {storage_path}')
         provenance[local_path.name] = actual[storage_path]['id']
     return provenance
+
+
+def resolve_provenance_from_storage(
+    ticker: str,
+    checksums: dict[str, str],
+) -> dict[str, str]:
+    """
+    PRIMARY provenance: keyed by storage path.
+
+    Phase 1B registered one ingestion_runs row per daily window, so a single
+    run_id cannot cover all 29 objects. Each row is still validated for
+    status + checksum before use.
+
+    `checksums` maps storage_path -> sha256 of the exact Storage bytes.
+    """
+    return ProvenanceIndex(
+        required_env('SUPABASE_URL'),
+        required_env('SUPABASE_SERVICE_ROLE_KEY'),
+    ).resolve_many(checksums)
 
 def same_value(left: Any, right: Any) -> bool:
     if left is None or right is None:
@@ -163,17 +231,40 @@ def create_canonical_row(instrument_id: str, raw: dict[str, Any], provenance_id:
     }
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description='Load local daily JSON into public.prices_daily')
+    parser = argparse.ArgumentParser(description='Load daily price JSON (Storage-first) into public.prices_daily')
     parser.add_argument('ticker')
-    parser.add_argument('--ingestion-run-id', required=True, help='Raw-storage ingestion_runs.id')
-    parser.add_argument('--raw-root', default=str(DEFAULT_RAW_ROOT))
+    parser.add_argument('--ingestion-run-id', help='Optional raw-storage ingestion_runs.id cross-check')
+    parser.add_argument('--source', choices=['storage', 'local'], default='storage',
+                        help='Pipeline source. Default storage (local is debug-only).')
+    parser.add_argument('--raw-root', default=str(DEFAULT_RAW_ROOT), help='Debug-only local root')
     args = parser.parse_args()
     ticker = args.ticker.upper().replace('.JK', '')
-    raw_by_date, file_count = discover_daily(Path(args.raw_root), ticker)
+
+    if args.source == 'storage':
+        source = RawStorageSource(ticker)
+        raw_by_date, file_count, checksums = collect_daily_from_storage(source, ticker)
+        source_label = f'{BUCKET}/sectors/{ticker}/{DAILY_CATEGORY}/'
+    else:
+        raw_by_date, file_count = discover_daily(Path(args.raw_root), ticker)
+        checksums = {
+            f'sectors/{ticker}/daily/{name}': hashlib.sha256(
+                (Path(args.raw_root) / ticker / 'daily' / name).read_bytes()
+            ).hexdigest()
+            for name in sorted({row['_source_file'] for row in raw_by_date.values()})
+        }
+        source_label = str(Path(args.raw_root) / ticker / 'daily')
+
     db = Supabase(required_env('SUPABASE_URL'), required_env('SUPABASE_SERVICE_ROLE_KEY'))
     instrument_id = resolve_instrument(db, ticker)
-    file_names = sorted((Path(args.raw_root) / ticker / 'daily').glob('*.json'))
-    provenance = resolve_provenance(db, args.ingestion_run_id, ticker, file_names)
+    provenance_by_path = resolve_provenance_from_storage(ticker, checksums)
+    # Map object name -> ingestion_files.id (insert helper uses the raw name).
+    provenance = {
+        storage_path.rsplit('/', 1)[-1]: file_id
+        for storage_path, file_id in provenance_by_path.items()
+    }
+    if args.ingestion_run_id:
+        file_names = sorted((Path(args.raw_root) / ticker / 'daily').glob('*.json'))
+        resolve_provenance(db, args.ingestion_run_id, ticker, file_names)
     existing_rows = db.get_all('prices_daily', {'instrument_id': 'eq.' + instrument_id, 'select': 'id,trading_date,open_price,high_price,low_price,close_price,volume,market_cap'})
     existing_by_date = {row['trading_date']: row for row in existing_rows}
     inserts: list[dict[str, Any]] = []
@@ -196,6 +287,8 @@ def main() -> None:
     final_rows = db.get_all('prices_daily', {'instrument_id': 'eq.' + instrument_id, 'select': 'trading_date'})
     final_dates = sorted(row['trading_date'] for row in final_rows)
     print(f'ticker={ticker}')
+    print(f'source={args.source}')
+    print(f'raw_source={source_label}')
     print(f'raw_file_count={file_count}')
     print(f'raw_unique_record_count={len(raw_by_date)}')
     print(f'inserted_count={len(inserts)}')

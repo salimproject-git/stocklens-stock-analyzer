@@ -12,6 +12,8 @@ from typing import Any
 
 import requests
 
+from raw_storage_source import ProvenanceIndex, RawStorageSource
+
 DEFAULT_RAW_ROOT = Path(r'D:\Stock Analyzer\Data\Raw')
 BUCKET = 'stocklens_raw'
 DIVIDEND_FILE = 'company_report_dividend.json'
@@ -40,6 +42,7 @@ def is_number(value: Any) -> bool:
 
 
 def load_source(raw_root: Path, ticker: str) -> tuple[dict[str, Any], Path, str]:
+    """DEBUG/VERIFICATION ONLY. Local disk is not the pipeline source."""
     path = raw_root / ticker / DIVIDEND_FILE
     if not path.is_file():
         raise LoaderError(f'DIVIDEND_SOURCE_NOT_FOUND: {path}')
@@ -51,6 +54,20 @@ def load_source(raw_root: Path, ticker: str) -> tuple[dict[str, Any], Path, str]
     if not isinstance(payload, dict):
         raise LoaderError('DIVIDEND_SOURCE_INVALID_SHAPE: expected an object')
     return payload, path, hashlib.sha256(content).hexdigest()
+
+
+def load_source_from_storage(ticker: str) -> tuple[dict[str, Any], str, str]:
+    """PRIMARY source: Supabase Storage. Returns (payload, storage_path, sha256)."""
+    source = RawStorageSource(ticker)
+    storage_path = source.storage_path(STORAGE_CATEGORY, DIVIDEND_FILE)
+    content = source.read(STORAGE_CATEGORY, DIVIDEND_FILE)
+    try:
+        payload = json.loads(content.decode('utf-8'))
+    except (UnicodeDecodeError, json.JSONDecodeError) as error:
+        raise LoaderError(f'DIVIDEND_SOURCE_INVALID_JSON: {BUCKET}/{storage_path}: {error}') from error
+    if not isinstance(payload, dict):
+        raise LoaderError('DIVIDEND_SOURCE_INVALID_SHAPE: expected an object')
+    return payload, storage_path, hashlib.sha256(content).hexdigest()
 
 
 def validate_source(payload: dict[str, Any], ticker: str) -> dict[str, Any]:
@@ -241,20 +258,35 @@ def preflight(db: Supabase, instrument_id: str, plans: list[dict[str, Any]]) -> 
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description='Load local dividend JSON into public.dividend_facts')
+    parser = argparse.ArgumentParser(description='Load dividend JSON (Storage-first) into public.dividend_facts')
     parser.add_argument('ticker')
-    parser.add_argument('--ingestion-run-id', required=True)
-    parser.add_argument('--raw-root', default=str(DEFAULT_RAW_ROOT))
+    parser.add_argument('--ingestion-run-id', help='Optional raw-storage ingestion_runs.id cross-check')
+    parser.add_argument('--source', choices=['storage', 'local'], default='storage',
+                        help='Pipeline source. Default storage (local is debug-only).')
+    parser.add_argument('--raw-root', default=str(DEFAULT_RAW_ROOT), help='Debug-only local root')
     args = parser.parse_args()
     ticker = args.ticker.upper().replace('.JK', '')
-    payload, local_path, checksum = load_source(Path(args.raw_root), ticker)
+
+    if args.source == 'storage':
+        payload, storage_path, checksum = load_source_from_storage(ticker)
+        source_label = f'{BUCKET}/{storage_path}'
+    else:
+        payload, local_path, checksum = load_source(Path(args.raw_root), ticker)
+        storage_path = f'sectors/{ticker}/{STORAGE_CATEGORY}/{DIVIDEND_FILE}'
+        source_label = str(local_path)
+
     dividend = validate_source(payload, ticker)
     plans = make_fact_plans(dividend, ticker)
     expected_count = len(EXPECTED_YEARS) * 2 + 2 if ticker == 'AUTO' else len(plans)
     if len(plans) != expected_count:
         raise LoaderError(f'CANONICAL_FACT_COUNT: expected {expected_count}, got {len(plans)}')
     db = Supabase(required_env('SUPABASE_URL'), required_env('SUPABASE_SERVICE_ROLE_KEY'))
-    verify_provenance(db, args.ingestion_run_id, ticker, checksum)
+    provenance_id = ProvenanceIndex(
+        required_env('SUPABASE_URL'),
+        required_env('SUPABASE_SERVICE_ROLE_KEY'),
+    ).resolve(storage_path, checksum)
+    if args.ingestion_run_id:
+        verify_provenance(db, args.ingestion_run_id, ticker, checksum)
     instrument_id = resolve_instrument(db, ticker)
     inserts, skips, conflicts = preflight(db, instrument_id, plans)
     if conflicts:
@@ -279,9 +311,10 @@ def main() -> None:
             raise LoaderError('FINAL_VERIFICATION_FAILED: ' + plan['source_field'])
         verified.append(existing[0])
     print('ticker=' + ticker)
+    print('source=' + args.source)
+    print('raw_source=' + source_label)
     print('instrument_id=' + instrument_id)
-    print('ingestion_run_id=' + args.ingestion_run_id)
-    print('raw_file=' + str(local_path))
+    print('identity_ingestion_file_id=' + provenance_id)
     print('checksum_sha256=' + checksum)
     print('fact_count=' + str(len(plans)))
     print('inserted_fact_count=' + str(len(inserts)))

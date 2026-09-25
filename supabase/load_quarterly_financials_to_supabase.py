@@ -13,6 +13,8 @@ from typing import Any
 
 import requests
 
+from raw_storage_source import ProvenanceIndex, RawStorageSource
+
 DEFAULT_RAW_ROOT = Path(r'D:\Stock Analyzer\Data\Raw')
 BUCKET = 'stocklens_raw'
 DATE_INDEX_FILE = 'quarterly_financial_dates.json'
@@ -124,10 +126,30 @@ def load_json(path: Path) -> tuple[Any, str]:
 
 
 def load_date_index(raw_root: Path, ticker: str) -> dict[str, dict[str, Any]]:
+    """DEBUG/VERIFICATION ONLY. Local disk is not the pipeline source."""
     path = raw_root / ticker / DATE_INDEX_FILE
     if not path.is_file():
         raise LoaderError(f'DATE_INDEX_NOT_FOUND: {path}')
     payload, _ = load_json(path)
+    return parse_date_index(payload, ticker)
+
+
+def load_date_index_from_storage(
+    source: RawStorageSource,
+    ticker: str,
+) -> dict[str, dict[str, Any]]:
+    """PRIMARY source: Supabase Storage."""
+    content = source.read(QUARTERLY_DIRECTORY, DATE_INDEX_FILE)
+    try:
+        payload = json.loads(content.decode('utf-8'))
+    except (UnicodeDecodeError, json.JSONDecodeError) as error:
+        raise LoaderError(
+            f'INVALID_JSON: {BUCKET}/sectors/{ticker}/{QUARTERLY_DIRECTORY}/{DATE_INDEX_FILE}: {error}'
+        ) from error
+    return parse_date_index(payload, ticker)
+
+
+def parse_date_index(payload: Any, ticker: str) -> dict[str, dict[str, Any]]:
     if not isinstance(payload, dict):
         raise LoaderError('DATE_INDEX_INVALID_SHAPE: expected an object keyed by year')
     entries: dict[str, dict[str, Any]] = {}
@@ -223,6 +245,95 @@ def load_quarterly_records(
     return records, paths_by_date, checksums
 
 
+def validate_quarterly_record(
+    payload: Any,
+    label: str,
+    ticker: str,
+    period_end: str,
+    date_index: dict[str, dict[str, Any]],
+) -> dict[str, Any]:
+    """Shared validation for one quarterly raw file (Storage or local debug)."""
+    expected_keys = {'symbol', 'financials_sector_metrics', 'date', *QUARTERLY_FIELDS}
+
+    if not isinstance(payload, list) or len(payload) != 1:
+        raise LoaderError(f'QUARTERLY_INVALID_SHAPE: {label} must be a one-record array')
+    record = payload[0]
+    if not isinstance(record, dict):
+        raise LoaderError(f'QUARTERLY_INVALID_RECORD: {label}')
+    if set(record) != expected_keys:
+        missing = sorted(expected_keys - set(record))
+        extra = sorted(set(record) - expected_keys)
+        raise LoaderError(f'QUARTERLY_FIELD_MISMATCH: {label} missing={missing} extra={extra}')
+    symbol = record.get('symbol')
+    if not isinstance(symbol, str) or symbol.upper() != f'{ticker}.JK':
+        raise LoaderError(f'QUARTERLY_SYMBOL_CONFLICT: {label} symbol={symbol!r}')
+    record_date = parse_iso_date(record.get('date'), f'{label}.date')
+    if record_date != period_end:
+        raise LoaderError(f'QUARTERLY_DATE_CONFLICT: {label} record_date={record_date}')
+    if record_date != date_index[period_end]['period_end']:
+        raise LoaderError(f'QUARTERLY_INDEX_DATE_CONFLICT: {label}')
+    for field in QUARTERLY_FIELDS:
+        value = record[field]
+        if value is not None and not is_number(value):
+            raise LoaderError(f'QUARTERLY_INVALID_VALUE: {label} field={field}')
+
+    record_copy = dict(record)
+    record_copy['_period'] = date_index[period_end]
+    return record_copy
+
+
+def load_quarterly_records_from_storage(
+    source: RawStorageSource,
+    ticker: str,
+    date_index: dict[str, dict[str, Any]],
+) -> tuple[list[dict[str, Any]], dict[str, str], dict[str, str]]:
+    """
+    PRIMARY source: Supabase Storage.
+
+    Returns (records, storage_paths_by_date, checksums_by_date).
+    Only the report dates actually present in the API-provided date index are
+    processed - no quarter is invented.
+    """
+    names = [
+        name
+        for name in source.names(QUARTERLY_DIRECTORY)
+        if name != DATE_INDEX_FILE
+    ]
+    if not names:
+        raise LoaderError(
+            f'QUARTERLY_FILES_NOT_FOUND: {BUCKET}/sectors/{ticker}/{QUARTERLY_DIRECTORY}/'
+        )
+
+    records: list[dict[str, Any]] = []
+    storage_paths_by_date: dict[str, str] = {}
+    checksums: dict[str, str] = {}
+
+    for name in names:
+        period_end = name[:-len('.json')]
+        parse_iso_date(period_end, f'quarterly object {name}')
+        if period_end not in date_index:
+            raise LoaderError(f'QUARTERLY_FILE_NOT_INDEXED: {name}')
+
+        content = source.read(QUARTERLY_DIRECTORY, name)
+        try:
+            payload = json.loads(content.decode('utf-8'))
+        except (UnicodeDecodeError, json.JSONDecodeError) as error:
+            raise LoaderError(f'INVALID_JSON: {BUCKET}/{name}: {error}') from error
+
+        record = validate_quarterly_record(payload, name, ticker, period_end, date_index)
+        record['_source_path'] = name
+        records.append(record)
+        storage_paths_by_date[period_end] = source.storage_path(QUARTERLY_DIRECTORY, name)
+        checksums[period_end] = hashlib.sha256(content).hexdigest()
+
+    if set(storage_paths_by_date) != set(date_index):
+        missing = sorted(set(date_index) - set(storage_paths_by_date))
+        extra = sorted(set(storage_paths_by_date) - set(date_index))
+        raise LoaderError(f'QUARTERLY_FILE_COVERAGE_CONFLICT: missing={missing}, extra={extra}')
+
+    return records, storage_paths_by_date, checksums
+
+
 def make_period_plan(record: dict[str, Any]) -> dict[str, Any]:
     period = record['_period']
     return {
@@ -259,14 +370,32 @@ def make_fact_plans(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return plans
 
 
-def verify_auto_annual_reconciliation(raw_root: Path, ticker: str, records: list[dict[str, Any]]) -> None:
-    if ticker != 'AUTO':
-        return
+def load_annual_rows_from_storage(source: RawStorageSource) -> list[dict[str, Any]]:
+    """Read the annual raw object from Storage for the 2025 reconciliation."""
+    content = source.read('annual', 'company_report_annual.json')
+    payload = json.loads(content.decode('utf-8'))
+    rows = payload.get('financials', {}).get('historical_financials', [])
+    if not isinstance(rows, list):
+        raise LoaderError('ANNUAL_SOURCE_INVALID_SHAPE_FOR_RECONCILIATION')
+    return rows
+
+
+def load_annual_rows_local(raw_root: Path, ticker: str) -> list[dict[str, Any]]:
+    """DEBUG/VERIFICATION ONLY."""
     annual_path = raw_root / ticker / 'company_report_annual.json'
     if not annual_path.is_file():
         raise LoaderError(f'ANNUAL_SOURCE_NOT_FOUND_FOR_RECONCILIATION: {annual_path}')
     annual_payload, _ = load_json(annual_path)
-    annual_rows = annual_payload.get('financials', {}).get('historical_financials', [])
+    return annual_payload.get('financials', {}).get('historical_financials', [])
+
+
+def verify_auto_annual_reconciliation(
+    ticker: str,
+    records: list[dict[str, Any]],
+    annual_rows: list[dict[str, Any]],
+) -> None:
+    if ticker != 'AUTO':
+        return
     annual_2025 = next((row for row in annual_rows if row.get('year') == 2025), None)
     if annual_2025 is None:
         raise LoaderError('ANNUAL_2025_NOT_FOUND_FOR_RECONCILIATION')
@@ -345,6 +474,20 @@ def verify_provenance(db: Supabase, run_id: str, ticker: str, checksums: dict[st
     return provenance
 
 
+def resolve_provenance_by_path(checksums: dict[str, str]) -> dict[str, str]:
+    """
+    Provenance keyed by storage path.
+
+    Phase 1B registered one ingestion_runs row per raw file, so a single
+    run_id cannot cover all 27 quarterly objects. Each row is still validated
+    for status + checksum before use.
+    """
+    return ProvenanceIndex(
+        required_env('SUPABASE_URL'),
+        required_env('SUPABASE_SERVICE_ROLE_KEY'),
+    ).resolve_many(checksums)
+
+
 def resolve_instrument(db: Supabase, ticker: str) -> str:
     rows = db.get_all('instruments', {'exchange_code': 'eq.IDX', 'ticker': 'eq.' + ticker, 'select': 'id,exchange_code,ticker'})
     if len(rows) == 0:
@@ -418,20 +561,45 @@ def preflight(db: Supabase, instrument_id: str, period_plans: list[dict[str, Any
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description='Load local quarterly financial JSON into canonical Supabase tables')
+    parser = argparse.ArgumentParser(description='Load quarterly financial JSON (Storage-first) into canonical Supabase tables')
     parser.add_argument('ticker')
-    parser.add_argument('--ingestion-run-id', required=True)
-    parser.add_argument('--raw-root', default=str(DEFAULT_RAW_ROOT))
+    parser.add_argument('--ingestion-run-id', help='Optional raw-storage ingestion_runs.id cross-check')
+    parser.add_argument('--source', choices=['storage', 'local'], default='storage',
+                        help='Pipeline source. Default storage (local is debug-only).')
+    parser.add_argument('--raw-root', default=str(DEFAULT_RAW_ROOT), help='Debug-only local root')
     args = parser.parse_args()
     ticker = args.ticker.upper().replace('.JK', '')
-    raw_root = Path(args.raw_root)
-    date_index = load_date_index(raw_root, ticker)
-    records, paths_by_date, checksums = load_quarterly_records(raw_root, ticker, date_index)
-    verify_auto_annual_reconciliation(raw_root, ticker, records)
+
+    if args.source == 'storage':
+        source = RawStorageSource(ticker)
+        date_index = load_date_index_from_storage(source, ticker)
+        records, storage_paths_by_date, checksums = load_quarterly_records_from_storage(
+            source, ticker, date_index
+        )
+        annual_rows = load_annual_rows_from_storage(source)
+        provenance_checksums = {
+            storage_path: checksums[period_end]
+            for period_end, storage_path in storage_paths_by_date.items()
+        }
+        source_label = f'{BUCKET}/sectors/{ticker}/{QUARTERLY_DIRECTORY}/'
+    else:
+        raw_root = Path(args.raw_root)
+        date_index = load_date_index(raw_root, ticker)
+        records, paths_by_date, checksums = load_quarterly_records(raw_root, ticker, date_index)
+        annual_rows = load_annual_rows_local(raw_root, ticker)
+        provenance_checksums = {
+            f'sectors/{ticker}/quarterly/{period_end}.json': checksum
+            for period_end, checksum in checksums.items()
+        }
+        source_label = str(raw_root / ticker / QUARTERLY_DIRECTORY)
+
+    verify_auto_annual_reconciliation(ticker, records, annual_rows)
     period_plans = [make_period_plan(record) for record in records]
     fact_plans = make_fact_plans(records)
     db = Supabase(required_env('SUPABASE_URL'), required_env('SUPABASE_SERVICE_ROLE_KEY'))
-    provenance = verify_provenance(db, args.ingestion_run_id, ticker, checksums)
+    provenance = resolve_provenance_by_path(provenance_checksums)
+    if args.ingestion_run_id:
+        verify_provenance(db, args.ingestion_run_id, ticker, checksums)
     instrument_id = resolve_instrument(db, ticker)
     periods_by_date, new_period_ends, existing_fact_keys, conflicts = preflight(db, instrument_id, period_plans, fact_plans)
     if conflicts:
@@ -475,8 +643,9 @@ def main() -> None:
         if not fact_matches(row, plans_by_key[key]):
             raise LoaderError('FINAL_FACT_VALUE_VERIFICATION_FAILED: ' + str(key))
     print('ticker=' + ticker)
+    print('source=' + args.source)
+    print('raw_source=' + source_label)
     print('instrument_id=' + instrument_id)
-    print('ingestion_run_id=' + args.ingestion_run_id)
     print('quarterly_file_count=' + str(len(records)))
     print('period_count=' + str(len(period_plans)))
     print('fact_count=' + str(len(fact_plans)))

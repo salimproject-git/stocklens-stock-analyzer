@@ -11,6 +11,8 @@ from typing import Any
 
 import requests
 
+from upload_raw_storage_only import StorageClient
+
 DEFAULT_RAW_ROOT = Path(r'D:\Stock Analyzer\Data\Raw')
 BUCKET = 'stocklens_raw'
 INFO_FILE = 'company_report_info.json'
@@ -23,17 +25,42 @@ def required_env(name: str) -> str:
     return value
 
 
+def parse_info_bytes(content: bytes, source_label: str) -> dict[str, Any]:
+    """Shared validation for the raw info payload (Storage or local debug)."""
+    try:
+        payload = json.loads(content.decode('utf-8'))
+    except (UnicodeDecodeError, json.JSONDecodeError) as error:
+        raise RuntimeError(f'IDENTITY_SOURCE_INVALID_JSON: {source_label}: {error}') from error
+    if not isinstance(payload, dict):
+        raise RuntimeError(f'IDENTITY_SOURCE_INVALID_SHAPE: {source_label} must contain an object')
+    return payload
+
+
+def load_info_from_storage(
+    storage: StorageClient,
+    ticker: str,
+) -> tuple[dict[str, Any], str, str]:
+    """
+    PRIMARY source of truth: the private Storage bucket.
+
+    Reads the exact bytes of `sectors/{TICKER}/info/company_report_info.json`
+    and returns (payload, storage_path, sha256). No transformation.
+    """
+    storage_path = f'sectors/{ticker}/info/{INFO_FILE}'
+    if storage.object_info(BUCKET, storage_path) is None:
+        raise RuntimeError(f'IDENTITY_SOURCE_NOT_FOUND: {BUCKET}/{storage_path}')
+    content = storage.download(BUCKET, storage_path)
+    payload = parse_info_bytes(content, f'{BUCKET}/{storage_path}')
+    return payload, storage_path, hashlib.sha256(content).hexdigest()
+
+
 def load_info(raw_root: Path, ticker: str) -> tuple[dict[str, Any], Path, str]:
+    """DEBUG/VERIFICATION ONLY. Local disk is not the pipeline source."""
     path = raw_root / ticker / INFO_FILE
     if not path.is_file():
         raise RuntimeError(f'IDENTITY_SOURCE_NOT_FOUND: {path}')
     content = path.read_bytes()
-    try:
-        payload = json.loads(content.decode('utf-8'))
-    except (UnicodeDecodeError, json.JSONDecodeError) as error:
-        raise RuntimeError(f'IDENTITY_SOURCE_INVALID_JSON: {path}: {error}') from error
-    if not isinstance(payload, dict):
-        raise RuntimeError(f'IDENTITY_SOURCE_INVALID_SHAPE: {path} must contain an object')
+    payload = parse_info_bytes(content, str(path))
     return payload, path, hashlib.sha256(content).hexdigest()
 
 
@@ -108,8 +135,12 @@ class Supabase:
         return rows[0]
 
 
-def verify_provenance(db: Supabase, run_id: str, ticker: str, local_path: Path, checksum: str) -> str:
-    storage_path = f'sectors/{ticker}/info/{INFO_FILE}'
+def verify_provenance(db: Supabase, run_id: str, ticker: str, storage_path: str, checksum: str) -> str:
+    expected_path = f'sectors/{ticker}/info/{INFO_FILE}'
+    if storage_path != expected_path:
+        raise RuntimeError(
+            f'PROVENANCE_PATH_MISMATCH: {storage_path} != {expected_path}'
+        )
     runs = db.get('ingestion_runs', {
         'id': 'eq.' + run_id,
         'select': 'id,symbol',
@@ -132,7 +163,7 @@ def verify_provenance(db: Supabase, run_id: str, ticker: str, local_path: Path, 
     if rows[0]['status'] not in {'UPLOADED', 'SKIPPED'}:
         raise RuntimeError('PROVENANCE_NOT_READY: %s status=%s' % (storage_path, rows[0].get('status')))
     if rows[0]['checksum_sha256'] != checksum:
-        raise RuntimeError(f'PROVENANCE_CHECKSUM_CONFLICT: {local_path}')
+        raise RuntimeError(f'PROVENANCE_CHECKSUM_CONFLICT: {storage_path}')
     return rows[0]['id']
 
 def compare_fields(existing: dict[str, Any], incoming: dict[str, Any], fields: tuple[str, ...]) -> list[str]:
@@ -238,25 +269,49 @@ def load_identity(db: Supabase, ticker: str, values: dict[str, Any]) -> tuple[st
     return instrument['id'], notes
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description='Load local raw identity into canonical Supabase tables')
+    parser = argparse.ArgumentParser(description='Load raw identity from Supabase Storage into canonical tables')
     parser.add_argument('ticker')
     parser.add_argument('--ingestion-run-id', required=True, help='Raw-storage ingestion_runs.id')
-    parser.add_argument('--raw-root', default=str(DEFAULT_RAW_ROOT))
+    parser.add_argument(
+        '--source',
+        choices=['storage', 'local'],
+        default='storage',
+        help='Pipeline source. Default storage (local is debug-only).',
+    )
+    parser.add_argument('--raw-root', default=str(DEFAULT_RAW_ROOT), help='Debug-only local root')
     args = parser.parse_args()
     ticker = args.ticker.upper().replace('.JK', '')
-    payload, local_path, checksum = load_info(Path(args.raw_root), ticker)
-    values = source_values(payload, ticker)
+
     db = Supabase(required_env('SUPABASE_URL'), required_env('SUPABASE_SERVICE_ROLE_KEY'))
-    provenance_id = verify_provenance(db, args.ingestion_run_id, ticker, local_path, checksum)
+
+    if args.source == 'storage':
+        storage = StorageClient(
+            required_env('SUPABASE_URL'),
+            required_env('SUPABASE_SERVICE_ROLE_KEY'),
+        )
+        payload, storage_path, checksum = load_info_from_storage(storage, ticker)
+        source_label = f'{BUCKET}/{storage_path}'
+    else:
+        payload, local_path, checksum = load_info(Path(args.raw_root), ticker)
+        storage_path = f'sectors/{ticker}/info/{INFO_FILE}'
+        source_label = str(local_path)
+
+    values = source_values(payload, ticker)
+    provenance_id = verify_provenance(db, args.ingestion_run_id, ticker, storage_path, checksum)
     instrument_id, notes = load_identity(db, ticker, values)
+
     print(f'ticker={ticker}')
-    print(f'raw_file={local_path.name}')
+    print(f'source={args.source}')
+    print(f'raw_source={source_label}')
     print(f'raw_checksum_sha256={checksum}')
     print(f'identity_ingestion_file_id={provenance_id}')
+    print(f'company_identity={values["provider_identity"]}')
+    print(f'company_legal_name={values["legal_name"]}')
     print(f'instrument_id={instrument_id}')
     for note in notes:
         print(note)
     print('provenance_limitation=instrument_sector_classifications has no ingestion_files FK; source_payload_id remains NULL')
+
 
 if __name__ == '__main__':
     try:
