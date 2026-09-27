@@ -1,0 +1,112 @@
+{
+  "ticker": "AUTO",
+  "scenario_code": "WORKBOOK_2026_Q2",
+  "scenario_version": 1,
+  "projection_year": 2026,
+  "as_of_quarter": 2,
+  "years_available": 7,
+  "average_dpr_ratio": "0.24",
+  "manual_dpr_ratio": null,
+  "projected_shares_outstanding": "4820000000",
+  "source_name": "Owner-provided Excel DataInputProyeksi",
+  "source_reference": "MetricsClassification input: Quarter 2 2026",
+  "projections": [
+    {
+      "metric_code": "REVENUE",
+      "value_numeric": "21705000000000",
+      "unit_code": "IDR",
+      "source_kind": "WORKBOOK_FORMULA_OUTPUT",
+      "source_display_value": "21705",
+      "source_note": "Annualized from Q1+Q2 actual using the workbook formula; not full-year actual."
+    },
+    {
+      "metric_code": "COST_OF_REVENUE",
+      "value_numeric": "-18329000000000",
+      "unit_code": "IDR",
+      "source_kind": "WORKBOOK_FORMULA_OUTPUT",
+      "source_display_value": "-18329",
+      "source_note": "Negative sign matches the workbook presentation."
+    },
+    {
+      "metric_code": "INTEREST_EXPENSE_NON_OPERATING",
+      "value_numeric": "37000000000",
+      "unit_code": "IDR",
+      "source_kind": "WORKBOOK_FORMULA_OUTPUT",
+      "source_display_value": "37"
+    },
+    {
+      "metric_code": "EARNINGS",
+      "value_numeric": "2303000000000",
+      "unit_code": "IDR",
+      "source_kind": "WORKBOOK_FORMULA_OUTPUT",
+      "source_display_value": "2303"
+    },
+    {
+      "metric_code": "OPERATING_CASH_FLOW",
+      "value_numeric": "1501000000000",
+      "unit_code": "IDR",
+      "source_kind": "WORKBOOK_FORMULA_OUTPUT",
+      "source_display_value": "1501"
+    },
+    {
+      "metric_code": "POTENTIAL_DPS",
+      "value_numeric": "114",
+      "unit_code": "IDR_PER_SHARE",
+      "source_kind": "WORKBOOK_FORMULA_OUTPUT",
+      "source_display_value": "114",
+      "source_note": "Potential dividend per share; workbook formula result."
+    },
+    {
+      "metric_code": "TOTAL_CURRENT_ASSET",
+      "value_numeric": "11056000000000",
+      "unit_code": "IDR",
+      "source_kind": "WORKBOOK_FORMULA_OUTPUT",
+      "source_display_value": "11056"
+    },
+    {
+      "metric_code": "CURRENT_LIABILITIES",
+      "value_numeric": "5459000000000",
+      "unit_code": "IDR",
+      "source_kind": "WORKBOOK_FORMULA_OUTPUT",
+      "source_display_value": "5459"
+    },
+    {
+      "metric_code": "TOTAL_LIABILITIES",
+      "value_numeric": "6687000000000",
+      "unit_code": "IDR",
+      "source_kind": "WORKBOOK_FORMULA_OUTPUT",
+      "source_display_value": "6687"
+    },
+    {
+      "metric_code": "TOTAL_EQUITY",
+      "value_numeric": "17195000000000",
+      "unit_code": "IDR",
+      "source_kind": "WORKBOOK_FORMULA_OUTPUT",
+      "source_display_value": "17195"
+    }
+  ],
+  "expected_historical": {
+    "Q1": {
+      "REVENUE": "5257",
+      "COST_OF_REVENUE": "-4415",
+      "INTEREST_EXPENSE_NON_OPERATING": "9",
+      "EARNINGS": "559",
+      "OPERATING_CASH_FLOW": "411",
+      "TOTAL_CURRENT_ASSET": "10746",
+      "CURRENT_LIABILITIES": "4850",
+      "TOTAL_LIABILITIES": "6072",
+      "TOTAL_EQUITY": "17490"
+    },
+    "Q2": {
+      "REVENUE": "5596",
+      "COST_OF_REVENUE": "-4750",
+      "INTEREST_EXPENSE_NON_OPERATING": "9",
+      "EARNINGS": "592",
+      "OPERATING_CASH_FLOW": "340",
+      "TOTAL_CURRENT_ASSET": "11056",
+      "CURRENT_LIABILITIES": "5459",
+      "TOTAL_LIABILITIES": "6687",
+      "TOTAL_EQUITY": "17195"
+    }
+  }
+}

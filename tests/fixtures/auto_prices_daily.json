@@ -1,0 +1,8121 @@
+{
+  "expected": {
+    "avg_volume_3m": "2449150.8474576273",
+    "avg_volume_3m_as_of": "2026-06-30",
+    "latest_close": "3340",
+    "latest_trading_date": "2026-09-24",
+    "year_end_prices": {
+      "2019": null,
+      "2020": "1115",
+      "2021": "1155",
+      "2022": "1460",
+      "2023": "2360",
+      "2024": "2300",
+      "2025": "2690"
+    }
+  },
+  "prices": [
+    {
+      "close_price": 1300,
+      "trading_date": "2020-01-02",
+      "volume": 5053900
+    },
+    {
+      "close_price": 1275,
+      "trading_date": "2020-01-03",
+      "volume": 1995500
+    },
+    {
+      "close_price": 1260,
+      "trading_date": "2020-01-06",
+      "volume": 814600
+    },
+    {
+      "close_price": 1255,
+      "trading_date": "2020-01-07",
+      "volume": 1125100
+    },
+    {
+      "close_price": 1240,
+      "trading_date": "2020-01-08",
+      "volume": 973800
+    },
+    {
+      "close_price": 1250,
+      "trading_date": "2020-01-09",
+      "volume": 596400
+    },
+    {
+      "close_price": 1270,
+      "trading_date": "2020-01-10",
+      "volume": 744100
+    },
+    {
+      "close_price": 1260,
+      "trading_date": "2020-01-13",
+      "volume": 515800
+    },
+    {
+      "close_price": 1270,
+      "trading_date": "2020-01-14",
+      "volume": 282900
+    },
+    {
+      "close_price": 1260,
+      "trading_date": "2020-01-15",
+      "volume": 660100
+    },
+    {
+      "close_price": 1245,
+      "trading_date": "2020-01-16",
+      "volume": 2831000
+    },
+    {
+      "close_price": 1250,
+      "trading_date": "2020-01-17",
+      "volume": 2053200
+    },
+    {
+      "close_price": 1270,
+      "trading_date": "2020-01-20",
+      "volume": 1680100
+    },
+    {
+      "close_price": 1245,
+      "trading_date": "2020-01-21",
+      "volume": 855800
+    },
+    {
+      "close_price": 1230,
+      "trading_date": "2020-01-22",
+      "volume": 916700
+    },
+    {
+      "close_price": 1230,
+      "trading_date": "2020-01-23",
+      "volume": 223800
+    },
+    {
+      "close_price": 1240,
+      "trading_date": "2020-01-24",
+      "volume": 190600
+    },
+    {
+      "close_price": 1220,
+      "trading_date": "2020-01-27",
+      "volume": 747900
+    },
+    {
+      "close_price": 1215,
+      "trading_date": "2020-01-28",
+      "volume": 2424500
+    },
+    {
+      "close_price": 1220,
+      "trading_date": "2020-01-29",
+      "volume": 234500
+    },
+    {
+      "close_price": 1205,
+      "trading_date": "2020-01-30",
+      "volume": 657000
+    },
+    {
+      "close_price": 1200,
+      "trading_date": "2020-01-31",
+      "volume": 817700
+    },
+    {
+      "close_price": 1180,
+      "trading_date": "2020-02-03",
+      "volume": 350800
+    },
+    {
+      "close_price": 1185,
+      "trading_date": "2020-02-04",
+      "volume": 391000
+    },
+    {
+      "close_price": 1180,
+      "trading_date": "2020-02-05",
+      "volume": 574600
+    },
+    {
+      "close_price": 1180,
+      "trading_date": "2020-02-06",
+      "volume": 1110000
+    },
+    {
+      "close_price": 1165,
+      "trading_date": "2020-02-07",
+      "volume": 717500
+    },
+    {
+      "close_price": 1165,
+      "trading_date": "2020-02-10",
+      "volume": 537400
+    },
+    {
+      "close_price": 1160,
+      "trading_date": "2020-02-11",
+      "volume": 216100
+    },
+    {
+      "close_price": 1155,
+      "trading_date": "2020-02-12",
+      "volume": 428500
+    },
+    {
+      "close_price": 1155,
+      "trading_date": "2020-02-13",
+      "volume": 288900
+    },
+    {
+      "close_price": 1145,
+      "trading_date": "2020-02-14",
+      "volume": 210300
+    },
+    {
+      "close_price": 1150,
+      "trading_date": "2020-02-17",
+      "volume": 255200
+    },
+    {
+      "close_price": 1185,
+      "trading_date": "2020-02-18",
+      "volume": 514900
+    },
+    {
+      "close_price": 1170,
+      "trading_date": "2020-02-19",
+      "volume": 308200
+    },
+    {
+      "close_price": 1160,
+      "trading_date": "2020-02-20",
+      "volume": 643600
+    },
+    {
+      "close_price": 1150,
+      "trading_date": "2020-02-21",
+      "volume": 399500
+    },
+    {
+      "close_price": 1070,
+      "trading_date": "2020-02-24",
+      "volume": 2062200
+    },
+    {
+      "close_price": 1085,
+      "trading_date": "2020-02-25",
+      "volume": 1184900
+    },
+    {
+      "close_price": 1060,
+      "trading_date": "2020-02-26",
+      "volume": 625400
+    },
+    {
+      "close_price": 1060,
+      "trading_date": "2020-02-27",
+      "volume": 1060200
+    },
+    {
+      "close_price": 1020,
+      "trading_date": "2020-02-28",
+      "volume": 4526200
+    },
+    {
+      "close_price": 1000,
+      "trading_date": "2020-03-02",
+      "volume": 2501000
+    },
+    {
+      "close_price": 1040,
+      "trading_date": "2020-03-03",
+      "volume": 1268300
+    },
+    {
+      "close_price": 1060,
+      "trading_date": "2020-03-04",
+      "volume": 737800
+    },
+    {
+      "close_price": 1090,
+      "trading_date": "2020-03-05",
+      "volume": 1134300
+    },
+    {
+      "close_price": 1065,
+      "trading_date": "2020-03-06",
+      "volume": 513300
+    },
+    {
+      "close_price": 1010,
+      "trading_date": "2020-03-09",
+      "volume": 812300
+    },
+    {
+      "close_price": 1020,
+      "trading_date": "2020-03-10",
+      "volume": 789000
+    },
+    {
+      "close_price": 1010,
+      "trading_date": "2020-03-11",
+      "volume": 568300
+    },
+    {
+      "close_price": 970,
+      "trading_date": "2020-03-12",
+      "volume": 748800
+    },
+    {
+      "close_price": 970,
+      "trading_date": "2020-03-13",
+      "volume": 0
+    },
+    {
+      "close_price": 845,
+      "trading_date": "2020-03-16",
+      "volume": 1566300
+    },
+    {
+      "close_price": 790,
+      "trading_date": "2020-03-17",
+      "volume": 1374700
+    },
+    {
+      "close_price": 740,
+      "trading_date": "2020-03-18",
+      "volume": 876600
+    },
+    {
+      "close_price": 690,
+      "trading_date": "2020-03-19",
+      "volume": 646800
+    },
+    {
+      "close_price": 700,
+      "trading_date": "2020-03-20",
+      "volume": 511500
+    },
+    {
+      "close_price": 660,
+      "trading_date": "2020-03-23",
+      "volume": 795800
+    },
+    {
+      "close_price": 680,
+      "trading_date": "2020-03-24",
+      "volume": 337500
+    },
+    {
+      "close_price": 745,
+      "trading_date": "2020-03-26",
+      "volume": 826000
+    },
+    {
+      "close_price": 810,
+      "trading_date": "2020-03-27",
+      "volume": 1533700
+    },
+    {
+      "close_price": 755,
+      "trading_date": "2020-03-30",
+      "volume": 221900
+    },
+    {
+      "close_price": 785,
+      "trading_date": "2020-03-31",
+      "volume": 797200
+    },
+    {
+      "close_price": 770,
+      "trading_date": "2020-04-01",
+      "volume": 421100
+    },
+    {
+      "close_price": 775,
+      "trading_date": "2020-04-02",
+      "volume": 709000
+    },
+    {
+      "close_price": 805,
+      "trading_date": "2020-04-03",
+      "volume": 475800
+    },
+    {
+      "close_price": 840,
+      "trading_date": "2020-04-06",
+      "volume": 5072300
+    },
+    {
+      "close_price": 845,
+      "trading_date": "2020-04-07",
+      "volume": 3169800
+    },
+    {
+      "close_price": 810,
+      "trading_date": "2020-04-08",
+      "volume": 442100
+    },
+    {
+      "close_price": 815,
+      "trading_date": "2020-04-09",
+      "volume": 357300
+    },
+    {
+      "close_price": 820,
+      "trading_date": "2020-04-13",
+      "volume": 564600
+    },
+    {
+      "close_price": 835,
+      "trading_date": "2020-04-14",
+      "volume": 438200
+    },
+    {
+      "close_price": 840,
+      "trading_date": "2020-04-15",
+      "volume": 470800
+    },
+    {
+      "close_price": 805,
+      "trading_date": "2020-04-16",
+      "volume": 328800
+    },
+    {
+      "close_price": 830,
+      "trading_date": "2020-04-17",
+      "volume": 162000
+    },
+    {
+      "close_price": 825,
+      "trading_date": "2020-04-20",
+      "volume": 125100
+    },
+    {
+      "close_price": 800,
+      "trading_date": "2020-04-21",
+      "volume": 357400
+    },
+    {
+      "close_price": 795,
+      "trading_date": "2020-04-22",
+      "volume": 1202300
+    },
+    {
+      "close_price": 800,
+      "trading_date": "2020-04-23",
+      "volume": 289700
+    },
+    {
+      "close_price": 780,
+      "trading_date": "2020-04-24",
+      "volume": 463300
+    },
+    {
+      "close_price": 775,
+      "trading_date": "2020-04-27",
+      "volume": 581100
+    },
+    {
+      "close_price": 770,
+      "trading_date": "2020-04-28",
+      "volume": 460400
+    },
+    {
+      "close_price": 770,
+      "trading_date": "2020-04-29",
+      "volume": 311000
+    },
+    {
+      "close_price": 780,
+      "trading_date": "2020-04-30",
+      "volume": 1717100
+    },
+    {
+      "close_price": 770,
+      "trading_date": "2020-05-04",
+      "volume": 2887200
+    },
+    {
+      "close_price": 770,
+      "trading_date": "2020-05-05",
+      "volume": 2637000
+    },
+    {
+      "close_price": 765,
+      "trading_date": "2020-05-06",
+      "volume": 8144000
+    },
+    {
+      "close_price": 750,
+      "trading_date": "2020-05-08",
+      "volume": 3210700
+    },
+    {
+      "close_price": 750,
+      "trading_date": "2020-05-11",
+      "volume": 10288500
+    },
+    {
+      "close_price": 745,
+      "trading_date": "2020-05-12",
+      "volume": 2535800
+    },
+    {
+      "close_price": 740,
+      "trading_date": "2020-05-13",
+      "volume": 460500
+    },
+    {
+      "close_price": 740,
+      "trading_date": "2020-05-14",
+      "volume": 565100
+    },
+    {
+      "close_price": 730,
+      "trading_date": "2020-05-15",
+      "volume": 306500
+    },
+    {
+      "close_price": 745,
+      "trading_date": "2020-05-18",
+      "volume": 552500
+    },
+    {
+      "close_price": 750,
+      "trading_date": "2020-05-19",
+      "volume": 1905100
+    },
+    {
+      "close_price": 750,
+      "trading_date": "2020-05-20",
+      "volume": 542200
+    },
+    {
+      "close_price": 765,
+      "trading_date": "2020-05-26",
+      "volume": 792700
+    },
+    {
+      "close_price": 770,
+      "trading_date": "2020-05-27",
+      "volume": 638900
+    },
+    {
+      "close_price": 750,
+      "trading_date": "2020-05-28",
+      "volume": 5655400
+    },
+    {
+      "close_price": 755,
+      "trading_date": "2020-05-29",
+      "volume": 2763900
+    },
+    {
+      "close_price": 800,
+      "trading_date": "2020-06-02",
+      "volume": 2338700
+    },
+    {
+      "close_price": 825,
+      "trading_date": "2020-06-03",
+      "volume": 2801700
+    },
+    {
+      "close_price": 840,
+      "trading_date": "2020-06-04",
+      "volume": 2967400
+    },
+    {
+      "close_price": 885,
+      "trading_date": "2020-06-05",
+      "volume": 1870800
+    },
+    {
+      "close_price": 935,
+      "trading_date": "2020-06-08",
+      "volume": 4543400
+    },
+    {
+      "close_price": 910,
+      "trading_date": "2020-06-09",
+      "volume": 3529100
+    },
+    {
+      "close_price": 905,
+      "trading_date": "2020-06-10",
+      "volume": 2006600
+    },
+    {
+      "close_price": 890,
+      "trading_date": "2020-06-11",
+      "volume": 1080500
+    },
+    {
+      "close_price": 890,
+      "trading_date": "2020-06-12",
+      "volume": 1977700
+    },
+    {
+      "close_price": 900,
+      "trading_date": "2020-06-15",
+      "volume": 1806700
+    },
+    {
+      "close_price": 920,
+      "trading_date": "2020-06-16",
+      "volume": 1574000
+    },
+    {
+      "close_price": 920,
+      "trading_date": "2020-06-17",
+      "volume": 5886800
+    },
+    {
+      "close_price": 895,
+      "trading_date": "2020-06-18",
+      "volume": 3077500
+    },
+    {
+      "close_price": 895,
+      "trading_date": "2020-06-19",
+      "volume": 401600
+    },
+    {
+      "close_price": 885,
+      "trading_date": "2020-06-22",
+      "volume": 915400
+    },
+    {
+      "close_price": 870,
+      "trading_date": "2020-06-23",
+      "volume": 1649900
+    },
+    {
+      "close_price": 885,
+      "trading_date": "2020-06-24",
+      "volume": 536300
+    },
+    {
+      "close_price": 895,
+      "trading_date": "2020-06-25",
+      "volume": 1561700
+    },
+    {
+      "close_price": 890,
+      "trading_date": "2020-06-26",
+      "volume": 908700
+    },
+    {
+      "close_price": 870,
+      "trading_date": "2020-06-29",
+      "volume": 686200
+    },
+    {
+      "close_price": 885,
+      "trading_date": "2020-06-30",
+      "volume": 1271200
+    },
+    {
+      "close_price": 860,
+      "trading_date": "2020-07-01",
+      "volume": 1419900
+    },
+    {
+      "close_price": 895,
+      "trading_date": "2020-07-02",
+      "volume": 788900
+    },
+    {
+      "close_price": 885,
+      "trading_date": "2020-07-03",
+      "volume": 692900
+    },
+    {
+      "close_price": 890,
+      "trading_date": "2020-07-06",
+      "volume": 675700
+    },
+    {
+      "close_price": 890,
+      "trading_date": "2020-07-07",
+      "volume": 423200
+    },
+    {
+      "close_price": 915,
+      "trading_date": "2020-07-08",
+      "volume": 2884600
+    },
+    {
+      "close_price": 905,
+      "trading_date": "2020-07-09",
+      "volume": 1054200
+    },
+    {
+      "close_price": 910,
+      "trading_date": "2020-07-10",
+      "volume": 419000
+    },
+    {
+      "close_price": 910,
+      "trading_date": "2020-07-13",
+      "volume": 422100
+    },
+    {
+      "close_price": 915,
+      "trading_date": "2020-07-14",
+      "volume": 737000
+    },
+    {
+      "close_price": 925,
+      "trading_date": "2020-07-15",
+      "volume": 2606100
+    },
+    {
+      "close_price": 935,
+      "trading_date": "2020-07-16",
+      "volume": 1849600
+    },
+    {
+      "close_price": 935,
+      "trading_date": "2020-07-17",
+      "volume": 2541100
+    },
+    {
+      "close_price": 920,
+      "trading_date": "2020-07-20",
+      "volume": 1505700
+    },
+    {
+      "close_price": 935,
+      "trading_date": "2020-07-21",
+      "volume": 1818000
+    },
+    {
+      "close_price": 935,
+      "trading_date": "2020-07-22",
+      "volume": 909500
+    },
+    {
+      "close_price": 955,
+      "trading_date": "2020-07-23",
+      "volume": 1595000
+    },
+    {
+      "close_price": 940,
+      "trading_date": "2020-07-24",
+      "volume": 839300
+    },
+    {
+      "close_price": 935,
+      "trading_date": "2020-07-27",
+      "volume": 367400
+    },
+    {
+      "close_price": 890,
+      "trading_date": "2020-07-28",
+      "volume": 5712600
+    },
+    {
+      "close_price": 865,
+      "trading_date": "2020-07-29",
+      "volume": 4622700
+    },
+    {
+      "close_price": 870,
+      "trading_date": "2020-07-30",
+      "volume": 1054600
+    },
+    {
+      "close_price": 835,
+      "trading_date": "2020-08-03",
+      "volume": 4322900
+    },
+    {
+      "close_price": 840,
+      "trading_date": "2020-08-04",
+      "volume": 1914200
+    },
+    {
+      "close_price": 855,
+      "trading_date": "2020-08-05",
+      "volume": 867300
+    },
+    {
+      "close_price": 875,
+      "trading_date": "2020-08-06",
+      "volume": 897000
+    },
+    {
+      "close_price": 875,
+      "trading_date": "2020-08-07",
+      "volume": 640700
+    },
+    {
+      "close_price": 875,
+      "trading_date": "2020-08-10",
+      "volume": 446900
+    },
+    {
+      "close_price": 885,
+      "trading_date": "2020-08-11",
+      "volume": 977700
+    },
+    {
+      "close_price": 885,
+      "trading_date": "2020-08-12",
+      "volume": 1170000
+    },
+    {
+      "close_price": 910,
+      "trading_date": "2020-08-13",
+      "volume": 5479700
+    },
+    {
+      "close_price": 915,
+      "trading_date": "2020-08-14",
+      "volume": 1272500
+    },
+    {
+      "close_price": 915,
+      "trading_date": "2020-08-18",
+      "volume": 1114000
+    },
+    {
+      "close_price": 905,
+      "trading_date": "2020-08-19",
+      "volume": 951700
+    },
+    {
+      "close_price": 890,
+      "trading_date": "2020-08-24",
+      "volume": 1843500
+    },
+    {
+      "close_price": 885,
+      "trading_date": "2020-08-25",
+      "volume": 4737600
+    },
+    {
+      "close_price": 905,
+      "trading_date": "2020-08-26",
+      "volume": 2260200
+    },
+    {
+      "close_price": 910,
+      "trading_date": "2020-08-27",
+      "volume": 991200
+    },
+    {
+      "close_price": 905,
+      "trading_date": "2020-08-28",
+      "volume": 995800
+    },
+    {
+      "close_price": 870,
+      "trading_date": "2020-08-31",
+      "volume": 1318900
+    },
+    {
+      "close_price": 890,
+      "trading_date": "2020-09-01",
+      "volume": 634200
+    },
+    {
+      "close_price": 895,
+      "trading_date": "2020-09-02",
+      "volume": 470800
+    },
+    {
+      "close_price": 890,
+      "trading_date": "2020-09-03",
+      "volume": 743900
+    },
+    {
+      "close_price": 885,
+      "trading_date": "2020-09-04",
+      "volume": 1233600
+    },
+    {
+      "close_price": 885,
+      "trading_date": "2020-09-07",
+      "volume": 353800
+    },
+    {
+      "close_price": 885,
+      "trading_date": "2020-09-08",
+      "volume": 262200
+    },
+    {
+      "close_price": 870,
+      "trading_date": "2020-09-09",
+      "volume": 1044000
+    },
+    {
+      "close_price": 815,
+      "trading_date": "2020-09-10",
+      "volume": 2876100
+    },
+    {
+      "close_price": 855,
+      "trading_date": "2020-09-11",
+      "volume": 1536300
+    },
+    {
+      "close_price": 875,
+      "trading_date": "2020-09-14",
+      "volume": 790400
+    },
+    {
+      "close_price": 865,
+      "trading_date": "2020-09-15",
+      "volume": 325900
+    },
+    {
+      "close_price": 855,
+      "trading_date": "2020-09-16",
+      "volume": 403600
+    },
+    {
+      "close_price": 855,
+      "trading_date": "2020-09-17",
+      "volume": 344800
+    },
+    {
+      "close_price": 860,
+      "trading_date": "2020-09-18",
+      "volume": 408200
+    },
+    {
+      "close_price": 855,
+      "trading_date": "2020-09-21",
+      "volume": 252900
+    },
+    {
+      "close_price": 835,
+      "trading_date": "2020-09-22",
+      "volume": 377300
+    },
+    {
+      "close_price": 825,
+      "trading_date": "2020-09-23",
+      "volume": 432600
+    },
+    {
+      "close_price": 820,
+      "trading_date": "2020-09-24",
+      "volume": 169400
+    },
+    {
+      "close_price": 820,
+      "trading_date": "2020-09-25",
+      "volume": 1135900
+    },
+    {
+      "close_price": 825,
+      "trading_date": "2020-09-28",
+      "volume": 359200
+    },
+    {
+      "close_price": 830,
+      "trading_date": "2020-09-29",
+      "volume": 770300
+    },
+    {
+      "close_price": 825,
+      "trading_date": "2020-09-30",
+      "volume": 106300
+    },
+    {
+      "close_price": 830,
+      "trading_date": "2020-10-01",
+      "volume": 151700
+    },
+    {
+      "close_price": 835,
+      "trading_date": "2020-10-02",
+      "volume": 665200
+    },
+    {
+      "close_price": 830,
+      "trading_date": "2020-10-05",
+      "volume": 149200
+    },
+    {
+      "close_price": 840,
+      "trading_date": "2020-10-06",
+      "volume": 248700
+    },
+    {
+      "close_price": 850,
+      "trading_date": "2020-10-07",
+      "volume": 341500
+    },
+    {
+      "close_price": 850,
+      "trading_date": "2020-10-08",
+      "volume": 283800
+    },
+    {
+      "close_price": 855,
+      "trading_date": "2020-10-09",
+      "volume": 164300
+    },
+    {
+      "close_price": 850,
+      "trading_date": "2020-10-12",
+      "volume": 465700
+    },
+    {
+      "close_price": 850,
+      "trading_date": "2020-10-13",
+      "volume": 395000
+    },
+    {
+      "close_price": 875,
+      "trading_date": "2020-10-14",
+      "volume": 687400
+    },
+    {
+      "close_price": 875,
+      "trading_date": "2020-10-15",
+      "volume": 1188800
+    },
+    {
+      "close_price": 875,
+      "trading_date": "2020-10-16",
+      "volume": 679200
+    },
+    {
+      "close_price": 870,
+      "trading_date": "2020-10-19",
+      "volume": 1103200
+    },
+    {
+      "close_price": 870,
+      "trading_date": "2020-10-20",
+      "volume": 389800
+    },
+    {
+      "close_price": 875,
+      "trading_date": "2020-10-21",
+      "volume": 281100
+    },
+    {
+      "close_price": 870,
+      "trading_date": "2020-10-22",
+      "volume": 281600
+    },
+    {
+      "close_price": 870,
+      "trading_date": "2020-10-23",
+      "volume": 779500
+    },
+    {
+      "close_price": 875,
+      "trading_date": "2020-10-26",
+      "volume": 450700
+    },
+    {
+      "close_price": 865,
+      "trading_date": "2020-10-27",
+      "volume": 433900
+    },
+    {
+      "close_price": 870,
+      "trading_date": "2020-11-02",
+      "volume": 470700
+    },
+    {
+      "close_price": 870,
+      "trading_date": "2020-11-03",
+      "volume": 352400
+    },
+    {
+      "close_price": 865,
+      "trading_date": "2020-11-04",
+      "volume": 535900
+    },
+    {
+      "close_price": 875,
+      "trading_date": "2020-11-05",
+      "volume": 497600
+    },
+    {
+      "close_price": 880,
+      "trading_date": "2020-11-06",
+      "volume": 1015300
+    },
+    {
+      "close_price": 885,
+      "trading_date": "2020-11-09",
+      "volume": 1686200
+    },
+    {
+      "close_price": 910,
+      "trading_date": "2020-11-10",
+      "volume": 1856900
+    },
+    {
+      "close_price": 915,
+      "trading_date": "2020-11-11",
+      "volume": 1042700
+    },
+    {
+      "close_price": 900,
+      "trading_date": "2020-11-12",
+      "volume": 564200
+    },
+    {
+      "close_price": 915,
+      "trading_date": "2020-11-13",
+      "volume": 939000
+    },
+    {
+      "close_price": 920,
+      "trading_date": "2020-11-16",
+      "volume": 969800
+    },
+    {
+      "close_price": 925,
+      "trading_date": "2020-11-17",
+      "volume": 2984100
+    },
+    {
+      "close_price": 945,
+      "trading_date": "2020-11-18",
+      "volume": 1775000
+    },
+    {
+      "close_price": 980,
+      "trading_date": "2020-11-19",
+      "volume": 2351400
+    },
+    {
+      "close_price": 1010,
+      "trading_date": "2020-11-20",
+      "volume": 4487000
+    },
+    {
+      "close_price": 1035,
+      "trading_date": "2020-11-23",
+      "volume": 1655400
+    },
+    {
+      "close_price": 1085,
+      "trading_date": "2020-11-24",
+      "volume": 2426000
+    },
+    {
+      "close_price": 1145,
+      "trading_date": "2020-11-25",
+      "volume": 4648100
+    },
+    {
+      "close_price": 1155,
+      "trading_date": "2020-11-26",
+      "volume": 2071600
+    },
+    {
+      "close_price": 1205,
+      "trading_date": "2020-11-27",
+      "volume": 3171400
+    },
+    {
+      "close_price": 1180,
+      "trading_date": "2020-11-30",
+      "volume": 4560800
+    },
+    {
+      "close_price": 1200,
+      "trading_date": "2020-12-01",
+      "volume": 3493000
+    },
+    {
+      "close_price": 1175,
+      "trading_date": "2020-12-02",
+      "volume": 1882100
+    },
+    {
+      "close_price": 1170,
+      "trading_date": "2020-12-03",
+      "volume": 1537200
+    },
+    {
+      "close_price": 1155,
+      "trading_date": "2020-12-04",
+      "volume": 1330800
+    },
+    {
+      "close_price": 1150,
+      "trading_date": "2020-12-07",
+      "volume": 1903000
+    },
+    {
+      "close_price": 1165,
+      "trading_date": "2020-12-08",
+      "volume": 1745200
+    },
+    {
+      "close_price": 1155,
+      "trading_date": "2020-12-10",
+      "volume": 2306600
+    },
+    {
+      "close_price": 1145,
+      "trading_date": "2020-12-11",
+      "volume": 787200
+    },
+    {
+      "close_price": 1155,
+      "trading_date": "2020-12-14",
+      "volume": 1308800
+    },
+    {
+      "close_price": 1155,
+      "trading_date": "2020-12-15",
+      "volume": 2355600
+    },
+    {
+      "close_price": 1185,
+      "trading_date": "2020-12-16",
+      "volume": 3593500
+    },
+    {
+      "close_price": 1170,
+      "trading_date": "2020-12-17",
+      "volume": 2154900
+    },
+    {
+      "close_price": 1180,
+      "trading_date": "2020-12-18",
+      "volume": 2158000
+    },
+    {
+      "close_price": 1205,
+      "trading_date": "2020-12-21",
+      "volume": 9112900
+    },
+    {
+      "close_price": 1160,
+      "trading_date": "2020-12-22",
+      "volume": 5823300
+    },
+    {
+      "close_price": 1140,
+      "trading_date": "2020-12-23",
+      "volume": 3764500
+    },
+    {
+      "close_price": 1135,
+      "trading_date": "2020-12-28",
+      "volume": 3022600
+    },
+    {
+      "close_price": 1135,
+      "trading_date": "2020-12-29",
+      "volume": 1442700
+    },
+    {
+      "close_price": 1115,
+      "trading_date": "2020-12-30",
+      "volume": 2282500
+    },
+    {
+      "close_price": 1120,
+      "trading_date": "2021-01-04",
+      "volume": 1639000
+    },
+    {
+      "close_price": 1130,
+      "trading_date": "2021-01-05",
+      "volume": 1337200
+    },
+    {
+      "close_price": 1135,
+      "trading_date": "2021-01-06",
+      "volume": 1507500
+    },
+    {
+      "close_price": 1115,
+      "trading_date": "2021-01-07",
+      "volume": 2225300
+    },
+    {
+      "close_price": 1135,
+      "trading_date": "2021-01-08",
+      "volume": 2546400
+    },
+    {
+      "close_price": 1180,
+      "trading_date": "2021-01-11",
+      "volume": 5501100
+    },
+    {
+      "close_price": 1170,
+      "trading_date": "2021-01-12",
+      "volume": 4034600
+    },
+    {
+      "close_price": 1165,
+      "trading_date": "2021-01-13",
+      "volume": 2151800
+    },
+    {
+      "close_price": 1175,
+      "trading_date": "2021-01-14",
+      "volume": 3731900
+    },
+    {
+      "close_price": 1160,
+      "trading_date": "2021-01-15",
+      "volume": 2086300
+    },
+    {
+      "close_price": 1125,
+      "trading_date": "2021-01-18",
+      "volume": 3396600
+    },
+    {
+      "close_price": 1125,
+      "trading_date": "2021-01-19",
+      "volume": 1856700
+    },
+    {
+      "close_price": 1125,
+      "trading_date": "2021-01-20",
+      "volume": 2197900
+    },
+    {
+      "close_price": 1120,
+      "trading_date": "2021-01-21",
+      "volume": 1433900
+    },
+    {
+      "close_price": 1105,
+      "trading_date": "2021-01-22",
+      "volume": 3390500
+    },
+    {
+      "close_price": 1065,
+      "trading_date": "2021-01-25",
+      "volume": 2056000
+    },
+    {
+      "close_price": 1050,
+      "trading_date": "2021-01-26",
+      "volume": 2055500
+    },
+    {
+      "close_price": 1060,
+      "trading_date": "2021-01-27",
+      "volume": 2642300
+    },
+    {
+      "close_price": 1015,
+      "trading_date": "2021-01-28",
+      "volume": 1792000
+    },
+    {
+      "close_price": 1010,
+      "trading_date": "2021-01-29",
+      "volume": 1436900
+    },
+    {
+      "close_price": 1020,
+      "trading_date": "2021-02-01",
+      "volume": 2223800
+    },
+    {
+      "close_price": 1035,
+      "trading_date": "2021-02-02",
+      "volume": 1453900
+    },
+    {
+      "close_price": 1070,
+      "trading_date": "2021-02-03",
+      "volume": 1361200
+    },
+    {
+      "close_price": 1065,
+      "trading_date": "2021-02-04",
+      "volume": 1817900
+    },
+    {
+      "close_price": 1070,
+      "trading_date": "2021-02-05",
+      "volume": 478300
+    },
+    {
+      "close_price": 1075,
+      "trading_date": "2021-02-08",
+      "volume": 456800
+    },
+    {
+      "close_price": 1065,
+      "trading_date": "2021-02-09",
+      "volume": 748800
+    },
+    {
+      "close_price": 1035,
+      "trading_date": "2021-02-10",
+      "volume": 834200
+    },
+    {
+      "close_price": 1040,
+      "trading_date": "2021-02-11",
+      "volume": 1014000
+    },
+    {
+      "close_price": 1060,
+      "trading_date": "2021-02-15",
+      "volume": 17370900
+    },
+    {
+      "close_price": 1045,
+      "trading_date": "2021-02-16",
+      "volume": 4065700
+    },
+    {
+      "close_price": 1030,
+      "trading_date": "2021-02-17",
+      "volume": 2699300
+    },
+    {
+      "close_price": 1025,
+      "trading_date": "2021-02-18",
+      "volume": 1276000
+    },
+    {
+      "close_price": 1030,
+      "trading_date": "2021-02-19",
+      "volume": 1914700
+    },
+    {
+      "close_price": 1025,
+      "trading_date": "2021-02-22",
+      "volume": 1092900
+    },
+    {
+      "close_price": 1025,
+      "trading_date": "2021-02-23",
+      "volume": 1776500
+    },
+    {
+      "close_price": 1040,
+      "trading_date": "2021-02-24",
+      "volume": 619400
+    },
+    {
+      "close_price": 1045,
+      "trading_date": "2021-02-25",
+      "volume": 7512700
+    },
+    {
+      "close_price": 1050,
+      "trading_date": "2021-02-26",
+      "volume": 1443500
+    },
+    {
+      "close_price": 1060,
+      "trading_date": "2021-03-01",
+      "volume": 4153000
+    },
+    {
+      "close_price": 1060,
+      "trading_date": "2021-03-02",
+      "volume": 3515700
+    },
+    {
+      "close_price": 1055,
+      "trading_date": "2021-03-03",
+      "volume": 2075900
+    },
+    {
+      "close_price": 1070,
+      "trading_date": "2021-03-04",
+      "volume": 11544800
+    },
+    {
+      "close_price": 1105,
+      "trading_date": "2021-03-05",
+      "volume": 5777200
+    },
+    {
+      "close_price": 1140,
+      "trading_date": "2021-03-08",
+      "volume": 7897700
+    },
+    {
+      "close_price": 1165,
+      "trading_date": "2021-03-09",
+      "volume": 8369300
+    },
+    {
+      "close_price": 1145,
+      "trading_date": "2021-03-10",
+      "volume": 3883900
+    },
+    {
+      "close_price": 1160,
+      "trading_date": "2021-03-12",
+      "volume": 2127300
+    },
+    {
+      "close_price": 1200,
+      "trading_date": "2021-03-15",
+      "volume": 5958400
+    },
+    {
+      "close_price": 1215,
+      "trading_date": "2021-03-16",
+      "volume": 4625600
+    },
+    {
+      "close_price": 1280,
+      "trading_date": "2021-03-17",
+      "volume": 16751600
+    },
+    {
+      "close_price": 1275,
+      "trading_date": "2021-03-18",
+      "volume": 4945300
+    },
+    {
+      "close_price": 1265,
+      "trading_date": "2021-03-19",
+      "volume": 3597300
+    },
+    {
+      "close_price": 1250,
+      "trading_date": "2021-03-22",
+      "volume": 3574800
+    },
+    {
+      "close_price": 1215,
+      "trading_date": "2021-03-23",
+      "volume": 6126700
+    },
+    {
+      "close_price": 1200,
+      "trading_date": "2021-03-24",
+      "volume": 3965700
+    },
+    {
+      "close_price": 1160,
+      "trading_date": "2021-03-25",
+      "volume": 4128100
+    },
+    {
+      "close_price": 1185,
+      "trading_date": "2021-03-26",
+      "volume": 2551300
+    },
+    {
+      "close_price": 1215,
+      "trading_date": "2021-03-29",
+      "volume": 4648800
+    },
+    {
+      "close_price": 1190,
+      "trading_date": "2021-03-30",
+      "volume": 2627900
+    },
+    {
+      "close_price": 1160,
+      "trading_date": "2021-03-31",
+      "volume": 2742800
+    },
+    {
+      "close_price": 1170,
+      "trading_date": "2021-04-01",
+      "volume": 1636900
+    },
+    {
+      "close_price": 1175,
+      "trading_date": "2021-04-05",
+      "volume": 909900
+    },
+    {
+      "close_price": 1185,
+      "trading_date": "2021-04-06",
+      "volume": 988700
+    },
+    {
+      "close_price": 1170,
+      "trading_date": "2021-04-07",
+      "volume": 1442900
+    },
+    {
+      "close_price": 1170,
+      "trading_date": "2021-04-08",
+      "volume": 987400
+    },
+    {
+      "close_price": 1180,
+      "trading_date": "2021-04-09",
+      "volume": 1155300
+    },
+    {
+      "close_price": 1160,
+      "trading_date": "2021-04-12",
+      "volume": 2328900
+    },
+    {
+      "close_price": 1155,
+      "trading_date": "2021-04-13",
+      "volume": 2800500
+    },
+    {
+      "close_price": 1150,
+      "trading_date": "2021-04-14",
+      "volume": 891200
+    },
+    {
+      "close_price": 1145,
+      "trading_date": "2021-04-15",
+      "volume": 1342900
+    },
+    {
+      "close_price": 1170,
+      "trading_date": "2021-04-16",
+      "volume": 1911400
+    },
+    {
+      "close_price": 1160,
+      "trading_date": "2021-04-19",
+      "volume": 1289700
+    },
+    {
+      "close_price": 1150,
+      "trading_date": "2021-04-20",
+      "volume": 1269100
+    },
+    {
+      "close_price": 1220,
+      "trading_date": "2021-04-21",
+      "volume": 7335500
+    },
+    {
+      "close_price": 1185,
+      "trading_date": "2021-04-22",
+      "volume": 3931300
+    },
+    {
+      "close_price": 1180,
+      "trading_date": "2021-04-23",
+      "volume": 2024900
+    },
+    {
+      "close_price": 1175,
+      "trading_date": "2021-04-26",
+      "volume": 1744700
+    },
+    {
+      "close_price": 1160,
+      "trading_date": "2021-04-27",
+      "volume": 775600
+    },
+    {
+      "close_price": 1160,
+      "trading_date": "2021-04-28",
+      "volume": 600300
+    },
+    {
+      "close_price": 1185,
+      "trading_date": "2021-04-29",
+      "volume": 554500
+    },
+    {
+      "close_price": 1170,
+      "trading_date": "2021-04-30",
+      "volume": 639600
+    },
+    {
+      "close_price": 1175,
+      "trading_date": "2021-05-03",
+      "volume": 810900
+    },
+    {
+      "close_price": 1175,
+      "trading_date": "2021-05-04",
+      "volume": 764900
+    },
+    {
+      "close_price": 1165,
+      "trading_date": "2021-05-05",
+      "volume": 1154500
+    },
+    {
+      "close_price": 1165,
+      "trading_date": "2021-05-06",
+      "volume": 511700
+    },
+    {
+      "close_price": 1160,
+      "trading_date": "2021-05-07",
+      "volume": 576100
+    },
+    {
+      "close_price": 1180,
+      "trading_date": "2021-05-10",
+      "volume": 700800
+    },
+    {
+      "close_price": 1165,
+      "trading_date": "2021-05-11",
+      "volume": 432800
+    },
+    {
+      "close_price": 1150,
+      "trading_date": "2021-05-17",
+      "volume": 1668700
+    },
+    {
+      "close_price": 1165,
+      "trading_date": "2021-05-18",
+      "volume": 2010100
+    },
+    {
+      "close_price": 1140,
+      "trading_date": "2021-05-19",
+      "volume": 754700
+    },
+    {
+      "close_price": 1135,
+      "trading_date": "2021-05-20",
+      "volume": 1339300
+    },
+    {
+      "close_price": 1120,
+      "trading_date": "2021-05-21",
+      "volume": 617800
+    },
+    {
+      "close_price": 1110,
+      "trading_date": "2021-05-24",
+      "volume": 882000
+    },
+    {
+      "close_price": 1110,
+      "trading_date": "2021-05-25",
+      "volume": 1105300
+    },
+    {
+      "close_price": 1130,
+      "trading_date": "2021-05-27",
+      "volume": 715700
+    },
+    {
+      "close_price": 1140,
+      "trading_date": "2021-05-28",
+      "volume": 737400
+    },
+    {
+      "close_price": 1150,
+      "trading_date": "2021-05-31",
+      "volume": 746600
+    },
+    {
+      "close_price": 1175,
+      "trading_date": "2021-06-02",
+      "volume": 1646100
+    },
+    {
+      "close_price": 1170,
+      "trading_date": "2021-06-03",
+      "volume": 1490500
+    },
+    {
+      "close_price": 1175,
+      "trading_date": "2021-06-04",
+      "volume": 1451800
+    },
+    {
+      "close_price": 1160,
+      "trading_date": "2021-06-07",
+      "volume": 933400
+    },
+    {
+      "close_price": 1140,
+      "trading_date": "2021-06-08",
+      "volume": 1391100
+    },
+    {
+      "close_price": 1140,
+      "trading_date": "2021-06-09",
+      "volume": 486700
+    },
+    {
+      "close_price": 1150,
+      "trading_date": "2021-06-10",
+      "volume": 306200
+    },
+    {
+      "close_price": 1160,
+      "trading_date": "2021-06-11",
+      "volume": 1382900
+    },
+    {
+      "close_price": 1175,
+      "trading_date": "2021-06-14",
+      "volume": 1674400
+    },
+    {
+      "close_price": 1170,
+      "trading_date": "2021-06-15",
+      "volume": 838400
+    },
+    {
+      "close_price": 1165,
+      "trading_date": "2021-06-16",
+      "volume": 424600
+    },
+    {
+      "close_price": 1145,
+      "trading_date": "2021-06-17",
+      "volume": 493000
+    },
+    {
+      "close_price": 1120,
+      "trading_date": "2021-06-18",
+      "volume": 2282300
+    },
+    {
+      "close_price": 1105,
+      "trading_date": "2021-06-21",
+      "volume": 1364200
+    },
+    {
+      "close_price": 1115,
+      "trading_date": "2021-06-22",
+      "volume": 612900
+    },
+    {
+      "close_price": 1115,
+      "trading_date": "2021-06-23",
+      "volume": 427100
+    },
+    {
+      "close_price": 1105,
+      "trading_date": "2021-06-24",
+      "volume": 552900
+    },
+    {
+      "close_price": 1110,
+      "trading_date": "2021-06-25",
+      "volume": 245700
+    },
+    {
+      "close_price": 1095,
+      "trading_date": "2021-06-28",
+      "volume": 935000
+    },
+    {
+      "close_price": 1090,
+      "trading_date": "2021-06-29",
+      "volume": 814200
+    },
+    {
+      "close_price": 1085,
+      "trading_date": "2021-06-30",
+      "volume": 848300
+    },
+    {
+      "close_price": 1085,
+      "trading_date": "2021-07-01",
+      "volume": 1310600
+    },
+    {
+      "close_price": 1090,
+      "trading_date": "2021-07-02",
+      "volume": 899200
+    },
+    {
+      "close_price": 1080,
+      "trading_date": "2021-07-05",
+      "volume": 1584400
+    },
+    {
+      "close_price": 1085,
+      "trading_date": "2021-07-06",
+      "volume": 689200
+    },
+    {
+      "close_price": 1080,
+      "trading_date": "2021-07-07",
+      "volume": 778200
+    },
+    {
+      "close_price": 1080,
+      "trading_date": "2021-07-08",
+      "volume": 1313300
+    },
+    {
+      "close_price": 1085,
+      "trading_date": "2021-07-09",
+      "volume": 857900
+    },
+    {
+      "close_price": 1090,
+      "trading_date": "2021-07-12",
+      "volume": 970600
+    },
+    {
+      "close_price": 1080,
+      "trading_date": "2021-07-13",
+      "volume": 576800
+    },
+    {
+      "close_price": 1065,
+      "trading_date": "2021-07-14",
+      "volume": 1072700
+    },
+    {
+      "close_price": 1070,
+      "trading_date": "2021-07-15",
+      "volume": 672200
+    },
+    {
+      "close_price": 1070,
+      "trading_date": "2021-07-16",
+      "volume": 404100
+    },
+    {
+      "close_price": 1060,
+      "trading_date": "2021-07-19",
+      "volume": 484900
+    },
+    {
+      "close_price": 1085,
+      "trading_date": "2021-07-21",
+      "volume": 840700
+    },
+    {
+      "close_price": 1085,
+      "trading_date": "2021-07-22",
+      "volume": 751800
+    },
+    {
+      "close_price": 1080,
+      "trading_date": "2021-07-23",
+      "volume": 569900
+    },
+    {
+      "close_price": 1080,
+      "trading_date": "2021-07-26",
+      "volume": 607800
+    },
+    {
+      "close_price": 1070,
+      "trading_date": "2021-07-27",
+      "volume": 466800
+    },
+    {
+      "close_price": 1065,
+      "trading_date": "2021-07-28",
+      "volume": 1623300
+    },
+    {
+      "close_price": 1065,
+      "trading_date": "2021-07-29",
+      "volume": 1650700
+    },
+    {
+      "close_price": 1060,
+      "trading_date": "2021-07-30",
+      "volume": 1937400
+    },
+    {
+      "close_price": 1035,
+      "trading_date": "2021-08-02",
+      "volume": 2907600
+    },
+    {
+      "close_price": 1045,
+      "trading_date": "2021-08-03",
+      "volume": 840400
+    },
+    {
+      "close_price": 1040,
+      "trading_date": "2021-08-04",
+      "volume": 1450000
+    },
+    {
+      "close_price": 1035,
+      "trading_date": "2021-08-05",
+      "volume": 908300
+    },
+    {
+      "close_price": 1025,
+      "trading_date": "2021-08-06",
+      "volume": 1107500
+    },
+    {
+      "close_price": 1020,
+      "trading_date": "2021-08-09",
+      "volume": 1061000
+    },
+    {
+      "close_price": 1020,
+      "trading_date": "2021-08-10",
+      "volume": 876900
+    },
+    {
+      "close_price": 1020,
+      "trading_date": "2021-08-12",
+      "volume": 1102300
+    },
+    {
+      "close_price": 1025,
+      "trading_date": "2021-08-13",
+      "volume": 890100
+    },
+    {
+      "close_price": 1015,
+      "trading_date": "2021-08-16",
+      "volume": 1493500
+    },
+    {
+      "close_price": 1020,
+      "trading_date": "2021-08-18",
+      "volume": 1304000
+    },
+    {
+      "close_price": 1010,
+      "trading_date": "2021-08-19",
+      "volume": 1341400
+    },
+    {
+      "close_price": 1015,
+      "trading_date": "2021-08-20",
+      "volume": 1100200
+    },
+    {
+      "close_price": 1025,
+      "trading_date": "2021-08-23",
+      "volume": 1056300
+    },
+    {
+      "close_price": 1020,
+      "trading_date": "2021-08-24",
+      "volume": 975000
+    },
+    {
+      "close_price": 1015,
+      "trading_date": "2021-08-25",
+      "volume": 816200
+    },
+    {
+      "close_price": 1020,
+      "trading_date": "2021-08-26",
+      "volume": 557200
+    },
+    {
+      "close_price": 1015,
+      "trading_date": "2021-08-27",
+      "volume": 1222200
+    },
+    {
+      "close_price": 1015,
+      "trading_date": "2021-08-30",
+      "volume": 1790300
+    },
+    {
+      "close_price": 1030,
+      "trading_date": "2021-08-31",
+      "volume": 2320700
+    },
+    {
+      "close_price": 1020,
+      "trading_date": "2021-09-01",
+      "volume": 1100300
+    },
+    {
+      "close_price": 1025,
+      "trading_date": "2021-09-02",
+      "volume": 1508900
+    },
+    {
+      "close_price": 1020,
+      "trading_date": "2021-09-03",
+      "volume": 1457500
+    },
+    {
+      "close_price": 1025,
+      "trading_date": "2021-09-06",
+      "volume": 6064400
+    },
+    {
+      "close_price": 1025,
+      "trading_date": "2021-09-07",
+      "volume": 1950100
+    },
+    {
+      "close_price": 1025,
+      "trading_date": "2021-09-08",
+      "volume": 2090600
+    },
+    {
+      "close_price": 1025,
+      "trading_date": "2021-09-09",
+      "volume": 1899200
+    },
+    {
+      "close_price": 1030,
+      "trading_date": "2021-09-10",
+      "volume": 1803900
+    },
+    {
+      "close_price": 1020,
+      "trading_date": "2021-09-13",
+      "volume": 1941100
+    },
+    {
+      "close_price": 1025,
+      "trading_date": "2021-09-14",
+      "volume": 1638200
+    },
+    {
+      "close_price": 1030,
+      "trading_date": "2021-09-15",
+      "volume": 1176100
+    },
+    {
+      "close_price": 1025,
+      "trading_date": "2021-09-16",
+      "volume": 1097800
+    },
+    {
+      "close_price": 1015,
+      "trading_date": "2021-09-17",
+      "volume": 2123500
+    },
+    {
+      "close_price": 1005,
+      "trading_date": "2021-09-20",
+      "volume": 2755400
+    },
+    {
+      "close_price": 1010,
+      "trading_date": "2021-09-21",
+      "volume": 1059900
+    },
+    {
+      "close_price": 1010,
+      "trading_date": "2021-09-22",
+      "volume": 1578100
+    },
+    {
+      "close_price": 1010,
+      "trading_date": "2021-09-23",
+      "volume": 1796200
+    },
+    {
+      "close_price": 1005,
+      "trading_date": "2021-09-24",
+      "volume": 1677200
+    },
+    {
+      "close_price": 1010,
+      "trading_date": "2021-09-27",
+      "volume": 1514300
+    },
+    {
+      "close_price": 1010,
+      "trading_date": "2021-09-28",
+      "volume": 1319700
+    },
+    {
+      "close_price": 1015,
+      "trading_date": "2021-09-29",
+      "volume": 2107500
+    },
+    {
+      "close_price": 1020,
+      "trading_date": "2021-09-30",
+      "volume": 1328200
+    },
+    {
+      "close_price": 1045,
+      "trading_date": "2021-10-01",
+      "volume": 3020500
+    },
+    {
+      "close_price": 1075,
+      "trading_date": "2021-10-04",
+      "volume": 4601100
+    },
+    {
+      "close_price": 1075,
+      "trading_date": "2021-10-05",
+      "volume": 3235800
+    },
+    {
+      "close_price": 1090,
+      "trading_date": "2021-10-06",
+      "volume": 3186400
+    },
+    {
+      "close_price": 1085,
+      "trading_date": "2021-10-07",
+      "volume": 2970100
+    },
+    {
+      "close_price": 1095,
+      "trading_date": "2021-10-08",
+      "volume": 1865900
+    },
+    {
+      "close_price": 1100,
+      "trading_date": "2021-10-11",
+      "volume": 2346600
+    },
+    {
+      "close_price": 1085,
+      "trading_date": "2021-10-12",
+      "volume": 2603700
+    },
+    {
+      "close_price": 1100,
+      "trading_date": "2021-10-13",
+      "volume": 2051900
+    },
+    {
+      "close_price": 1140,
+      "trading_date": "2021-10-14",
+      "volume": 4287500
+    },
+    {
+      "close_price": 1140,
+      "trading_date": "2021-10-15",
+      "volume": 2393700
+    },
+    {
+      "close_price": 1155,
+      "trading_date": "2021-10-18",
+      "volume": 3100300
+    },
+    {
+      "close_price": 1165,
+      "trading_date": "2021-10-19",
+      "volume": 1805300
+    },
+    {
+      "close_price": 1150,
+      "trading_date": "2021-10-21",
+      "volume": 2701700
+    },
+    {
+      "close_price": 1150,
+      "trading_date": "2021-10-22",
+      "volume": 2283900
+    },
+    {
+      "close_price": 1170,
+      "trading_date": "2021-10-25",
+      "volume": 4910200
+    },
+    {
+      "close_price": 1150,
+      "trading_date": "2021-10-26",
+      "volume": 3790000
+    },
+    {
+      "close_price": 1130,
+      "trading_date": "2021-10-27",
+      "volume": 2247100
+    },
+    {
+      "close_price": 1120,
+      "trading_date": "2021-10-28",
+      "volume": 2816400
+    },
+    {
+      "close_price": 1130,
+      "trading_date": "2021-10-29",
+      "volume": 1809000
+    },
+    {
+      "close_price": 1135,
+      "trading_date": "2021-11-01",
+      "volume": 996000
+    },
+    {
+      "close_price": 1110,
+      "trading_date": "2021-11-02",
+      "volume": 1355100
+    },
+    {
+      "close_price": 1120,
+      "trading_date": "2021-11-03",
+      "volume": 1108500
+    },
+    {
+      "close_price": 1125,
+      "trading_date": "2021-11-04",
+      "volume": 826600
+    },
+    {
+      "close_price": 1120,
+      "trading_date": "2021-11-05",
+      "volume": 1115800
+    },
+    {
+      "close_price": 1125,
+      "trading_date": "2021-11-08",
+      "volume": 1243400
+    },
+    {
+      "close_price": 1175,
+      "trading_date": "2021-11-09",
+      "volume": 7647500
+    },
+    {
+      "close_price": 1255,
+      "trading_date": "2021-11-10",
+      "volume": 18549700
+    },
+    {
+      "close_price": 1250,
+      "trading_date": "2021-11-11",
+      "volume": 19368000
+    },
+    {
+      "close_price": 1250,
+      "trading_date": "2021-11-12",
+      "volume": 9907000
+    },
+    {
+      "close_price": 1235,
+      "trading_date": "2021-11-15",
+      "volume": 2901900
+    },
+    {
+      "close_price": 1290,
+      "trading_date": "2021-11-16",
+      "volume": 14567300
+    },
+    {
+      "close_price": 1350,
+      "trading_date": "2021-11-17",
+      "volume": 13738900
+    },
+    {
+      "close_price": 1320,
+      "trading_date": "2021-11-18",
+      "volume": 7848000
+    },
+    {
+      "close_price": 1315,
+      "trading_date": "2021-11-19",
+      "volume": 5974100
+    },
+    {
+      "close_price": 1375,
+      "trading_date": "2021-11-22",
+      "volume": 7974800
+    },
+    {
+      "close_price": 1335,
+      "trading_date": "2021-11-23",
+      "volume": 5792000
+    },
+    {
+      "close_price": 1360,
+      "trading_date": "2021-11-24",
+      "volume": 5596700
+    },
+    {
+      "close_price": 1345,
+      "trading_date": "2021-11-25",
+      "volume": 2389500
+    },
+    {
+      "close_price": 1300,
+      "trading_date": "2021-11-26",
+      "volume": 8579200
+    },
+    {
+      "close_price": 1305,
+      "trading_date": "2021-11-29",
+      "volume": 4553600
+    },
+    {
+      "close_price": 1250,
+      "trading_date": "2021-11-30",
+      "volume": 5979300
+    },
+    {
+      "close_price": 1205,
+      "trading_date": "2021-12-01",
+      "volume": 8334000
+    },
+    {
+      "close_price": 1230,
+      "trading_date": "2021-12-02",
+      "volume": 3899000
+    },
+    {
+      "close_price": 1235,
+      "trading_date": "2021-12-03",
+      "volume": 5544500
+    },
+    {
+      "close_price": 1265,
+      "trading_date": "2021-12-06",
+      "volume": 5191300
+    },
+    {
+      "close_price": 1250,
+      "trading_date": "2021-12-07",
+      "volume": 3912400
+    },
+    {
+      "close_price": 1240,
+      "trading_date": "2021-12-08",
+      "volume": 1580900
+    },
+    {
+      "close_price": 1240,
+      "trading_date": "2021-12-09",
+      "volume": 950100
+    },
+    {
+      "close_price": 1230,
+      "trading_date": "2021-12-10",
+      "volume": 2159300
+    },
+    {
+      "close_price": 1250,
+      "trading_date": "2021-12-13",
+      "volume": 2025300
+    },
+    {
+      "close_price": 1275,
+      "trading_date": "2021-12-14",
+      "volume": 5042500
+    },
+    {
+      "close_price": 1265,
+      "trading_date": "2021-12-15",
+      "volume": 7332400
+    },
+    {
+      "close_price": 1230,
+      "trading_date": "2021-12-16",
+      "volume": 5438100
+    },
+    {
+      "close_price": 1205,
+      "trading_date": "2021-12-17",
+      "volume": 4165200
+    },
+    {
+      "close_price": 1160,
+      "trading_date": "2021-12-20",
+      "volume": 4879900
+    },
+    {
+      "close_price": 1160,
+      "trading_date": "2021-12-21",
+      "volume": 2281100
+    },
+    {
+      "close_price": 1150,
+      "trading_date": "2021-12-22",
+      "volume": 1325100
+    },
+    {
+      "close_price": 1155,
+      "trading_date": "2021-12-23",
+      "volume": 1978900
+    },
+    {
+      "close_price": 1150,
+      "trading_date": "2021-12-24",
+      "volume": 1297900
+    },
+    {
+      "close_price": 1155,
+      "trading_date": "2021-12-27",
+      "volume": 3536800
+    },
+    {
+      "close_price": 1150,
+      "trading_date": "2021-12-28",
+      "volume": 1234400
+    },
+    {
+      "close_price": 1170,
+      "trading_date": "2021-12-29",
+      "volume": 1879700
+    },
+    {
+      "close_price": 1155,
+      "trading_date": "2021-12-30",
+      "volume": 910000
+    },
+    {
+      "close_price": 1175,
+      "trading_date": "2022-01-03",
+      "volume": 1993500
+    },
+    {
+      "close_price": 1200,
+      "trading_date": "2022-01-04",
+      "volume": 1890600
+    },
+    {
+      "close_price": 1205,
+      "trading_date": "2022-01-05",
+      "volume": 6102000
+    },
+    {
+      "close_price": 1160,
+      "trading_date": "2022-01-06",
+      "volume": 5066800
+    },
+    {
+      "close_price": 1135,
+      "trading_date": "2022-01-07",
+      "volume": 6943800
+    },
+    {
+      "close_price": 1135,
+      "trading_date": "2022-01-10",
+      "volume": 2085800
+    },
+    {
+      "close_price": 1120,
+      "trading_date": "2022-01-11",
+      "volume": 2045800
+    },
+    {
+      "close_price": 1120,
+      "trading_date": "2022-01-12",
+      "volume": 1102600
+    },
+    {
+      "close_price": 1115,
+      "trading_date": "2022-01-13",
+      "volume": 1843200
+    },
+    {
+      "close_price": 1115,
+      "trading_date": "2022-01-14",
+      "volume": 896900
+    },
+    {
+      "close_price": 1120,
+      "trading_date": "2022-01-17",
+      "volume": 990000
+    },
+    {
+      "close_price": 1110,
+      "trading_date": "2022-01-18",
+      "volume": 2599500
+    },
+    {
+      "close_price": 1090,
+      "trading_date": "2022-01-19",
+      "volume": 3008500
+    },
+    {
+      "close_price": 1090,
+      "trading_date": "2022-01-20",
+      "volume": 1187700
+    },
+    {
+      "close_price": 1095,
+      "trading_date": "2022-01-21",
+      "volume": 1338400
+    },
+    {
+      "close_price": 1090,
+      "trading_date": "2022-01-24",
+      "volume": 1026100
+    },
+    {
+      "close_price": 1075,
+      "trading_date": "2022-01-25",
+      "volume": 1654300
+    },
+    {
+      "close_price": 1070,
+      "trading_date": "2022-01-26",
+      "volume": 931100
+    },
+    {
+      "close_price": 1060,
+      "trading_date": "2022-01-27",
+      "volume": 1244600
+    },
+    {
+      "close_price": 1085,
+      "trading_date": "2022-01-28",
+      "volume": 766300
+    },
+    {
+      "close_price": 1030,
+      "trading_date": "2022-01-31",
+      "volume": 23092500
+    },
+    {
+      "close_price": 1045,
+      "trading_date": "2022-02-02",
+      "volume": 2562300
+    },
+    {
+      "close_price": 1045,
+      "trading_date": "2022-02-03",
+      "volume": 1230700
+    },
+    {
+      "close_price": 1080,
+      "trading_date": "2022-02-04",
+      "volume": 11631000
+    },
+    {
+      "close_price": 1065,
+      "trading_date": "2022-02-07",
+      "volume": 4803800
+    },
+    {
+      "close_price": 1140,
+      "trading_date": "2022-02-08",
+      "volume": 13779700
+    },
+    {
+      "close_price": 1125,
+      "trading_date": "2022-02-09",
+      "volume": 8213600
+    },
+    {
+      "close_price": 1105,
+      "trading_date": "2022-02-10",
+      "volume": 2822600
+    },
+    {
+      "close_price": 1095,
+      "trading_date": "2022-02-11",
+      "volume": 2721600
+    },
+    {
+      "close_price": 1080,
+      "trading_date": "2022-02-14",
+      "volume": 5936500
+    },
+    {
+      "close_price": 1090,
+      "trading_date": "2022-02-15",
+      "volume": 3151600
+    },
+    {
+      "close_price": 1105,
+      "trading_date": "2022-02-16",
+      "volume": 3681900
+    },
+    {
+      "close_price": 1090,
+      "trading_date": "2022-02-17",
+      "volume": 2656500
+    },
+    {
+      "close_price": 1100,
+      "trading_date": "2022-02-18",
+      "volume": 1860000
+    },
+    {
+      "close_price": 1085,
+      "trading_date": "2022-02-21",
+      "volume": 3628600
+    },
+    {
+      "close_price": 1085,
+      "trading_date": "2022-02-22",
+      "volume": 2019900
+    },
+    {
+      "close_price": 1085,
+      "trading_date": "2022-02-23",
+      "volume": 6532200
+    },
+    {
+      "close_price": 1055,
+      "trading_date": "2022-02-24",
+      "volume": 8607200
+    },
+    {
+      "close_price": 1055,
+      "trading_date": "2022-02-25",
+      "volume": 7403800
+    },
+    {
+      "close_price": 1060,
+      "trading_date": "2022-03-01",
+      "volume": 3784300
+    },
+    {
+      "close_price": 1060,
+      "trading_date": "2022-03-02",
+      "volume": 1719500
+    },
+    {
+      "close_price": 1055,
+      "trading_date": "2022-03-04",
+      "volume": 3879800
+    },
+    {
+      "close_price": 1050,
+      "trading_date": "2022-03-07",
+      "volume": 2741300
+    },
+    {
+      "close_price": 1070,
+      "trading_date": "2022-03-08",
+      "volume": 6189200
+    },
+    {
+      "close_price": 1070,
+      "trading_date": "2022-03-09",
+      "volume": 3574300
+    },
+    {
+      "close_price": 1075,
+      "trading_date": "2022-03-10",
+      "volume": 1994600
+    },
+    {
+      "close_price": 1075,
+      "trading_date": "2022-03-11",
+      "volume": 1261300
+    },
+    {
+      "close_price": 1090,
+      "trading_date": "2022-03-14",
+      "volume": 9562100
+    },
+    {
+      "close_price": 1055,
+      "trading_date": "2022-03-15",
+      "volume": 11283100
+    },
+    {
+      "close_price": 1070,
+      "trading_date": "2022-03-16",
+      "volume": 1825800
+    },
+    {
+      "close_price": 1070,
+      "trading_date": "2022-03-17",
+      "volume": 2206500
+    },
+    {
+      "close_price": 1065,
+      "trading_date": "2022-03-18",
+      "volume": 1184100
+    },
+    {
+      "close_price": 1075,
+      "trading_date": "2022-03-21",
+      "volume": 1776800
+    },
+    {
+      "close_price": 1080,
+      "trading_date": "2022-03-22",
+      "volume": 1098800
+    },
+    {
+      "close_price": 1080,
+      "trading_date": "2022-03-23",
+      "volume": 2116800
+    },
+    {
+      "close_price": 1095,
+      "trading_date": "2022-03-24",
+      "volume": 2571000
+    },
+    {
+      "close_price": 1085,
+      "trading_date": "2022-03-25",
+      "volume": 2892800
+    },
+    {
+      "close_price": 1120,
+      "trading_date": "2022-03-28",
+      "volume": 4443600
+    },
+    {
+      "close_price": 1120,
+      "trading_date": "2022-03-29",
+      "volume": 5622000
+    },
+    {
+      "close_price": 1120,
+      "trading_date": "2022-03-30",
+      "volume": 2523200
+    },
+    {
+      "close_price": 1125,
+      "trading_date": "2022-03-31",
+      "volume": 1906000
+    },
+    {
+      "close_price": 1100,
+      "trading_date": "2022-04-01",
+      "volume": 3294800
+    },
+    {
+      "close_price": 1115,
+      "trading_date": "2022-04-04",
+      "volume": 2567000
+    },
+    {
+      "close_price": 1115,
+      "trading_date": "2022-04-05",
+      "volume": 1116600
+    },
+    {
+      "close_price": 1125,
+      "trading_date": "2022-04-06",
+      "volume": 2749700
+    },
+    {
+      "close_price": 1130,
+      "trading_date": "2022-04-07",
+      "volume": 2547600
+    },
+    {
+      "close_price": 1165,
+      "trading_date": "2022-04-08",
+      "volume": 7337700
+    },
+    {
+      "close_price": 1170,
+      "trading_date": "2022-04-11",
+      "volume": 9947500
+    },
+    {
+      "close_price": 1155,
+      "trading_date": "2022-04-12",
+      "volume": 4338000
+    },
+    {
+      "close_price": 1165,
+      "trading_date": "2022-04-13",
+      "volume": 3075400
+    },
+    {
+      "close_price": 1185,
+      "trading_date": "2022-04-14",
+      "volume": 3194300
+    },
+    {
+      "close_price": 1170,
+      "trading_date": "2022-04-18",
+      "volume": 4349100
+    },
+    {
+      "close_price": 1170,
+      "trading_date": "2022-04-19",
+      "volume": 3328300
+    },
+    {
+      "close_price": 1150,
+      "trading_date": "2022-04-20",
+      "volume": 8486200
+    },
+    {
+      "close_price": 1160,
+      "trading_date": "2022-04-21",
+      "volume": 4290500
+    },
+    {
+      "close_price": 1110,
+      "trading_date": "2022-04-22",
+      "volume": 4293900
+    },
+    {
+      "close_price": 1095,
+      "trading_date": "2022-04-25",
+      "volume": 2406000
+    },
+    {
+      "close_price": 1120,
+      "trading_date": "2022-04-26",
+      "volume": 3980200
+    },
+    {
+      "close_price": 1130,
+      "trading_date": "2022-04-27",
+      "volume": 3158000
+    },
+    {
+      "close_price": 1145,
+      "trading_date": "2022-04-28",
+      "volume": 4340000
+    },
+    {
+      "close_price": 1120,
+      "trading_date": "2022-05-09",
+      "volume": 3188700
+    },
+    {
+      "close_price": 1120,
+      "trading_date": "2022-05-10",
+      "volume": 4260000
+    },
+    {
+      "close_price": 1115,
+      "trading_date": "2022-05-11",
+      "volume": 1369700
+    },
+    {
+      "close_price": 1100,
+      "trading_date": "2022-05-12",
+      "volume": 3287800
+    },
+    {
+      "close_price": 1105,
+      "trading_date": "2022-05-13",
+      "volume": 1395100
+    },
+    {
+      "close_price": 1105,
+      "trading_date": "2022-05-17",
+      "volume": 3392300
+    },
+    {
+      "close_price": 1115,
+      "trading_date": "2022-05-18",
+      "volume": 2246200
+    },
+    {
+      "close_price": 1095,
+      "trading_date": "2022-05-19",
+      "volume": 1854900
+    },
+    {
+      "close_price": 1115,
+      "trading_date": "2022-05-20",
+      "volume": 2704200
+    },
+    {
+      "close_price": 1100,
+      "trading_date": "2022-05-23",
+      "volume": 2437600
+    },
+    {
+      "close_price": 1115,
+      "trading_date": "2022-05-24",
+      "volume": 1440100
+    },
+    {
+      "close_price": 1105,
+      "trading_date": "2022-05-25",
+      "volume": 2566600
+    },
+    {
+      "close_price": 1105,
+      "trading_date": "2022-05-27",
+      "volume": 2486500
+    },
+    {
+      "close_price": 1170,
+      "trading_date": "2022-05-30",
+      "volume": 8558400
+    },
+    {
+      "close_price": 1170,
+      "trading_date": "2022-05-31",
+      "volume": 4215400
+    },
+    {
+      "close_price": 1180,
+      "trading_date": "2022-06-02",
+      "volume": 3267000
+    },
+    {
+      "close_price": 1160,
+      "trading_date": "2022-06-03",
+      "volume": 3357200
+    },
+    {
+      "close_price": 1195,
+      "trading_date": "2022-06-06",
+      "volume": 4607400
+    },
+    {
+      "close_price": 1235,
+      "trading_date": "2022-06-07",
+      "volume": 9521200
+    },
+    {
+      "close_price": 1240,
+      "trading_date": "2022-06-08",
+      "volume": 5131900
+    },
+    {
+      "close_price": 1230,
+      "trading_date": "2022-06-09",
+      "volume": 5071600
+    },
+    {
+      "close_price": 1215,
+      "trading_date": "2022-06-10",
+      "volume": 4192800
+    },
+    {
+      "close_price": 1190,
+      "trading_date": "2022-06-13",
+      "volume": 6795400
+    },
+    {
+      "close_price": 1230,
+      "trading_date": "2022-06-14",
+      "volume": 5614700
+    },
+    {
+      "close_price": 1200,
+      "trading_date": "2022-06-15",
+      "volume": 4450200
+    },
+    {
+      "close_price": 1215,
+      "trading_date": "2022-06-16",
+      "volume": 3883400
+    },
+    {
+      "close_price": 1200,
+      "trading_date": "2022-06-17",
+      "volume": 2866800
+    },
+    {
+      "close_price": 1185,
+      "trading_date": "2022-06-20",
+      "volume": 2724900
+    },
+    {
+      "close_price": 1180,
+      "trading_date": "2022-06-21",
+      "volume": 2498000
+    },
+    {
+      "close_price": 1185,
+      "trading_date": "2022-06-22",
+      "volume": 2215000
+    },
+    {
+      "close_price": 1185,
+      "trading_date": "2022-06-23",
+      "volume": 1616600
+    },
+    {
+      "close_price": 1185,
+      "trading_date": "2022-06-24",
+      "volume": 2839100
+    },
+    {
+      "close_price": 1185,
+      "trading_date": "2022-06-27",
+      "volume": 863200
+    },
+    {
+      "close_price": 1185,
+      "trading_date": "2022-06-28",
+      "volume": 1344500
+    },
+    {
+      "close_price": 1175,
+      "trading_date": "2022-06-29",
+      "volume": 1535500
+    },
+    {
+      "close_price": 1140,
+      "trading_date": "2022-06-30",
+      "volume": 5636700
+    },
+    {
+      "close_price": 1120,
+      "trading_date": "2022-07-01",
+      "volume": 2878000
+    },
+    {
+      "close_price": 1095,
+      "trading_date": "2022-07-04",
+      "volume": 3040600
+    },
+    {
+      "close_price": 1100,
+      "trading_date": "2022-07-05",
+      "volume": 1453000
+    },
+    {
+      "close_price": 1105,
+      "trading_date": "2022-07-06",
+      "volume": 1354100
+    },
+    {
+      "close_price": 1125,
+      "trading_date": "2022-07-07",
+      "volume": 955500
+    },
+    {
+      "close_price": 1135,
+      "trading_date": "2022-07-08",
+      "volume": 1344100
+    },
+    {
+      "close_price": 1120,
+      "trading_date": "2022-07-11",
+      "volume": 683900
+    },
+    {
+      "close_price": 1120,
+      "trading_date": "2022-07-12",
+      "volume": 597700
+    },
+    {
+      "close_price": 1120,
+      "trading_date": "2022-07-13",
+      "volume": 509800
+    },
+    {
+      "close_price": 1125,
+      "trading_date": "2022-07-14",
+      "volume": 596900
+    },
+    {
+      "close_price": 1120,
+      "trading_date": "2022-07-15",
+      "volume": 685500
+    },
+    {
+      "close_price": 1120,
+      "trading_date": "2022-07-18",
+      "volume": 633800
+    },
+    {
+      "close_price": 1140,
+      "trading_date": "2022-07-19",
+      "volume": 1451900
+    },
+    {
+      "close_price": 1140,
+      "trading_date": "2022-07-20",
+      "volume": 1116000
+    },
+    {
+      "close_price": 1145,
+      "trading_date": "2022-07-21",
+      "volume": 379700
+    },
+    {
+      "close_price": 1150,
+      "trading_date": "2022-07-22",
+      "volume": 543300
+    },
+    {
+      "close_price": 1145,
+      "trading_date": "2022-07-25",
+      "volume": 865300
+    },
+    {
+      "close_price": 1140,
+      "trading_date": "2022-07-26",
+      "volume": 493000
+    },
+    {
+      "close_price": 1160,
+      "trading_date": "2022-07-27",
+      "volume": 1434800
+    },
+    {
+      "close_price": 1185,
+      "trading_date": "2022-07-28",
+      "volume": 4772400
+    },
+    {
+      "close_price": 1165,
+      "trading_date": "2022-07-29",
+      "volume": 3705300
+    },
+    {
+      "close_price": 1175,
+      "trading_date": "2022-08-01",
+      "volume": 1830800
+    },
+    {
+      "close_price": 1170,
+      "trading_date": "2022-08-02",
+      "volume": 1112300
+    },
+    {
+      "close_price": 1185,
+      "trading_date": "2022-08-03",
+      "volume": 2042400
+    },
+    {
+      "close_price": 1205,
+      "trading_date": "2022-08-04",
+      "volume": 4648600
+    },
+    {
+      "close_price": 1240,
+      "trading_date": "2022-08-05",
+      "volume": 5902800
+    },
+    {
+      "close_price": 1250,
+      "trading_date": "2022-08-08",
+      "volume": 2967800
+    },
+    {
+      "close_price": 1235,
+      "trading_date": "2022-08-09",
+      "volume": 2808200
+    },
+    {
+      "close_price": 1240,
+      "trading_date": "2022-08-10",
+      "volume": 3314500
+    },
+    {
+      "close_price": 1230,
+      "trading_date": "2022-08-11",
+      "volume": 3450300
+    },
+    {
+      "close_price": 1210,
+      "trading_date": "2022-08-12",
+      "volume": 3870500
+    },
+    {
+      "close_price": 1240,
+      "trading_date": "2022-08-15",
+      "volume": 2604300
+    },
+    {
+      "close_price": 1240,
+      "trading_date": "2022-08-16",
+      "volume": 1545500
+    },
+    {
+      "close_price": 1245,
+      "trading_date": "2022-08-18",
+      "volume": 1876500
+    },
+    {
+      "close_price": 1245,
+      "trading_date": "2022-08-19",
+      "volume": 2727500
+    },
+    {
+      "close_price": 1235,
+      "trading_date": "2022-08-22",
+      "volume": 2559000
+    },
+    {
+      "close_price": 1230,
+      "trading_date": "2022-08-23",
+      "volume": 951700
+    },
+    {
+      "close_price": 1235,
+      "trading_date": "2022-08-24",
+      "volume": 903300
+    },
+    {
+      "close_price": 1235,
+      "trading_date": "2022-08-25",
+      "volume": 1233100
+    },
+    {
+      "close_price": 1240,
+      "trading_date": "2022-08-26",
+      "volume": 1306100
+    },
+    {
+      "close_price": 1235,
+      "trading_date": "2022-08-29",
+      "volume": 1076800
+    },
+    {
+      "close_price": 1230,
+      "trading_date": "2022-08-30",
+      "volume": 887000
+    },
+    {
+      "close_price": 1240,
+      "trading_date": "2022-08-31",
+      "volume": 1373800
+    },
+    {
+      "close_price": 1240,
+      "trading_date": "2022-09-01",
+      "volume": 809100
+    },
+    {
+      "close_price": 1220,
+      "trading_date": "2022-09-02",
+      "volume": 3077700
+    },
+    {
+      "close_price": 1220,
+      "trading_date": "2022-09-05",
+      "volume": 1880400
+    },
+    {
+      "close_price": 1230,
+      "trading_date": "2022-09-06",
+      "volume": 809600
+    },
+    {
+      "close_price": 1230,
+      "trading_date": "2022-09-07",
+      "volume": 1286000
+    },
+    {
+      "close_price": 1230,
+      "trading_date": "2022-09-08",
+      "volume": 1221100
+    },
+    {
+      "close_price": 1230,
+      "trading_date": "2022-09-09",
+      "volume": 1225200
+    },
+    {
+      "close_price": 1235,
+      "trading_date": "2022-09-12",
+      "volume": 1321800
+    },
+    {
+      "close_price": 1270,
+      "trading_date": "2022-09-13",
+      "volume": 5020600
+    },
+    {
+      "close_price": 1255,
+      "trading_date": "2022-09-14",
+      "volume": 2577700
+    },
+    {
+      "close_price": 1275,
+      "trading_date": "2022-09-15",
+      "volume": 2971900
+    },
+    {
+      "close_price": 1300,
+      "trading_date": "2022-09-16",
+      "volume": 5008800
+    },
+    {
+      "close_price": 1350,
+      "trading_date": "2022-09-19",
+      "volume": 7137000
+    },
+    {
+      "close_price": 1350,
+      "trading_date": "2022-09-20",
+      "volume": 2762400
+    },
+    {
+      "close_price": 1330,
+      "trading_date": "2022-09-21",
+      "volume": 1430100
+    },
+    {
+      "close_price": 1330,
+      "trading_date": "2022-09-22",
+      "volume": 1662400
+    },
+    {
+      "close_price": 1325,
+      "trading_date": "2022-09-23",
+      "volume": 997900
+    },
+    {
+      "close_price": 1290,
+      "trading_date": "2022-09-26",
+      "volume": 4173800
+    },
+    {
+      "close_price": 1315,
+      "trading_date": "2022-09-27",
+      "volume": 2161400
+    },
+    {
+      "close_price": 1295,
+      "trading_date": "2022-09-28",
+      "volume": 2352600
+    },
+    {
+      "close_price": 1255,
+      "trading_date": "2022-09-29",
+      "volume": 4408500
+    },
+    {
+      "close_price": 1245,
+      "trading_date": "2022-09-30",
+      "volume": 3423200
+    },
+    {
+      "close_price": 1230,
+      "trading_date": "2022-10-03",
+      "volume": 803900
+    },
+    {
+      "close_price": 1240,
+      "trading_date": "2022-10-04",
+      "volume": 1581500
+    },
+    {
+      "close_price": 1260,
+      "trading_date": "2022-10-05",
+      "volume": 1879900
+    },
+    {
+      "close_price": 1255,
+      "trading_date": "2022-10-06",
+      "volume": 742800
+    },
+    {
+      "close_price": 1250,
+      "trading_date": "2022-10-07",
+      "volume": 1057100
+    },
+    {
+      "close_price": 1240,
+      "trading_date": "2022-10-10",
+      "volume": 1624900
+    },
+    {
+      "close_price": 1235,
+      "trading_date": "2022-10-11",
+      "volume": 1710900
+    },
+    {
+      "close_price": 1225,
+      "trading_date": "2022-10-12",
+      "volume": 2060700
+    },
+    {
+      "close_price": 1225,
+      "trading_date": "2022-10-13",
+      "volume": 1717900
+    },
+    {
+      "close_price": 1195,
+      "trading_date": "2022-10-14",
+      "volume": 2713200
+    },
+    {
+      "close_price": 1185,
+      "trading_date": "2022-10-17",
+      "volume": 1663100
+    },
+    {
+      "close_price": 1180,
+      "trading_date": "2022-10-18",
+      "volume": 631900
+    },
+    {
+      "close_price": 1185,
+      "trading_date": "2022-10-19",
+      "volume": 1869400
+    },
+    {
+      "close_price": 1190,
+      "trading_date": "2022-10-20",
+      "volume": 826600
+    },
+    {
+      "close_price": 1200,
+      "trading_date": "2022-10-21",
+      "volume": 1781800
+    },
+    {
+      "close_price": 1215,
+      "trading_date": "2022-10-24",
+      "volume": 1006700
+    },
+    {
+      "close_price": 1210,
+      "trading_date": "2022-10-25",
+      "volume": 725700
+    },
+    {
+      "close_price": 1205,
+      "trading_date": "2022-10-26",
+      "volume": 1208200
+    },
+    {
+      "close_price": 1210,
+      "trading_date": "2022-10-27",
+      "volume": 2246700
+    },
+    {
+      "close_price": 1205,
+      "trading_date": "2022-10-28",
+      "volume": 2478200
+    },
+    {
+      "close_price": 1320,
+      "trading_date": "2022-10-31",
+      "volume": 26632100
+    },
+    {
+      "close_price": 1335,
+      "trading_date": "2022-11-01",
+      "volume": 12775900
+    },
+    {
+      "close_price": 1315,
+      "trading_date": "2022-11-02",
+      "volume": 3808800
+    },
+    {
+      "close_price": 1320,
+      "trading_date": "2022-11-03",
+      "volume": 3402300
+    },
+    {
+      "close_price": 1335,
+      "trading_date": "2022-11-04",
+      "volume": 5506200
+    },
+    {
+      "close_price": 1425,
+      "trading_date": "2022-11-07",
+      "volume": 15747800
+    },
+    {
+      "close_price": 1480,
+      "trading_date": "2022-11-08",
+      "volume": 8525100
+    },
+    {
+      "close_price": 1450,
+      "trading_date": "2022-11-09",
+      "volume": 3923500
+    },
+    {
+      "close_price": 1430,
+      "trading_date": "2022-11-10",
+      "volume": 3034100
+    },
+    {
+      "close_price": 1515,
+      "trading_date": "2022-11-11",
+      "volume": 7555200
+    },
+    {
+      "close_price": 1525,
+      "trading_date": "2022-11-14",
+      "volume": 4785300
+    },
+    {
+      "close_price": 1515,
+      "trading_date": "2022-11-15",
+      "volume": 3135500
+    },
+    {
+      "close_price": 1500,
+      "trading_date": "2022-11-16",
+      "volume": 3446200
+    },
+    {
+      "close_price": 1520,
+      "trading_date": "2022-11-17",
+      "volume": 4369400
+    },
+    {
+      "close_price": 1525,
+      "trading_date": "2022-11-18",
+      "volume": 2339000
+    },
+    {
+      "close_price": 1535,
+      "trading_date": "2022-11-21",
+      "volume": 2189000
+    },
+    {
+      "close_price": 1540,
+      "trading_date": "2022-11-22",
+      "volume": 2024100
+    },
+    {
+      "close_price": 1515,
+      "trading_date": "2022-11-23",
+      "volume": 1870600
+    },
+    {
+      "close_price": 1515,
+      "trading_date": "2022-11-24",
+      "volume": 3219900
+    },
+    {
+      "close_price": 1490,
+      "trading_date": "2022-11-25",
+      "volume": 1538600
+    },
+    {
+      "close_price": 1490,
+      "trading_date": "2022-11-28",
+      "volume": 6474600
+    },
+    {
+      "close_price": 1480,
+      "trading_date": "2022-11-29",
+      "volume": 985700
+    },
+    {
+      "close_price": 1520,
+      "trading_date": "2022-11-30",
+      "volume": 2557300
+    },
+    {
+      "close_price": 1575,
+      "trading_date": "2022-12-01",
+      "volume": 6209200
+    },
+    {
+      "close_price": 1565,
+      "trading_date": "2022-12-02",
+      "volume": 2233600
+    },
+    {
+      "close_price": 1490,
+      "trading_date": "2022-12-05",
+      "volume": 4779400
+    },
+    {
+      "close_price": 1480,
+      "trading_date": "2022-12-06",
+      "volume": 2977900
+    },
+    {
+      "close_price": 1465,
+      "trading_date": "2022-12-07",
+      "volume": 1460900
+    },
+    {
+      "close_price": 1460,
+      "trading_date": "2022-12-08",
+      "volume": 3614300
+    },
+    {
+      "close_price": 1410,
+      "trading_date": "2022-12-09",
+      "volume": 3038800
+    },
+    {
+      "close_price": 1440,
+      "trading_date": "2022-12-12",
+      "volume": 1354300
+    },
+    {
+      "close_price": 1435,
+      "trading_date": "2022-12-13",
+      "volume": 1705000
+    },
+    {
+      "close_price": 1425,
+      "trading_date": "2022-12-14",
+      "volume": 926400
+    },
+    {
+      "close_price": 1415,
+      "trading_date": "2022-12-15",
+      "volume": 788800
+    },
+    {
+      "close_price": 1420,
+      "trading_date": "2022-12-16",
+      "volume": 1389600
+    },
+    {
+      "close_price": 1405,
+      "trading_date": "2022-12-19",
+      "volume": 596600
+    },
+    {
+      "close_price": 1390,
+      "trading_date": "2022-12-20",
+      "volume": 1381900
+    },
+    {
+      "close_price": 1375,
+      "trading_date": "2022-12-21",
+      "volume": 1864400
+    },
+    {
+      "close_price": 1390,
+      "trading_date": "2022-12-22",
+      "volume": 758000
+    },
+    {
+      "close_price": 1370,
+      "trading_date": "2022-12-23",
+      "volume": 829400
+    },
+    {
+      "close_price": 1405,
+      "trading_date": "2022-12-26",
+      "volume": 1457200
+    },
+    {
+      "close_price": 1440,
+      "trading_date": "2022-12-27",
+      "volume": 2043300
+    },
+    {
+      "close_price": 1415,
+      "trading_date": "2022-12-28",
+      "volume": 1505700
+    },
+    {
+      "close_price": 1445,
+      "trading_date": "2022-12-29",
+      "volume": 1272100
+    },
+    {
+      "close_price": 1460,
+      "trading_date": "2022-12-30",
+      "volume": 1583800
+    },
+    {
+      "close_price": 1445,
+      "trading_date": "2023-01-02",
+      "volume": 1193800
+    },
+    {
+      "close_price": 1450,
+      "trading_date": "2023-01-03",
+      "volume": 1220300
+    },
+    {
+      "close_price": 1455,
+      "trading_date": "2023-01-04",
+      "volume": 1142300
+    },
+    {
+      "close_price": 1400,
+      "trading_date": "2023-01-05",
+      "volume": 2683000
+    },
+    {
+      "close_price": 1400,
+      "trading_date": "2023-01-06",
+      "volume": 961900
+    },
+    {
+      "close_price": 1400,
+      "trading_date": "2023-01-09",
+      "volume": 1122900
+    },
+    {
+      "close_price": 1390,
+      "trading_date": "2023-01-10",
+      "volume": 1199800
+    },
+    {
+      "close_price": 1380,
+      "trading_date": "2023-01-11",
+      "volume": 1057900
+    },
+    {
+      "close_price": 1400,
+      "trading_date": "2023-01-12",
+      "volume": 847600
+    },
+    {
+      "close_price": 1400,
+      "trading_date": "2023-01-13",
+      "volume": 726400
+    },
+    {
+      "close_price": 1400,
+      "trading_date": "2023-01-16",
+      "volume": 335200
+    },
+    {
+      "close_price": 1390,
+      "trading_date": "2023-01-17",
+      "volume": 865300
+    },
+    {
+      "close_price": 1375,
+      "trading_date": "2023-01-18",
+      "volume": 4198600
+    },
+    {
+      "close_price": 1380,
+      "trading_date": "2023-01-19",
+      "volume": 2329500
+    },
+    {
+      "close_price": 1385,
+      "trading_date": "2023-01-20",
+      "volume": 1466100
+    },
+    {
+      "close_price": 1395,
+      "trading_date": "2023-01-24",
+      "volume": 1887400
+    },
+    {
+      "close_price": 1405,
+      "trading_date": "2023-01-25",
+      "volume": 2248100
+    },
+    {
+      "close_price": 1420,
+      "trading_date": "2023-01-26",
+      "volume": 1219600
+    },
+    {
+      "close_price": 1385,
+      "trading_date": "2023-01-27",
+      "volume": 5352200
+    },
+    {
+      "close_price": 1350,
+      "trading_date": "2023-01-30",
+      "volume": 6956400
+    },
+    {
+      "close_price": 1360,
+      "trading_date": "2023-01-31",
+      "volume": 3376000
+    },
+    {
+      "close_price": 1360,
+      "trading_date": "2023-02-01",
+      "volume": 5952900
+    },
+    {
+      "close_price": 1370,
+      "trading_date": "2023-02-02",
+      "volume": 3252000
+    },
+    {
+      "close_price": 1350,
+      "trading_date": "2023-02-03",
+      "volume": 5745900
+    },
+    {
+      "close_price": 1360,
+      "trading_date": "2023-02-06",
+      "volume": 1875700
+    },
+    {
+      "close_price": 1350,
+      "trading_date": "2023-02-07",
+      "volume": 4892300
+    },
+    {
+      "close_price": 1350,
+      "trading_date": "2023-02-08",
+      "volume": 3425800
+    },
+    {
+      "close_price": 1350,
+      "trading_date": "2023-02-09",
+      "volume": 3238500
+    },
+    {
+      "close_price": 1340,
+      "trading_date": "2023-02-10",
+      "volume": 6105700
+    },
+    {
+      "close_price": 1340,
+      "trading_date": "2023-02-13",
+      "volume": 3087200
+    },
+    {
+      "close_price": 1350,
+      "trading_date": "2023-02-14",
+      "volume": 4011900
+    },
+    {
+      "close_price": 1370,
+      "trading_date": "2023-02-15",
+      "volume": 4772900
+    },
+    {
+      "close_price": 1415,
+      "trading_date": "2023-02-16",
+      "volume": 7596800
+    },
+    {
+      "close_price": 1415,
+      "trading_date": "2023-02-17",
+      "volume": 7871900
+    },
+    {
+      "close_price": 1420,
+      "trading_date": "2023-02-20",
+      "volume": 3027800
+    },
+    {
+      "close_price": 1545,
+      "trading_date": "2023-02-21",
+      "volume": 17279200
+    },
+    {
+      "close_price": 1650,
+      "trading_date": "2023-02-22",
+      "volume": 25990800
+    },
+    {
+      "close_price": 1755,
+      "trading_date": "2023-02-23",
+      "volume": 15281600
+    },
+    {
+      "close_price": 1730,
+      "trading_date": "2023-02-24",
+      "volume": 12924300
+    },
+    {
+      "close_price": 1705,
+      "trading_date": "2023-02-27",
+      "volume": 8205200
+    },
+    {
+      "close_price": 1730,
+      "trading_date": "2023-02-28",
+      "volume": 10971100
+    },
+    {
+      "close_price": 1685,
+      "trading_date": "2023-03-01",
+      "volume": 5174100
+    },
+    {
+      "close_price": 1810,
+      "trading_date": "2023-03-02",
+      "volume": 18573600
+    },
+    {
+      "close_price": 1785,
+      "trading_date": "2023-03-03",
+      "volume": 14528700
+    },
+    {
+      "close_price": 1825,
+      "trading_date": "2023-03-06",
+      "volume": 8951200
+    },
+    {
+      "close_price": 1845,
+      "trading_date": "2023-03-07",
+      "volume": 7827000
+    },
+    {
+      "close_price": 1780,
+      "trading_date": "2023-03-08",
+      "volume": 6765400
+    },
+    {
+      "close_price": 1780,
+      "trading_date": "2023-03-09",
+      "volume": 4448100
+    },
+    {
+      "close_price": 1750,
+      "trading_date": "2023-03-10",
+      "volume": 4460900
+    },
+    {
+      "close_price": 1730,
+      "trading_date": "2023-03-13",
+      "volume": 3526100
+    },
+    {
+      "close_price": 1670,
+      "trading_date": "2023-03-14",
+      "volume": 10228200
+    },
+    {
+      "close_price": 1690,
+      "trading_date": "2023-03-15",
+      "volume": 6558200
+    },
+    {
+      "close_price": 1680,
+      "trading_date": "2023-03-16",
+      "volume": 5288300
+    },
+    {
+      "close_price": 1715,
+      "trading_date": "2023-03-17",
+      "volume": 5790600
+    },
+    {
+      "close_price": 1675,
+      "trading_date": "2023-03-20",
+      "volume": 2696900
+    },
+    {
+      "close_price": 1680,
+      "trading_date": "2023-03-21",
+      "volume": 1400000
+    },
+    {
+      "close_price": 1725,
+      "trading_date": "2023-03-24",
+      "volume": 3940700
+    },
+    {
+      "close_price": 1725,
+      "trading_date": "2023-03-27",
+      "volume": 3430500
+    },
+    {
+      "close_price": 1720,
+      "trading_date": "2023-03-28",
+      "volume": 3915600
+    },
+    {
+      "close_price": 1670,
+      "trading_date": "2023-03-29",
+      "volume": 11191900
+    },
+    {
+      "close_price": 1690,
+      "trading_date": "2023-03-30",
+      "volume": 5005800
+    },
+    {
+      "close_price": 1690,
+      "trading_date": "2023-03-31",
+      "volume": 2120600
+    },
+    {
+      "close_price": 1675,
+      "trading_date": "2023-04-03",
+      "volume": 2707500
+    },
+    {
+      "close_price": 1675,
+      "trading_date": "2023-04-04",
+      "volume": 1437500
+    },
+    {
+      "close_price": 1580,
+      "trading_date": "2023-04-05",
+      "volume": 16877500
+    },
+    {
+      "close_price": 1590,
+      "trading_date": "2023-04-06",
+      "volume": 9592900
+    },
+    {
+      "close_price": 1605,
+      "trading_date": "2023-04-10",
+      "volume": 5247700
+    },
+    {
+      "close_price": 1640,
+      "trading_date": "2023-04-11",
+      "volume": 7244800
+    },
+    {
+      "close_price": 1770,
+      "trading_date": "2023-04-12",
+      "volume": 19704700
+    },
+    {
+      "close_price": 1760,
+      "trading_date": "2023-04-13",
+      "volume": 11687700
+    },
+    {
+      "close_price": 1730,
+      "trading_date": "2023-04-14",
+      "volume": 4243200
+    },
+    {
+      "close_price": 1720,
+      "trading_date": "2023-04-17",
+      "volume": 2701100
+    },
+    {
+      "close_price": 1900,
+      "trading_date": "2023-04-18",
+      "volume": 19460100
+    },
+    {
+      "close_price": 1875,
+      "trading_date": "2023-04-26",
+      "volume": 12639300
+    },
+    {
+      "close_price": 1820,
+      "trading_date": "2023-04-27",
+      "volume": 5960800
+    },
+    {
+      "close_price": 1830,
+      "trading_date": "2023-04-28",
+      "volume": 4433000
+    },
+    {
+      "close_price": 1835,
+      "trading_date": "2023-05-02",
+      "volume": 3651700
+    },
+    {
+      "close_price": 1800,
+      "trading_date": "2023-05-03",
+      "volume": 4992900
+    },
+    {
+      "close_price": 1815,
+      "trading_date": "2023-05-04",
+      "volume": 2471900
+    },
+    {
+      "close_price": 1815,
+      "trading_date": "2023-05-05",
+      "volume": 2417600
+    },
+    {
+      "close_price": 1880,
+      "trading_date": "2023-05-08",
+      "volume": 6714900
+    },
+    {
+      "close_price": 2110,
+      "trading_date": "2023-05-09",
+      "volume": 26642900
+    },
+    {
+      "close_price": 2000,
+      "trading_date": "2023-05-10",
+      "volume": 11380400
+    },
+    {
+      "close_price": 2060,
+      "trading_date": "2023-05-11",
+      "volume": 12235300
+    },
+    {
+      "close_price": 2110,
+      "trading_date": "2023-05-12",
+      "volume": 21564600
+    },
+    {
+      "close_price": 2080,
+      "trading_date": "2023-05-15",
+      "volume": 6785100
+    },
+    {
+      "close_price": 1995,
+      "trading_date": "2023-05-16",
+      "volume": 7277900
+    },
+    {
+      "close_price": 1985,
+      "trading_date": "2023-05-17",
+      "volume": 4397100
+    },
+    {
+      "close_price": 1970,
+      "trading_date": "2023-05-19",
+      "volume": 6157900
+    },
+    {
+      "close_price": 2050,
+      "trading_date": "2023-05-22",
+      "volume": 9044800
+    },
+    {
+      "close_price": 2010,
+      "trading_date": "2023-05-23",
+      "volume": 6153400
+    },
+    {
+      "close_price": 1980,
+      "trading_date": "2023-05-24",
+      "volume": 3885900
+    },
+    {
+      "close_price": 2040,
+      "trading_date": "2023-05-25",
+      "volume": 7589600
+    },
+    {
+      "close_price": 1990,
+      "trading_date": "2023-05-26",
+      "volume": 3889500
+    },
+    {
+      "close_price": 1970,
+      "trading_date": "2023-05-29",
+      "volume": 5251700
+    },
+    {
+      "close_price": 2030,
+      "trading_date": "2023-05-30",
+      "volume": 3605300
+    },
+    {
+      "close_price": 2070,
+      "trading_date": "2023-05-31",
+      "volume": 5643200
+    },
+    {
+      "close_price": 2110,
+      "trading_date": "2023-06-05",
+      "volume": 16685000
+    },
+    {
+      "close_price": 2080,
+      "trading_date": "2023-06-06",
+      "volume": 5670000
+    },
+    {
+      "close_price": 2150,
+      "trading_date": "2023-06-07",
+      "volume": 7288800
+    },
+    {
+      "close_price": 2250,
+      "trading_date": "2023-06-08",
+      "volume": 31578500
+    },
+    {
+      "close_price": 2310,
+      "trading_date": "2023-06-09",
+      "volume": 13638500
+    },
+    {
+      "close_price": 2380,
+      "trading_date": "2023-06-12",
+      "volume": 7178900
+    },
+    {
+      "close_price": 2430,
+      "trading_date": "2023-06-13",
+      "volume": 7056100
+    },
+    {
+      "close_price": 2410,
+      "trading_date": "2023-06-14",
+      "volume": 4136300
+    },
+    {
+      "close_price": 2420,
+      "trading_date": "2023-06-15",
+      "volume": 5789900
+    },
+    {
+      "close_price": 2500,
+      "trading_date": "2023-06-16",
+      "volume": 18714700
+    },
+    {
+      "close_price": 2450,
+      "trading_date": "2023-06-19",
+      "volume": 4891900
+    },
+    {
+      "close_price": 2380,
+      "trading_date": "2023-06-20",
+      "volume": 8060000
+    },
+    {
+      "close_price": 2520,
+      "trading_date": "2023-06-21",
+      "volume": 10751500
+    },
+    {
+      "close_price": 2520,
+      "trading_date": "2023-06-22",
+      "volume": 6607100
+    },
+    {
+      "close_price": 2520,
+      "trading_date": "2023-06-23",
+      "volume": 2505600
+    },
+    {
+      "close_price": 2440,
+      "trading_date": "2023-06-26",
+      "volume": 7282500
+    },
+    {
+      "close_price": 2480,
+      "trading_date": "2023-06-27",
+      "volume": 3238300
+    },
+    {
+      "close_price": 2600,
+      "trading_date": "2023-07-03",
+      "volume": 11748700
+    },
+    {
+      "close_price": 2800,
+      "trading_date": "2023-07-04",
+      "volume": 23282500
+    },
+    {
+      "close_price": 2750,
+      "trading_date": "2023-07-05",
+      "volume": 8078100
+    },
+    {
+      "close_price": 2690,
+      "trading_date": "2023-07-06",
+      "volume": 12533700
+    },
+    {
+      "close_price": 2590,
+      "trading_date": "2023-07-07",
+      "volume": 11302900
+    },
+    {
+      "close_price": 2570,
+      "trading_date": "2023-07-10",
+      "volume": 7572300
+    },
+    {
+      "close_price": 2700,
+      "trading_date": "2023-07-11",
+      "volume": 12817700
+    },
+    {
+      "close_price": 2640,
+      "trading_date": "2023-07-12",
+      "volume": 8584000
+    },
+    {
+      "close_price": 2680,
+      "trading_date": "2023-07-13",
+      "volume": 7007400
+    },
+    {
+      "close_price": 2620,
+      "trading_date": "2023-07-14",
+      "volume": 6088600
+    },
+    {
+      "close_price": 2640,
+      "trading_date": "2023-07-17",
+      "volume": 4460500
+    },
+    {
+      "close_price": 2660,
+      "trading_date": "2023-07-18",
+      "volume": 5250800
+    },
+    {
+      "close_price": 2790,
+      "trading_date": "2023-07-20",
+      "volume": 20893100
+    },
+    {
+      "close_price": 2780,
+      "trading_date": "2023-07-21",
+      "volume": 6673000
+    },
+    {
+      "close_price": 2840,
+      "trading_date": "2023-07-24",
+      "volume": 9561100
+    },
+    {
+      "close_price": 2930,
+      "trading_date": "2023-07-25",
+      "volume": 8872000
+    },
+    {
+      "close_price": 3050,
+      "trading_date": "2023-07-26",
+      "volume": 13283700
+    },
+    {
+      "close_price": 3130,
+      "trading_date": "2023-07-27",
+      "volume": 11153100
+    },
+    {
+      "close_price": 3060,
+      "trading_date": "2023-07-28",
+      "volume": 23142100
+    },
+    {
+      "close_price": 2930,
+      "trading_date": "2023-07-31",
+      "volume": 16587900
+    },
+    {
+      "close_price": 2960,
+      "trading_date": "2023-08-01",
+      "volume": 8701300
+    },
+    {
+      "close_price": 3090,
+      "trading_date": "2023-08-02",
+      "volume": 18153400
+    },
+    {
+      "close_price": 3200,
+      "trading_date": "2023-08-03",
+      "volume": 12604200
+    },
+    {
+      "close_price": 3270,
+      "trading_date": "2023-08-04",
+      "volume": 11491200
+    },
+    {
+      "close_price": 3390,
+      "trading_date": "2023-08-07",
+      "volume": 11706400
+    },
+    {
+      "close_price": 3310,
+      "trading_date": "2023-08-08",
+      "volume": 7027100
+    },
+    {
+      "close_price": 3450,
+      "trading_date": "2023-08-09",
+      "volume": 12572400
+    },
+    {
+      "close_price": 3450,
+      "trading_date": "2023-08-10",
+      "volume": 15409500
+    },
+    {
+      "close_price": 3470,
+      "trading_date": "2023-08-11",
+      "volume": 10165300
+    },
+    {
+      "close_price": 3380,
+      "trading_date": "2023-08-14",
+      "volume": 12740200
+    },
+    {
+      "close_price": 3370,
+      "trading_date": "2023-08-15",
+      "volume": 5675800
+    },
+    {
+      "close_price": 3200,
+      "trading_date": "2023-08-16",
+      "volume": 19366500
+    },
+    {
+      "close_price": 3220,
+      "trading_date": "2023-08-18",
+      "volume": 23917900
+    },
+    {
+      "close_price": 3030,
+      "trading_date": "2023-08-21",
+      "volume": 20140100
+    },
+    {
+      "close_price": 3040,
+      "trading_date": "2023-08-22",
+      "volume": 13802300
+    },
+    {
+      "close_price": 3230,
+      "trading_date": "2023-08-23",
+      "volume": 15604400
+    },
+    {
+      "close_price": 3240,
+      "trading_date": "2023-08-24",
+      "volume": 12894300
+    },
+    {
+      "close_price": 3170,
+      "trading_date": "2023-08-25",
+      "volume": 7238600
+    },
+    {
+      "close_price": 3020,
+      "trading_date": "2023-08-28",
+      "volume": 15647000
+    },
+    {
+      "close_price": 3100,
+      "trading_date": "2023-08-29",
+      "volume": 8155800
+    },
+    {
+      "close_price": 3240,
+      "trading_date": "2023-08-30",
+      "volume": 13292700
+    },
+    {
+      "close_price": 3200,
+      "trading_date": "2023-08-31",
+      "volume": 24725400
+    },
+    {
+      "close_price": 3040,
+      "trading_date": "2023-09-01",
+      "volume": 12675100
+    },
+    {
+      "close_price": 3100,
+      "trading_date": "2023-09-04",
+      "volume": 5847300
+    },
+    {
+      "close_price": 3080,
+      "trading_date": "2023-09-05",
+      "volume": 3458600
+    },
+    {
+      "close_price": 3100,
+      "trading_date": "2023-09-06",
+      "volume": 4877800
+    },
+    {
+      "close_price": 3190,
+      "trading_date": "2023-09-07",
+      "volume": 5827000
+    },
+    {
+      "close_price": 3160,
+      "trading_date": "2023-09-08",
+      "volume": 4354400
+    },
+    {
+      "close_price": 3160,
+      "trading_date": "2023-09-11",
+      "volume": 3106600
+    },
+    {
+      "close_price": 3130,
+      "trading_date": "2023-09-12",
+      "volume": 1797400
+    },
+    {
+      "close_price": 3100,
+      "trading_date": "2023-09-13",
+      "volume": 2819900
+    },
+    {
+      "close_price": 3190,
+      "trading_date": "2023-09-14",
+      "volume": 15658900
+    },
+    {
+      "close_price": 3200,
+      "trading_date": "2023-09-15",
+      "volume": 5369500
+    },
+    {
+      "close_price": 3180,
+      "trading_date": "2023-09-18",
+      "volume": 3750700
+    },
+    {
+      "close_price": 3340,
+      "trading_date": "2023-09-19",
+      "volume": 19848300
+    },
+    {
+      "close_price": 3250,
+      "trading_date": "2023-09-20",
+      "volume": 12646800
+    },
+    {
+      "close_price": 3160,
+      "trading_date": "2023-09-21",
+      "volume": 5703300
+    },
+    {
+      "close_price": 3110,
+      "trading_date": "2023-09-22",
+      "volume": 5958600
+    },
+    {
+      "close_price": 3080,
+      "trading_date": "2023-09-25",
+      "volume": 4401900
+    },
+    {
+      "close_price": 3160,
+      "trading_date": "2023-09-26",
+      "volume": 4706200
+    },
+    {
+      "close_price": 3110,
+      "trading_date": "2023-09-27",
+      "volume": 1688700
+    },
+    {
+      "close_price": 3180,
+      "trading_date": "2023-09-29",
+      "volume": 4475100
+    },
+    {
+      "close_price": 3170,
+      "trading_date": "2023-10-02",
+      "volume": 2525900
+    },
+    {
+      "close_price": 3040,
+      "trading_date": "2023-10-03",
+      "volume": 8866100
+    },
+    {
+      "close_price": 2860,
+      "trading_date": "2023-10-04",
+      "volume": 15148000
+    },
+    {
+      "close_price": 2830,
+      "trading_date": "2023-10-05",
+      "volume": 6424000
+    },
+    {
+      "close_price": 2930,
+      "trading_date": "2023-10-06",
+      "volume": 6166300
+    },
+    {
+      "close_price": 2970,
+      "trading_date": "2023-10-09",
+      "volume": 5934200
+    },
+    {
+      "close_price": 2860,
+      "trading_date": "2023-10-10",
+      "volume": 8942900
+    },
+    {
+      "close_price": 2930,
+      "trading_date": "2023-10-11",
+      "volume": 4633100
+    },
+    {
+      "close_price": 2990,
+      "trading_date": "2023-10-12",
+      "volume": 6787100
+    },
+    {
+      "close_price": 3040,
+      "trading_date": "2023-10-13",
+      "volume": 5169600
+    },
+    {
+      "close_price": 2880,
+      "trading_date": "2023-10-16",
+      "volume": 4898200
+    },
+    {
+      "close_price": 2880,
+      "trading_date": "2023-10-17",
+      "volume": 4428600
+    },
+    {
+      "close_price": 2880,
+      "trading_date": "2023-10-18",
+      "volume": 13879700
+    },
+    {
+      "close_price": 2790,
+      "trading_date": "2023-10-19",
+      "volume": 2362800
+    },
+    {
+      "close_price": 2630,
+      "trading_date": "2023-10-20",
+      "volume": 9195000
+    },
+    {
+      "close_price": 2560,
+      "trading_date": "2023-10-23",
+      "volume": 4909200
+    },
+    {
+      "close_price": 2620,
+      "trading_date": "2023-10-24",
+      "volume": 3682800
+    },
+    {
+      "close_price": 2650,
+      "trading_date": "2023-10-25",
+      "volume": 4748800
+    },
+    {
+      "close_price": 2690,
+      "trading_date": "2023-10-26",
+      "volume": 3287400
+    },
+    {
+      "close_price": 2850,
+      "trading_date": "2023-10-27",
+      "volume": 7198400
+    },
+    {
+      "close_price": 2750,
+      "trading_date": "2023-10-30",
+      "volume": 4947000
+    },
+    {
+      "close_price": 2760,
+      "trading_date": "2023-10-31",
+      "volume": 11420900
+    },
+    {
+      "close_price": 2730,
+      "trading_date": "2023-11-01",
+      "volume": 3851800
+    },
+    {
+      "close_price": 2830,
+      "trading_date": "2023-11-02",
+      "volume": 6551000
+    },
+    {
+      "close_price": 2800,
+      "trading_date": "2023-11-03",
+      "volume": 4025400
+    },
+    {
+      "close_price": 2770,
+      "trading_date": "2023-11-06",
+      "volume": 3290200
+    },
+    {
+      "close_price": 2760,
+      "trading_date": "2023-11-07",
+      "volume": 3068300
+    },
+    {
+      "close_price": 2760,
+      "trading_date": "2023-11-08",
+      "volume": 972500
+    },
+    {
+      "close_price": 2710,
+      "trading_date": "2023-11-09",
+      "volume": 1845600
+    },
+    {
+      "close_price": 2650,
+      "trading_date": "2023-11-10",
+      "volume": 1837000
+    },
+    {
+      "close_price": 2530,
+      "trading_date": "2023-11-13",
+      "volume": 5509600
+    },
+    {
+      "close_price": 2520,
+      "trading_date": "2023-11-14",
+      "volume": 2807600
+    },
+    {
+      "close_price": 2590,
+      "trading_date": "2023-11-15",
+      "volume": 4716400
+    },
+    {
+      "close_price": 2610,
+      "trading_date": "2023-11-16",
+      "volume": 3221900
+    },
+    {
+      "close_price": 2630,
+      "trading_date": "2023-11-17",
+      "volume": 2005800
+    },
+    {
+      "close_price": 2730,
+      "trading_date": "2023-11-20",
+      "volume": 4423900
+    },
+    {
+      "close_price": 2730,
+      "trading_date": "2023-11-21",
+      "volume": 2771800
+    },
+    {
+      "close_price": 2630,
+      "trading_date": "2023-11-22",
+      "volume": 2127100
+    },
+    {
+      "close_price": 2600,
+      "trading_date": "2023-11-23",
+      "volume": 1424900
+    },
+    {
+      "close_price": 2570,
+      "trading_date": "2023-11-24",
+      "volume": 2861300
+    },
+    {
+      "close_price": 2610,
+      "trading_date": "2023-11-27",
+      "volume": 1335400
+    },
+    {
+      "close_price": 2570,
+      "trading_date": "2023-11-28",
+      "volume": 1624800
+    },
+    {
+      "close_price": 2550,
+      "trading_date": "2023-11-29",
+      "volume": 1183600
+    },
+    {
+      "close_price": 2750,
+      "trading_date": "2023-11-30",
+      "volume": 6275500
+    },
+    {
+      "close_price": 2630,
+      "trading_date": "2023-12-01",
+      "volume": 3990800
+    },
+    {
+      "close_price": 2590,
+      "trading_date": "2023-12-04",
+      "volume": 2626400
+    },
+    {
+      "close_price": 2580,
+      "trading_date": "2023-12-05",
+      "volume": 4874400
+    },
+    {
+      "close_price": 2570,
+      "trading_date": "2023-12-06",
+      "volume": 2650100
+    },
+    {
+      "close_price": 2510,
+      "trading_date": "2023-12-07",
+      "volume": 3396700
+    },
+    {
+      "close_price": 2500,
+      "trading_date": "2023-12-08",
+      "volume": 3242800
+    },
+    {
+      "close_price": 2410,
+      "trading_date": "2023-12-11",
+      "volume": 4009700
+    },
+    {
+      "close_price": 2360,
+      "trading_date": "2023-12-12",
+      "volume": 5205400
+    },
+    {
+      "close_price": 2330,
+      "trading_date": "2023-12-13",
+      "volume": 2662800
+    },
+    {
+      "close_price": 2360,
+      "trading_date": "2023-12-14",
+      "volume": 3583300
+    },
+    {
+      "close_price": 2440,
+      "trading_date": "2023-12-15",
+      "volume": 4964600
+    },
+    {
+      "close_price": 2260,
+      "trading_date": "2023-12-18",
+      "volume": 10522000
+    },
+    {
+      "close_price": 2320,
+      "trading_date": "2023-12-19",
+      "volume": 2282100
+    },
+    {
+      "close_price": 2370,
+      "trading_date": "2023-12-20",
+      "volume": 2339400
+    },
+    {
+      "close_price": 2340,
+      "trading_date": "2023-12-21",
+      "volume": 12055700
+    },
+    {
+      "close_price": 2320,
+      "trading_date": "2023-12-22",
+      "volume": 1797800
+    },
+    {
+      "close_price": 2310,
+      "trading_date": "2023-12-27",
+      "volume": 2249900
+    },
+    {
+      "close_price": 2320,
+      "trading_date": "2023-12-28",
+      "volume": 2143400
+    },
+    {
+      "close_price": 2360,
+      "trading_date": "2023-12-29",
+      "volume": 1113100
+    },
+    {
+      "close_price": 2390,
+      "trading_date": "2024-01-02",
+      "volume": 1674100
+    },
+    {
+      "close_price": 2340,
+      "trading_date": "2024-01-03",
+      "volume": 3318900
+    },
+    {
+      "close_price": 2370,
+      "trading_date": "2024-01-04",
+      "volume": 3537000
+    },
+    {
+      "close_price": 2340,
+      "trading_date": "2024-01-05",
+      "volume": 3811300
+    },
+    {
+      "close_price": 2380,
+      "trading_date": "2024-01-08",
+      "volume": 3062100
+    },
+    {
+      "close_price": 2450,
+      "trading_date": "2024-01-09",
+      "volume": 7485800
+    },
+    {
+      "close_price": 2550,
+      "trading_date": "2024-01-10",
+      "volume": 5661400
+    },
+    {
+      "close_price": 2530,
+      "trading_date": "2024-01-11",
+      "volume": 6077500
+    },
+    {
+      "close_price": 2600,
+      "trading_date": "2024-01-12",
+      "volume": 5502700
+    },
+    {
+      "close_price": 2570,
+      "trading_date": "2024-01-15",
+      "volume": 3334200
+    },
+    {
+      "close_price": 2570,
+      "trading_date": "2024-01-16",
+      "volume": 1077800
+    },
+    {
+      "close_price": 2570,
+      "trading_date": "2024-01-17",
+      "volume": 1715200
+    },
+    {
+      "close_price": 2540,
+      "trading_date": "2024-01-18",
+      "volume": 1822900
+    },
+    {
+      "close_price": 2380,
+      "trading_date": "2024-01-19",
+      "volume": 7641600
+    },
+    {
+      "close_price": 2400,
+      "trading_date": "2024-01-22",
+      "volume": 2796100
+    },
+    {
+      "close_price": 2380,
+      "trading_date": "2024-01-23",
+      "volume": 1531800
+    },
+    {
+      "close_price": 2350,
+      "trading_date": "2024-01-24",
+      "volume": 1855500
+    },
+    {
+      "close_price": 2320,
+      "trading_date": "2024-01-25",
+      "volume": 4416500
+    },
+    {
+      "close_price": 2230,
+      "trading_date": "2024-01-26",
+      "volume": 5959400
+    },
+    {
+      "close_price": 2220,
+      "trading_date": "2024-01-29",
+      "volume": 3606000
+    },
+    {
+      "close_price": 2260,
+      "trading_date": "2024-01-30",
+      "volume": 4244300
+    },
+    {
+      "close_price": 2240,
+      "trading_date": "2024-01-31",
+      "volume": 5445400
+    },
+    {
+      "close_price": 2230,
+      "trading_date": "2024-02-01",
+      "volume": 2710400
+    },
+    {
+      "close_price": 2210,
+      "trading_date": "2024-02-02",
+      "volume": 5010900
+    },
+    {
+      "close_price": 2190,
+      "trading_date": "2024-02-05",
+      "volume": 2947600
+    },
+    {
+      "close_price": 2210,
+      "trading_date": "2024-02-06",
+      "volume": 2555600
+    },
+    {
+      "close_price": 2290,
+      "trading_date": "2024-02-07",
+      "volume": 6867600
+    },
+    {
+      "close_price": 2240,
+      "trading_date": "2024-02-12",
+      "volume": 7129800
+    },
+    {
+      "close_price": 2220,
+      "trading_date": "2024-02-13",
+      "volume": 2346700
+    },
+    {
+      "close_price": 2210,
+      "trading_date": "2024-02-15",
+      "volume": 4161600
+    },
+    {
+      "close_price": 2200,
+      "trading_date": "2024-02-16",
+      "volume": 4004300
+    },
+    {
+      "close_price": 2260,
+      "trading_date": "2024-02-19",
+      "volume": 3896200
+    },
+    {
+      "close_price": 2360,
+      "trading_date": "2024-02-20",
+      "volume": 7363100
+    },
+    {
+      "close_price": 2360,
+      "trading_date": "2024-02-21",
+      "volume": 4672900
+    },
+    {
+      "close_price": 2320,
+      "trading_date": "2024-02-22",
+      "volume": 3556000
+    },
+    {
+      "close_price": 2380,
+      "trading_date": "2024-02-23",
+      "volume": 12125200
+    },
+    {
+      "close_price": 2370,
+      "trading_date": "2024-02-26",
+      "volume": 13888200
+    },
+    {
+      "close_price": 2290,
+      "trading_date": "2024-02-27",
+      "volume": 10752000
+    },
+    {
+      "close_price": 2340,
+      "trading_date": "2024-02-28",
+      "volume": 5905000
+    },
+    {
+      "close_price": 2350,
+      "trading_date": "2024-02-29",
+      "volume": 8676900
+    },
+    {
+      "close_price": 2400,
+      "trading_date": "2024-03-01",
+      "volume": 8478100
+    },
+    {
+      "close_price": 2310,
+      "trading_date": "2024-03-04",
+      "volume": 7897300
+    },
+    {
+      "close_price": 2210,
+      "trading_date": "2024-03-05",
+      "volume": 10395100
+    },
+    {
+      "close_price": 2250,
+      "trading_date": "2024-03-06",
+      "volume": 3528200
+    },
+    {
+      "close_price": 2240,
+      "trading_date": "2024-03-07",
+      "volume": 2302400
+    },
+    {
+      "close_price": 2210,
+      "trading_date": "2024-03-08",
+      "volume": 6497500
+    },
+    {
+      "close_price": 2210,
+      "trading_date": "2024-03-13",
+      "volume": 3453700
+    },
+    {
+      "close_price": 2230,
+      "trading_date": "2024-03-14",
+      "volume": 4165900
+    },
+    {
+      "close_price": 2230,
+      "trading_date": "2024-03-15",
+      "volume": 3318800
+    },
+    {
+      "close_price": 2200,
+      "trading_date": "2024-03-18",
+      "volume": 3027100
+    },
+    {
+      "close_price": 2230,
+      "trading_date": "2024-03-19",
+      "volume": 1649700
+    },
+    {
+      "close_price": 2240,
+      "trading_date": "2024-03-20",
+      "volume": 2715900
+    },
+    {
+      "close_price": 2260,
+      "trading_date": "2024-03-21",
+      "volume": 5757000
+    },
+    {
+      "close_price": 2260,
+      "trading_date": "2024-03-22",
+      "volume": 2444300
+    },
+    {
+      "close_price": 2260,
+      "trading_date": "2024-03-25",
+      "volume": 2783900
+    },
+    {
+      "close_price": 2250,
+      "trading_date": "2024-03-26",
+      "volume": 2411100
+    },
+    {
+      "close_price": 2230,
+      "trading_date": "2024-03-27",
+      "volume": 5357600
+    },
+    {
+      "close_price": 2230,
+      "trading_date": "2024-03-28",
+      "volume": 2407300
+    },
+    {
+      "close_price": 2220,
+      "trading_date": "2024-04-01",
+      "volume": 6385200
+    },
+    {
+      "close_price": 2200,
+      "trading_date": "2024-04-02",
+      "volume": 2440700
+    },
+    {
+      "close_price": 2180,
+      "trading_date": "2024-04-03",
+      "volume": 3536500
+    },
+    {
+      "close_price": 2190,
+      "trading_date": "2024-04-04",
+      "volume": 2037100
+    },
+    {
+      "close_price": 2210,
+      "trading_date": "2024-04-05",
+      "volume": 7628700
+    },
+    {
+      "close_price": 2100,
+      "trading_date": "2024-04-16",
+      "volume": 7732200
+    },
+    {
+      "close_price": 2090,
+      "trading_date": "2024-04-17",
+      "volume": 6627400
+    },
+    {
+      "close_price": 2080,
+      "trading_date": "2024-04-18",
+      "volume": 4850800
+    },
+    {
+      "close_price": 2010,
+      "trading_date": "2024-04-19",
+      "volume": 7142000
+    },
+    {
+      "close_price": 1995,
+      "trading_date": "2024-04-22",
+      "volume": 4635800
+    },
+    {
+      "close_price": 2030,
+      "trading_date": "2024-04-23",
+      "volume": 3269900
+    },
+    {
+      "close_price": 2070,
+      "trading_date": "2024-04-24",
+      "volume": 4755600
+    },
+    {
+      "close_price": 2040,
+      "trading_date": "2024-04-25",
+      "volume": 2182000
+    },
+    {
+      "close_price": 2040,
+      "trading_date": "2024-04-26",
+      "volume": 5801500
+    },
+    {
+      "close_price": 2120,
+      "trading_date": "2024-04-29",
+      "volume": 5484300
+    },
+    {
+      "close_price": 2080,
+      "trading_date": "2024-04-30",
+      "volume": 4868200
+    },
+    {
+      "close_price": 2100,
+      "trading_date": "2024-05-02",
+      "volume": 2545300
+    },
+    {
+      "close_price": 2080,
+      "trading_date": "2024-05-03",
+      "volume": 1973100
+    },
+    {
+      "close_price": 2060,
+      "trading_date": "2024-05-06",
+      "volume": 4424600
+    },
+    {
+      "close_price": 2080,
+      "trading_date": "2024-05-07",
+      "volume": 4499900
+    },
+    {
+      "close_price": 1940,
+      "trading_date": "2024-05-08",
+      "volume": 8194800
+    },
+    {
+      "close_price": 1915,
+      "trading_date": "2024-05-13",
+      "volume": 5354500
+    },
+    {
+      "close_price": 1890,
+      "trading_date": "2024-05-14",
+      "volume": 4252600
+    },
+    {
+      "close_price": 1975,
+      "trading_date": "2024-05-15",
+      "volume": 5059800
+    },
+    {
+      "close_price": 2010,
+      "trading_date": "2024-05-16",
+      "volume": 6049200
+    },
+    {
+      "close_price": 1970,
+      "trading_date": "2024-05-17",
+      "volume": 4708700
+    },
+    {
+      "close_price": 2000,
+      "trading_date": "2024-05-20",
+      "volume": 3041200
+    },
+    {
+      "close_price": 1980,
+      "trading_date": "2024-05-21",
+      "volume": 1951400
+    },
+    {
+      "close_price": 1985,
+      "trading_date": "2024-05-22",
+      "volume": 2273700
+    },
+    {
+      "close_price": 1915,
+      "trading_date": "2024-05-27",
+      "volume": 4342300
+    },
+    {
+      "close_price": 1900,
+      "trading_date": "2024-05-28",
+      "volume": 2639100
+    },
+    {
+      "close_price": 1855,
+      "trading_date": "2024-05-29",
+      "volume": 3657300
+    },
+    {
+      "close_price": 1865,
+      "trading_date": "2024-05-30",
+      "volume": 2942100
+    },
+    {
+      "close_price": 1795,
+      "trading_date": "2024-05-31",
+      "volume": 18676900
+    },
+    {
+      "close_price": 1975,
+      "trading_date": "2024-06-03",
+      "volume": 8803500
+    },
+    {
+      "close_price": 2000,
+      "trading_date": "2024-06-04",
+      "volume": 5495200
+    },
+    {
+      "close_price": 1930,
+      "trading_date": "2024-06-05",
+      "volume": 2626100
+    },
+    {
+      "close_price": 1930,
+      "trading_date": "2024-06-06",
+      "volume": 1283100
+    },
+    {
+      "close_price": 1925,
+      "trading_date": "2024-06-07",
+      "volume": 2180400
+    },
+    {
+      "close_price": 1880,
+      "trading_date": "2024-06-10",
+      "volume": 2294900
+    },
+    {
+      "close_price": 1845,
+      "trading_date": "2024-06-11",
+      "volume": 2435600
+    },
+    {
+      "close_price": 1835,
+      "trading_date": "2024-06-12",
+      "volume": 1916600
+    },
+    {
+      "close_price": 1855,
+      "trading_date": "2024-06-13",
+      "volume": 2104400
+    },
+    {
+      "close_price": 1820,
+      "trading_date": "2024-06-14",
+      "volume": 2753100
+    },
+    {
+      "close_price": 1800,
+      "trading_date": "2024-06-19",
+      "volume": 3549300
+    },
+    {
+      "close_price": 1805,
+      "trading_date": "2024-06-20",
+      "volume": 2235600
+    },
+    {
+      "close_price": 1835,
+      "trading_date": "2024-06-21",
+      "volume": 5922100
+    },
+    {
+      "close_price": 1820,
+      "trading_date": "2024-06-24",
+      "volume": 3293800
+    },
+    {
+      "close_price": 1800,
+      "trading_date": "2024-06-25",
+      "volume": 3046100
+    },
+    {
+      "close_price": 1815,
+      "trading_date": "2024-06-26",
+      "volume": 2967100
+    },
+    {
+      "close_price": 1835,
+      "trading_date": "2024-06-27",
+      "volume": 1560900
+    },
+    {
+      "close_price": 1895,
+      "trading_date": "2024-06-28",
+      "volume": 6898400
+    },
+    {
+      "close_price": 1905,
+      "trading_date": "2024-07-01",
+      "volume": 5257300
+    },
+    {
+      "close_price": 1940,
+      "trading_date": "2024-07-02",
+      "volume": 6630700
+    },
+    {
+      "close_price": 1980,
+      "trading_date": "2024-07-03",
+      "volume": 7225600
+    },
+    {
+      "close_price": 2010,
+      "trading_date": "2024-07-04",
+      "volume": 4064200
+    },
+    {
+      "close_price": 2100,
+      "trading_date": "2024-07-05",
+      "volume": 10550500
+    },
+    {
+      "close_price": 2160,
+      "trading_date": "2024-07-08",
+      "volume": 9718900
+    },
+    {
+      "close_price": 2140,
+      "trading_date": "2024-07-09",
+      "volume": 5447300
+    },
+    {
+      "close_price": 2120,
+      "trading_date": "2024-07-10",
+      "volume": 4703800
+    },
+    {
+      "close_price": 2150,
+      "trading_date": "2024-07-11",
+      "volume": 6823000
+    },
+    {
+      "close_price": 2150,
+      "trading_date": "2024-07-12",
+      "volume": 4541800
+    },
+    {
+      "close_price": 2160,
+      "trading_date": "2024-07-15",
+      "volume": 3902900
+    },
+    {
+      "close_price": 2130,
+      "trading_date": "2024-07-16",
+      "volume": 4339400
+    },
+    {
+      "close_price": 2130,
+      "trading_date": "2024-07-17",
+      "volume": 2930800
+    },
+    {
+      "close_price": 2130,
+      "trading_date": "2024-07-18",
+      "volume": 1760000
+    },
+    {
+      "close_price": 2210,
+      "trading_date": "2024-07-19",
+      "volume": 10264000
+    },
+    {
+      "close_price": 2190,
+      "trading_date": "2024-07-22",
+      "volume": 12907700
+    },
+    {
+      "close_price": 2120,
+      "trading_date": "2024-07-23",
+      "volume": 9161200
+    },
+    {
+      "close_price": 2110,
+      "trading_date": "2024-07-24",
+      "volume": 7272700
+    },
+    {
+      "close_price": 2050,
+      "trading_date": "2024-07-25",
+      "volume": 8606700
+    },
+    {
+      "close_price": 2100,
+      "trading_date": "2024-07-26",
+      "volume": 4712400
+    },
+    {
+      "close_price": 2310,
+      "trading_date": "2024-07-29",
+      "volume": 29867900
+    },
+    {
+      "close_price": 2280,
+      "trading_date": "2024-07-30",
+      "volume": 19334100
+    },
+    {
+      "close_price": 2240,
+      "trading_date": "2024-07-31",
+      "volume": 6460800
+    },
+    {
+      "close_price": 2230,
+      "trading_date": "2024-08-01",
+      "volume": 7470300
+    },
+    {
+      "close_price": 2220,
+      "trading_date": "2024-08-02",
+      "volume": 8559000
+    },
+    {
+      "close_price": 2100,
+      "trading_date": "2024-08-05",
+      "volume": 17594500
+    },
+    {
+      "close_price": 2140,
+      "trading_date": "2024-08-06",
+      "volume": 12809800
+    },
+    {
+      "close_price": 2160,
+      "trading_date": "2024-08-07",
+      "volume": 6249900
+    },
+    {
+      "close_price": 2120,
+      "trading_date": "2024-08-08",
+      "volume": 4931000
+    },
+    {
+      "close_price": 2130,
+      "trading_date": "2024-08-09",
+      "volume": 6598600
+    },
+    {
+      "close_price": 2120,
+      "trading_date": "2024-08-12",
+      "volume": 2344100
+    },
+    {
+      "close_price": 2130,
+      "trading_date": "2024-08-13",
+      "volume": 4024400
+    },
+    {
+      "close_price": 2220,
+      "trading_date": "2024-08-14",
+      "volume": 12501500
+    },
+    {
+      "close_price": 2180,
+      "trading_date": "2024-08-15",
+      "volume": 9498600
+    },
+    {
+      "close_price": 2190,
+      "trading_date": "2024-08-16",
+      "volume": 4312300
+    },
+    {
+      "close_price": 2200,
+      "trading_date": "2024-08-19",
+      "volume": 3384400
+    },
+    {
+      "close_price": 2220,
+      "trading_date": "2024-08-20",
+      "volume": 8141400
+    },
+    {
+      "close_price": 2180,
+      "trading_date": "2024-08-21",
+      "volume": 9266200
+    },
+    {
+      "close_price": 2200,
+      "trading_date": "2024-08-22",
+      "volume": 12729000
+    },
+    {
+      "close_price": 2230,
+      "trading_date": "2024-08-23",
+      "volume": 13575500
+    },
+    {
+      "close_price": 2240,
+      "trading_date": "2024-08-26",
+      "volume": 8223900
+    },
+    {
+      "close_price": 2200,
+      "trading_date": "2024-08-27",
+      "volume": 11649700
+    },
+    {
+      "close_price": 2190,
+      "trading_date": "2024-08-28",
+      "volume": 7349000
+    },
+    {
+      "close_price": 2200,
+      "trading_date": "2024-08-29",
+      "volume": 4410200
+    },
+    {
+      "close_price": 2210,
+      "trading_date": "2024-08-30",
+      "volume": 7948900
+    },
+    {
+      "close_price": 2280,
+      "trading_date": "2024-09-02",
+      "volume": 17405200
+    },
+    {
+      "close_price": 2270,
+      "trading_date": "2024-09-03",
+      "volume": 291300
+    },
+    {
+      "close_price": 2280,
+      "trading_date": "2024-09-04",
+      "volume": 746300
+    },
+    {
+      "close_price": 2300,
+      "trading_date": "2024-09-05",
+      "volume": 12041700
+    },
+    {
+      "close_price": 2300,
+      "trading_date": "2024-09-06",
+      "volume": 6080400
+    },
+    {
+      "close_price": 2260,
+      "trading_date": "2024-09-09",
+      "volume": 9454700
+    },
+    {
+      "close_price": 2290,
+      "trading_date": "2024-09-10",
+      "volume": 8706500
+    },
+    {
+      "close_price": 2260,
+      "trading_date": "2024-09-11",
+      "volume": 7451300
+    },
+    {
+      "close_price": 2270,
+      "trading_date": "2024-09-12",
+      "volume": 4574300
+    },
+    {
+      "close_price": 2250,
+      "trading_date": "2024-09-13",
+      "volume": 3418100
+    },
+    {
+      "close_price": 2300,
+      "trading_date": "2024-09-17",
+      "volume": 13781900
+    },
+    {
+      "close_price": 2300,
+      "trading_date": "2024-09-18",
+      "volume": 10576100
+    },
+    {
+      "close_price": 2300,
+      "trading_date": "2024-09-19",
+      "volume": 6479500
+    },
+    {
+      "close_price": 2340,
+      "trading_date": "2024-09-20",
+      "volume": 10183200
+    },
+    {
+      "close_price": 2340,
+      "trading_date": "2024-09-23",
+      "volume": 9685900
+    },
+    {
+      "close_price": 2330,
+      "trading_date": "2024-09-24",
+      "volume": 5643900
+    },
+    {
+      "close_price": 2290,
+      "trading_date": "2024-09-25",
+      "volume": 8208600
+    },
+    {
+      "close_price": 2280,
+      "trading_date": "2024-09-26",
+      "volume": 7544900
+    },
+    {
+      "close_price": 2230,
+      "trading_date": "2024-09-27",
+      "volume": 13953800
+    },
+    {
+      "close_price": 2260,
+      "trading_date": "2024-09-30",
+      "volume": 11999600
+    },
+    {
+      "close_price": 2260,
+      "trading_date": "2024-10-01",
+      "volume": 3932100
+    },
+    {
+      "close_price": 2230,
+      "trading_date": "2024-10-02",
+      "volume": 4826700
+    },
+    {
+      "close_price": 2330,
+      "trading_date": "2024-10-03",
+      "volume": 28517000
+    },
+    {
+      "close_price": 2360,
+      "trading_date": "2024-10-04",
+      "volume": 13255100
+    },
+    {
+      "close_price": 2360,
+      "trading_date": "2024-10-07",
+      "volume": 16095900
+    },
+    {
+      "close_price": 2360,
+      "trading_date": "2024-10-08",
+      "volume": 4880900
+    },
+    {
+      "close_price": 2360,
+      "trading_date": "2024-10-09",
+      "volume": 3665000
+    },
+    {
+      "close_price": 2340,
+      "trading_date": "2024-10-10",
+      "volume": 4858100
+    },
+    {
+      "close_price": 2360,
+      "trading_date": "2024-10-11",
+      "volume": 10490700
+    },
+    {
+      "close_price": 2320,
+      "trading_date": "2024-10-14",
+      "volume": 10260400
+    },
+    {
+      "close_price": 2290,
+      "trading_date": "2024-10-15",
+      "volume": 9622200
+    },
+    {
+      "close_price": 2460,
+      "trading_date": "2024-10-16",
+      "volume": 27486900
+    },
+    {
+      "close_price": 2380,
+      "trading_date": "2024-10-17",
+      "volume": 10000700
+    },
+    {
+      "close_price": 2350,
+      "trading_date": "2024-10-18",
+      "volume": 6641500
+    },
+    {
+      "close_price": 2390,
+      "trading_date": "2024-10-21",
+      "volume": 3991900
+    },
+    {
+      "close_price": 2390,
+      "trading_date": "2024-10-22",
+      "volume": 6353400
+    },
+    {
+      "close_price": 2530,
+      "trading_date": "2024-10-23",
+      "volume": 20004800
+    },
+    {
+      "close_price": 2570,
+      "trading_date": "2024-10-24",
+      "volume": 10323500
+    },
+    {
+      "close_price": 2510,
+      "trading_date": "2024-10-25",
+      "volume": 5393200
+    },
+    {
+      "close_price": 2550,
+      "trading_date": "2024-10-28",
+      "volume": 5928300
+    },
+    {
+      "close_price": 2580,
+      "trading_date": "2024-10-29",
+      "volume": 4564500
+    },
+    {
+      "close_price": 2510,
+      "trading_date": "2024-10-30",
+      "volume": 6818300
+    },
+    {
+      "close_price": 2510,
+      "trading_date": "2024-10-31",
+      "volume": 4603100
+    },
+    {
+      "close_price": 2480,
+      "trading_date": "2024-11-01",
+      "volume": 1862700
+    },
+    {
+      "close_price": 2470,
+      "trading_date": "2024-11-04",
+      "volume": 3696200
+    },
+    {
+      "close_price": 2500,
+      "trading_date": "2024-11-05",
+      "volume": 3202100
+    },
+    {
+      "close_price": 2480,
+      "trading_date": "2024-11-06",
+      "volume": 6072700
+    },
+    {
+      "close_price": 2450,
+      "trading_date": "2024-11-07",
+      "volume": 2479800
+    },
+    {
+      "close_price": 2390,
+      "trading_date": "2024-11-08",
+      "volume": 1913200
+    },
+    {
+      "close_price": 2380,
+      "trading_date": "2024-11-11",
+      "volume": 3973600
+    },
+    {
+      "close_price": 2420,
+      "trading_date": "2024-11-12",
+      "volume": 5160900
+    },
+    {
+      "close_price": 2400,
+      "trading_date": "2024-11-13",
+      "volume": 2325100
+    },
+    {
+      "close_price": 2390,
+      "trading_date": "2024-11-14",
+      "volume": 1802200
+    },
+    {
+      "close_price": 2340,
+      "trading_date": "2024-11-15",
+      "volume": 3863300
+    },
+    {
+      "close_price": 2300,
+      "trading_date": "2024-11-18",
+      "volume": 2601800
+    },
+    {
+      "close_price": 2350,
+      "trading_date": "2024-11-19",
+      "volume": 1863200
+    },
+    {
+      "close_price": 2320,
+      "trading_date": "2024-11-20",
+      "volume": 1013200
+    },
+    {
+      "close_price": 2260,
+      "trading_date": "2024-11-21",
+      "volume": 2640200
+    },
+    {
+      "close_price": 2330,
+      "trading_date": "2024-11-22",
+      "volume": 3050300
+    },
+    {
+      "close_price": 2340,
+      "trading_date": "2024-11-25",
+      "volume": 2021600
+    },
+    {
+      "close_price": 2290,
+      "trading_date": "2024-11-26",
+      "volume": 2017300
+    },
+    {
+      "close_price": 2340,
+      "trading_date": "2024-11-28",
+      "volume": 1074800
+    },
+    {
+      "close_price": 2310,
+      "trading_date": "2024-11-29",
+      "volume": 3446300
+    },
+    {
+      "close_price": 2250,
+      "trading_date": "2024-12-02",
+      "volume": 2487500
+    },
+    {
+      "close_price": 2300,
+      "trading_date": "2024-12-03",
+      "volume": 4361400
+    },
+    {
+      "close_price": 2330,
+      "trading_date": "2024-12-04",
+      "volume": 7595000
+    },
+    {
+      "close_price": 2340,
+      "trading_date": "2024-12-05",
+      "volume": 3329000
+    },
+    {
+      "close_price": 2340,
+      "trading_date": "2024-12-06",
+      "volume": 2078300
+    },
+    {
+      "close_price": 2340,
+      "trading_date": "2024-12-09",
+      "volume": 2687000
+    },
+    {
+      "close_price": 2390,
+      "trading_date": "2024-12-10",
+      "volume": 2965300
+    },
+    {
+      "close_price": 2380,
+      "trading_date": "2024-12-11",
+      "volume": 2637300
+    },
+    {
+      "close_price": 2350,
+      "trading_date": "2024-12-12",
+      "volume": 2943400
+    },
+    {
+      "close_price": 2350,
+      "trading_date": "2024-12-13",
+      "volume": 1157000
+    },
+    {
+      "close_price": 2320,
+      "trading_date": "2024-12-16",
+      "volume": 1461800
+    },
+    {
+      "close_price": 2280,
+      "trading_date": "2024-12-17",
+      "volume": 2418300
+    },
+    {
+      "close_price": 2240,
+      "trading_date": "2024-12-18",
+      "volume": 3631400
+    },
+    {
+      "close_price": 2150,
+      "trading_date": "2024-12-19",
+      "volume": 4637700
+    },
+    {
+      "close_price": 2180,
+      "trading_date": "2024-12-20",
+      "volume": 2047800
+    },
+    {
+      "close_price": 2280,
+      "trading_date": "2024-12-23",
+      "volume": 3105200
+    },
+    {
+      "close_price": 2230,
+      "trading_date": "2024-12-24",
+      "volume": 1016200
+    },
+    {
+      "close_price": 2220,
+      "trading_date": "2024-12-27",
+      "volume": 530900
+    },
+    {
+      "close_price": 2300,
+      "trading_date": "2024-12-30",
+      "volume": 2132400
+    },
+    {
+      "close_price": 2300,
+      "trading_date": "2025-01-02",
+      "volume": 583100
+    },
+    {
+      "close_price": 2250,
+      "trading_date": "2025-01-03",
+      "volume": 942500
+    },
+    {
+      "close_price": 2220,
+      "trading_date": "2025-01-06",
+      "volume": 1206000
+    },
+    {
+      "close_price": 2230,
+      "trading_date": "2025-01-07",
+      "volume": 417800
+    },
+    {
+      "close_price": 2210,
+      "trading_date": "2025-01-08",
+      "volume": 1567900
+    },
+    {
+      "close_price": 2200,
+      "trading_date": "2025-01-09",
+      "volume": 1545100
+    },
+    {
+      "close_price": 2200,
+      "trading_date": "2025-01-10",
+      "volume": 1221100
+    },
+    {
+      "close_price": 2150,
+      "trading_date": "2025-01-13",
+      "volume": 2637500
+    },
+    {
+      "close_price": 2120,
+      "trading_date": "2025-01-14",
+      "volume": 2666600
+    },
+    {
+      "close_price": 2150,
+      "trading_date": "2025-01-15",
+      "volume": 2367100
+    },
+    {
+      "close_price": 2120,
+      "trading_date": "2025-01-16",
+      "volume": 3184800
+    },
+    {
+      "close_price": 2150,
+      "trading_date": "2025-01-17",
+      "volume": 2348400
+    },
+    {
+      "close_price": 2110,
+      "trading_date": "2025-01-20",
+      "volume": 3711600
+    },
+    {
+      "close_price": 2080,
+      "trading_date": "2025-01-21",
+      "volume": 4520700
+    },
+    {
+      "close_price": 2080,
+      "trading_date": "2025-01-22",
+      "volume": 4134400
+    },
+    {
+      "close_price": 2100,
+      "trading_date": "2025-01-23",
+      "volume": 1947600
+    },
+    {
+      "close_price": 2090,
+      "trading_date": "2025-01-24",
+      "volume": 2268900
+    },
+    {
+      "close_price": 2040,
+      "trading_date": "2025-01-30",
+      "volume": 2854500
+    },
+    {
+      "close_price": 2050,
+      "trading_date": "2025-01-31",
+      "volume": 1166400
+    },
+    {
+      "close_price": 2000,
+      "trading_date": "2025-02-03",
+      "volume": 3787600
+    },
+    {
+      "close_price": 1980,
+      "trading_date": "2025-02-04",
+      "volume": 13523700
+    },
+    {
+      "close_price": 2000,
+      "trading_date": "2025-02-05",
+      "volume": 5303800
+    },
+    {
+      "close_price": 1980,
+      "trading_date": "2025-02-06",
+      "volume": 4156900
+    },
+    {
+      "close_price": 2020,
+      "trading_date": "2025-02-07",
+      "volume": 3061100
+    },
+    {
+      "close_price": 1955,
+      "trading_date": "2025-02-10",
+      "volume": 3047600
+    },
+    {
+      "close_price": 2000,
+      "trading_date": "2025-02-11",
+      "volume": 2749700
+    },
+    {
+      "close_price": 2000,
+      "trading_date": "2025-02-12",
+      "volume": 1273000
+    },
+    {
+      "close_price": 2000,
+      "trading_date": "2025-02-13",
+      "volume": 575500
+    },
+    {
+      "close_price": 2000,
+      "trading_date": "2025-02-14",
+      "volume": 778100
+    },
+    {
+      "close_price": 2030,
+      "trading_date": "2025-02-17",
+      "volume": 1926700
+    },
+    {
+      "close_price": 2040,
+      "trading_date": "2025-02-18",
+      "volume": 2277900
+    },
+    {
+      "close_price": 1995,
+      "trading_date": "2025-02-19",
+      "volume": 3025300
+    },
+    {
+      "close_price": 1995,
+      "trading_date": "2025-02-20",
+      "volume": 1091800
+    },
+    {
+      "close_price": 2030,
+      "trading_date": "2025-02-21",
+      "volume": 1304800
+    },
+    {
+      "close_price": 2020,
+      "trading_date": "2025-02-24",
+      "volume": 1844400
+    },
+    {
+      "close_price": 2010,
+      "trading_date": "2025-02-25",
+      "volume": 4980900
+    },
+    {
+      "close_price": 1995,
+      "trading_date": "2025-02-26",
+      "volume": 2656300
+    },
+    {
+      "close_price": 2000,
+      "trading_date": "2025-02-27",
+      "volume": 2110400
+    },
+    {
+      "close_price": 1945,
+      "trading_date": "2025-02-28",
+      "volume": 3158700
+    },
+    {
+      "close_price": 2010,
+      "trading_date": "2025-03-03",
+      "volume": 3053200
+    },
+    {
+      "close_price": 1945,
+      "trading_date": "2025-03-04",
+      "volume": 2620000
+    },
+    {
+      "close_price": 2000,
+      "trading_date": "2025-03-05",
+      "volume": 2938900
+    },
+    {
+      "close_price": 2010,
+      "trading_date": "2025-03-06",
+      "volume": 2048800
+    },
+    {
+      "close_price": 2070,
+      "trading_date": "2025-03-07",
+      "volume": 2868500
+    },
+    {
+      "close_price": 2040,
+      "trading_date": "2025-03-10",
+      "volume": 2990100
+    },
+    {
+      "close_price": 2050,
+      "trading_date": "2025-03-11",
+      "volume": 1551300
+    },
+    {
+      "close_price": 2050,
+      "trading_date": "2025-03-12",
+      "volume": 1269100
+    },
+    {
+      "close_price": 2030,
+      "trading_date": "2025-03-13",
+      "volume": 867200
+    },
+    {
+      "close_price": 1995,
+      "trading_date": "2025-03-14",
+      "volume": 2289600
+    },
+    {
+      "close_price": 2010,
+      "trading_date": "2025-03-17",
+      "volume": 1599100
+    },
+    {
+      "close_price": 1995,
+      "trading_date": "2025-03-18",
+      "volume": 3171500
+    },
+    {
+      "close_price": 2000,
+      "trading_date": "2025-03-19",
+      "volume": 843600
+    },
+    {
+      "close_price": 1990,
+      "trading_date": "2025-03-20",
+      "volume": 1491400
+    },
+    {
+      "close_price": 1970,
+      "trading_date": "2025-03-21",
+      "volume": 1115200
+    },
+    {
+      "close_price": 1995,
+      "trading_date": "2025-03-24",
+      "volume": 2158300
+    },
+    {
+      "close_price": 1980,
+      "trading_date": "2025-03-25",
+      "volume": 504300
+    },
+    {
+      "close_price": 2000,
+      "trading_date": "2025-03-26",
+      "volume": 3034100
+    },
+    {
+      "close_price": 1975,
+      "trading_date": "2025-03-27",
+      "volume": 5016800
+    },
+    {
+      "close_price": 1810,
+      "trading_date": "2025-04-08",
+      "volume": 5192300
+    },
+    {
+      "close_price": 1850,
+      "trading_date": "2025-04-09",
+      "volume": 1559900
+    },
+    {
+      "close_price": 1905,
+      "trading_date": "2025-04-10",
+      "volume": 4290000
+    },
+    {
+      "close_price": 1980,
+      "trading_date": "2025-04-11",
+      "volume": 1623200
+    },
+    {
+      "close_price": 2050,
+      "trading_date": "2025-04-14",
+      "volume": 2525100
+    },
+    {
+      "close_price": 2010,
+      "trading_date": "2025-04-15",
+      "volume": 2568800
+    },
+    {
+      "close_price": 2000,
+      "trading_date": "2025-04-16",
+      "volume": 1615500
+    },
+    {
+      "close_price": 2010,
+      "trading_date": "2025-04-17",
+      "volume": 1180000
+    },
+    {
+      "close_price": 2030,
+      "trading_date": "2025-04-21",
+      "volume": 681800
+    },
+    {
+      "close_price": 2040,
+      "trading_date": "2025-04-22",
+      "volume": 1266300
+    },
+    {
+      "close_price": 2060,
+      "trading_date": "2025-04-23",
+      "volume": 2564400
+    },
+    {
+      "close_price": 2060,
+      "trading_date": "2025-04-24",
+      "volume": 3168800
+    },
+    {
+      "close_price": 2150,
+      "trading_date": "2025-04-25",
+      "volume": 5018400
+    },
+    {
+      "close_price": 2190,
+      "trading_date": "2025-04-28",
+      "volume": 7225700
+    },
+    {
+      "close_price": 2200,
+      "trading_date": "2025-04-29",
+      "volume": 5699000
+    },
+    {
+      "close_price": 2180,
+      "trading_date": "2025-04-30",
+      "volume": 4414400
+    },
+    {
+      "close_price": 2210,
+      "trading_date": "2025-05-02",
+      "volume": 2550700
+    },
+    {
+      "close_price": 2200,
+      "trading_date": "2025-05-05",
+      "volume": 2408400
+    },
+    {
+      "close_price": 2200,
+      "trading_date": "2025-05-06",
+      "volume": 3203700
+    },
+    {
+      "close_price": 2210,
+      "trading_date": "2025-05-07",
+      "volume": 2944200
+    },
+    {
+      "close_price": 2230,
+      "trading_date": "2025-05-08",
+      "volume": 9143100
+    },
+    {
+      "close_price": 2070,
+      "trading_date": "2025-05-09",
+      "volume": 5896200
+    },
+    {
+      "close_price": 2100,
+      "trading_date": "2025-05-14",
+      "volume": 8176200
+    },
+    {
+      "close_price": 2080,
+      "trading_date": "2025-05-15",
+      "volume": 2976100
+    },
+    {
+      "close_price": 2090,
+      "trading_date": "2025-05-16",
+      "volume": 1556100
+    },
+    {
+      "close_price": 2150,
+      "trading_date": "2025-05-19",
+      "volume": 4783200
+    },
+    {
+      "close_price": 2130,
+      "trading_date": "2025-05-20",
+      "volume": 4607700
+    },
+    {
+      "close_price": 2130,
+      "trading_date": "2025-05-21",
+      "volume": 2944800
+    },
+    {
+      "close_price": 2090,
+      "trading_date": "2025-05-22",
+      "volume": 2802300
+    },
+    {
+      "close_price": 2100,
+      "trading_date": "2025-05-23",
+      "volume": 984100
+    },
+    {
+      "close_price": 2100,
+      "trading_date": "2025-05-26",
+      "volume": 3753700
+    },
+    {
+      "close_price": 2090,
+      "trading_date": "2025-05-27",
+      "volume": 2869200
+    },
+    {
+      "close_price": 2110,
+      "trading_date": "2025-05-28",
+      "volume": 3262600
+    },
+    {
+      "close_price": 2090,
+      "trading_date": "2025-06-02",
+      "volume": 2644700
+    },
+    {
+      "close_price": 2090,
+      "trading_date": "2025-06-03",
+      "volume": 1408800
+    },
+    {
+      "close_price": 2060,
+      "trading_date": "2025-06-04",
+      "volume": 1272300
+    },
+    {
+      "close_price": 2070,
+      "trading_date": "2025-06-05",
+      "volume": 1736700
+    },
+    {
+      "close_price": 2050,
+      "trading_date": "2025-06-10",
+      "volume": 3157000
+    },
+    {
+      "close_price": 2040,
+      "trading_date": "2025-06-11",
+      "volume": 2670700
+    },
+    {
+      "close_price": 2040,
+      "trading_date": "2025-06-12",
+      "volume": 2925900
+    },
+    {
+      "close_price": 2010,
+      "trading_date": "2025-06-13",
+      "volume": 5595200
+    },
+    {
+      "close_price": 2040,
+      "trading_date": "2025-06-16",
+      "volume": 1133300
+    },
+    {
+      "close_price": 2010,
+      "trading_date": "2025-06-17",
+      "volume": 4195700
+    },
+    {
+      "close_price": 2010,
+      "trading_date": "2025-06-18",
+      "volume": 3061600
+    },
+    {
+      "close_price": 2000,
+      "trading_date": "2025-06-19",
+      "volume": 2972600
+    },
+    {
+      "close_price": 2010,
+      "trading_date": "2025-06-20",
+      "volume": 1803100
+    },
+    {
+      "close_price": 1965,
+      "trading_date": "2025-06-23",
+      "volume": 4568400
+    },
+    {
+      "close_price": 2010,
+      "trading_date": "2025-06-24",
+      "volume": 1464100
+    },
+    {
+      "close_price": 2010,
+      "trading_date": "2025-06-25",
+      "volume": 1085900
+    },
+    {
+      "close_price": 2050,
+      "trading_date": "2025-06-26",
+      "volume": 1880200
+    },
+    {
+      "close_price": 2060,
+      "trading_date": "2025-06-30",
+      "volume": 2410100
+    },
+    {
+      "close_price": 2050,
+      "trading_date": "2025-07-01",
+      "volume": 1387100
+    },
+    {
+      "close_price": 2050,
+      "trading_date": "2025-07-02",
+      "volume": 1497600
+    },
+    {
+      "close_price": 2050,
+      "trading_date": "2025-07-03",
+      "volume": 686700
+    },
+    {
+      "close_price": 2030,
+      "trading_date": "2025-07-04",
+      "volume": 926800
+    },
+    {
+      "close_price": 2030,
+      "trading_date": "2025-07-07",
+      "volume": 755500
+    },
+    {
+      "close_price": 2040,
+      "trading_date": "2025-07-08",
+      "volume": 990300
+    },
+    {
+      "close_price": 2040,
+      "trading_date": "2025-07-09",
+      "volume": 1016100
+    },
+    {
+      "close_price": 2040,
+      "trading_date": "2025-07-10",
+      "volume": 2479200
+    },
+    {
+      "close_price": 2060,
+      "trading_date": "2025-07-11",
+      "volume": 1177000
+    },
+    {
+      "close_price": 2040,
+      "trading_date": "2025-07-14",
+      "volume": 1271000
+    },
+    {
+      "close_price": 2060,
+      "trading_date": "2025-07-15",
+      "volume": 1834600
+    },
+    {
+      "close_price": 2100,
+      "trading_date": "2025-07-16",
+      "volume": 3862700
+    },
+    {
+      "close_price": 2120,
+      "trading_date": "2025-07-17",
+      "volume": 2372400
+    },
+    {
+      "close_price": 2110,
+      "trading_date": "2025-07-18",
+      "volume": 4279000
+    },
+    {
+      "close_price": 2100,
+      "trading_date": "2025-07-21",
+      "volume": 2132300
+    },
+    {
+      "close_price": 2140,
+      "trading_date": "2025-07-22",
+      "volume": 2937900
+    },
+    {
+      "close_price": 2150,
+      "trading_date": "2025-07-23",
+      "volume": 2621700
+    },
+    {
+      "close_price": 2150,
+      "trading_date": "2025-07-24",
+      "volume": 1880700
+    },
+    {
+      "close_price": 2140,
+      "trading_date": "2025-07-25",
+      "volume": 1020300
+    },
+    {
+      "close_price": 2150,
+      "trading_date": "2025-07-28",
+      "volume": 2041400
+    },
+    {
+      "close_price": 2110,
+      "trading_date": "2025-07-29",
+      "volume": 4038600
+    },
+    {
+      "close_price": 2200,
+      "trading_date": "2025-07-30",
+      "volume": 6616700
+    },
+    {
+      "close_price": 2150,
+      "trading_date": "2025-07-31",
+      "volume": 4620000
+    },
+    {
+      "close_price": 2110,
+      "trading_date": "2025-08-01",
+      "volume": 1629100
+    },
+    {
+      "close_price": 2120,
+      "trading_date": "2025-08-04",
+      "volume": 1245300
+    },
+    {
+      "close_price": 2140,
+      "trading_date": "2025-08-05",
+      "volume": 1521500
+    },
+    {
+      "close_price": 2140,
+      "trading_date": "2025-08-06",
+      "volume": 1014500
+    },
+    {
+      "close_price": 2130,
+      "trading_date": "2025-08-07",
+      "volume": 833500
+    },
+    {
+      "close_price": 2180,
+      "trading_date": "2025-08-08",
+      "volume": 3212900
+    },
+    {
+      "close_price": 2180,
+      "trading_date": "2025-08-11",
+      "volume": 2294800
+    },
+    {
+      "close_price": 2170,
+      "trading_date": "2025-08-12",
+      "volume": 1382300
+    },
+    {
+      "close_price": 2310,
+      "trading_date": "2025-08-13",
+      "volume": 12208800
+    },
+    {
+      "close_price": 2280,
+      "trading_date": "2025-08-14",
+      "volume": 6489500
+    },
+    {
+      "close_price": 2260,
+      "trading_date": "2025-08-15",
+      "volume": 7693700
+    },
+    {
+      "close_price": 2310,
+      "trading_date": "2025-08-19",
+      "volume": 7524900
+    },
+    {
+      "close_price": 2310,
+      "trading_date": "2025-08-20",
+      "volume": 3629800
+    },
+    {
+      "close_price": 2300,
+      "trading_date": "2025-08-21",
+      "volume": 5406300
+    },
+    {
+      "close_price": 2460,
+      "trading_date": "2025-08-22",
+      "volume": 11837300
+    },
+    {
+      "close_price": 2480,
+      "trading_date": "2025-08-25",
+      "volume": 9093100
+    },
+    {
+      "close_price": 2440,
+      "trading_date": "2025-08-26",
+      "volume": 3776700
+    },
+    {
+      "close_price": 2350,
+      "trading_date": "2025-08-27",
+      "volume": 3876500
+    },
+    {
+      "close_price": 2420,
+      "trading_date": "2025-08-28",
+      "volume": 2716500
+    },
+    {
+      "close_price": 2430,
+      "trading_date": "2025-08-29",
+      "volume": 7275700
+    },
+    {
+      "close_price": 2370,
+      "trading_date": "2025-09-01",
+      "volume": 3975000
+    },
+    {
+      "close_price": 2410,
+      "trading_date": "2025-09-02",
+      "volume": 2175000
+    },
+    {
+      "close_price": 2400,
+      "trading_date": "2025-09-03",
+      "volume": 3302700
+    },
+    {
+      "close_price": 2370,
+      "trading_date": "2025-09-04",
+      "volume": 2495100
+    },
+    {
+      "close_price": 2390,
+      "trading_date": "2025-09-08",
+      "volume": 4608300
+    },
+    {
+      "close_price": 2430,
+      "trading_date": "2025-09-09",
+      "volume": 3538200
+    },
+    {
+      "close_price": 2350,
+      "trading_date": "2025-09-10",
+      "volume": 2465600
+    },
+    {
+      "close_price": 2300,
+      "trading_date": "2025-09-11",
+      "volume": 5554900
+    },
+    {
+      "close_price": 2330,
+      "trading_date": "2025-09-12",
+      "volume": 2570200
+    },
+    {
+      "close_price": 2360,
+      "trading_date": "2025-09-15",
+      "volume": 2310300
+    },
+    {
+      "close_price": 2360,
+      "trading_date": "2025-09-16",
+      "volume": 482600
+    },
+    {
+      "close_price": 2380,
+      "trading_date": "2025-09-17",
+      "volume": 1640400
+    },
+    {
+      "close_price": 2330,
+      "trading_date": "2025-09-18",
+      "volume": 2110300
+    },
+    {
+      "close_price": 2410,
+      "trading_date": "2025-09-19",
+      "volume": 3488300
+    },
+    {
+      "close_price": 2320,
+      "trading_date": "2025-09-22",
+      "volume": 4841700
+    },
+    {
+      "close_price": 2320,
+      "trading_date": "2025-09-23",
+      "volume": 3135000
+    },
+    {
+      "close_price": 2300,
+      "trading_date": "2025-09-24",
+      "volume": 2064500
+    },
+    {
+      "close_price": 2310,
+      "trading_date": "2025-09-25",
+      "volume": 1563400
+    },
+    {
+      "close_price": 2330,
+      "trading_date": "2025-09-26",
+      "volume": 2959200
+    },
+    {
+      "close_price": 2320,
+      "trading_date": "2025-09-29",
+      "volume": 1046300
+    },
+    {
+      "close_price": 2310,
+      "trading_date": "2025-09-30",
+      "volume": 2834400
+    },
+    {
+      "close_price": 2310,
+      "trading_date": "2025-10-01",
+      "volume": 2388000
+    },
+    {
+      "close_price": 2340,
+      "trading_date": "2025-10-02",
+      "volume": 1828000
+    },
+    {
+      "close_price": 2290,
+      "trading_date": "2025-10-03",
+      "volume": 3166400
+    },
+    {
+      "close_price": 2340,
+      "trading_date": "2025-10-06",
+      "volume": 3475300
+    },
+    {
+      "close_price": 2370,
+      "trading_date": "2025-10-07",
+      "volume": 5632400
+    },
+    {
+      "close_price": 2410,
+      "trading_date": "2025-10-08",
+      "volume": 5002500
+    },
+    {
+      "close_price": 2410,
+      "trading_date": "2025-10-09",
+      "volume": 4772400
+    },
+    {
+      "close_price": 2450,
+      "trading_date": "2025-10-10",
+      "volume": 3909200
+    },
+    {
+      "close_price": 2480,
+      "trading_date": "2025-10-13",
+      "volume": 11039800
+    },
+    {
+      "close_price": 2440,
+      "trading_date": "2025-10-14",
+      "volume": 7730900
+    },
+    {
+      "close_price": 2310,
+      "trading_date": "2025-10-15",
+      "volume": 25623900
+    },
+    {
+      "close_price": 2400,
+      "trading_date": "2025-10-16",
+      "volume": 2849500
+    },
+    {
+      "close_price": 2300,
+      "trading_date": "2025-10-17",
+      "volume": 6389200
+    },
+    {
+      "close_price": 2340,
+      "trading_date": "2025-10-20",
+      "volume": 1968400
+    },
+    {
+      "close_price": 2320,
+      "trading_date": "2025-10-21",
+      "volume": 4035200
+    },
+    {
+      "close_price": 2370,
+      "trading_date": "2025-10-22",
+      "volume": 4702500
+    },
+    {
+      "close_price": 2420,
+      "trading_date": "2025-10-23",
+      "volume": 5470300
+    },
+    {
+      "close_price": 2430,
+      "trading_date": "2025-10-24",
+      "volume": 5666800
+    },
+    {
+      "close_price": 2490,
+      "trading_date": "2025-10-27",
+      "volume": 7044200
+    },
+    {
+      "close_price": 2430,
+      "trading_date": "2025-10-28",
+      "volume": 14431200
+    },
+    {
+      "close_price": 2490,
+      "trading_date": "2025-10-29",
+      "volume": 4826500
+    },
+    {
+      "close_price": 2550,
+      "trading_date": "2025-10-30",
+      "volume": 12933300
+    },
+    {
+      "close_price": 2550,
+      "trading_date": "2025-10-31",
+      "volume": 6939300
+    },
+    {
+      "close_price": 2650,
+      "trading_date": "2025-11-03",
+      "volume": 7366000
+    },
+    {
+      "close_price": 2660,
+      "trading_date": "2025-11-04",
+      "volume": 4415800
+    },
+    {
+      "close_price": 2560,
+      "trading_date": "2025-11-05",
+      "volume": 6890900
+    },
+    {
+      "close_price": 2700,
+      "trading_date": "2025-11-06",
+      "volume": 8118800
+    },
+    {
+      "close_price": 2710,
+      "trading_date": "2025-11-07",
+      "volume": 3221800
+    },
+    {
+      "close_price": 2660,
+      "trading_date": "2025-11-10",
+      "volume": 2868500
+    },
+    {
+      "close_price": 2690,
+      "trading_date": "2025-11-11",
+      "volume": 2763500
+    },
+    {
+      "close_price": 2660,
+      "trading_date": "2025-11-12",
+      "volume": 1467000
+    },
+    {
+      "close_price": 2600,
+      "trading_date": "2025-11-13",
+      "volume": 4593200
+    },
+    {
+      "close_price": 2610,
+      "trading_date": "2025-11-14",
+      "volume": 1528700
+    },
+    {
+      "close_price": 2660,
+      "trading_date": "2025-11-17",
+      "volume": 3270200
+    },
+    {
+      "close_price": 2600,
+      "trading_date": "2025-11-18",
+      "volume": 3112700
+    },
+    {
+      "close_price": 2640,
+      "trading_date": "2025-11-19",
+      "volume": 1172200
+    },
+    {
+      "close_price": 2630,
+      "trading_date": "2025-11-20",
+      "volume": 1302100
+    },
+    {
+      "close_price": 2630,
+      "trading_date": "2025-11-21",
+      "volume": 1477200
+    },
+    {
+      "close_price": 2660,
+      "trading_date": "2025-11-24",
+      "volume": 1943600
+    },
+    {
+      "close_price": 2610,
+      "trading_date": "2025-11-25",
+      "volume": 3672300
+    },
+    {
+      "close_price": 2650,
+      "trading_date": "2025-11-26",
+      "volume": 2552800
+    },
+    {
+      "close_price": 2540,
+      "trading_date": "2025-11-27",
+      "volume": 3672000
+    },
+    {
+      "close_price": 2540,
+      "trading_date": "2025-11-28",
+      "volume": 9502900
+    },
+    {
+      "close_price": 2500,
+      "trading_date": "2025-12-01",
+      "volume": 2963200
+    },
+    {
+      "close_price": 2640,
+      "trading_date": "2025-12-02",
+      "volume": 6017300
+    },
+    {
+      "close_price": 2720,
+      "trading_date": "2025-12-03",
+      "volume": 7898200
+    },
+    {
+      "close_price": 2710,
+      "trading_date": "2025-12-04",
+      "volume": 2892800
+    },
+    {
+      "close_price": 2760,
+      "trading_date": "2025-12-05",
+      "volume": 3295600
+    },
+    {
+      "close_price": 2890,
+      "trading_date": "2025-12-08",
+      "volume": 6071000
+    },
+    {
+      "close_price": 2690,
+      "trading_date": "2025-12-09",
+      "volume": 8763500
+    },
+    {
+      "close_price": 2740,
+      "trading_date": "2025-12-10",
+      "volume": 4594900
+    },
+    {
+      "close_price": 2690,
+      "trading_date": "2025-12-11",
+      "volume": 2621800
+    },
+    {
+      "close_price": 2690,
+      "trading_date": "2025-12-12",
+      "volume": 3183500
+    },
+    {
+      "close_price": 2750,
+      "trading_date": "2025-12-15",
+      "volume": 2269400
+    },
+    {
+      "close_price": 2640,
+      "trading_date": "2025-12-16",
+      "volume": 4406500
+    },
+    {
+      "close_price": 2690,
+      "trading_date": "2025-12-17",
+      "volume": 2415000
+    },
+    {
+      "close_price": 2690,
+      "trading_date": "2025-12-18",
+      "volume": 929700
+    },
+    {
+      "close_price": 2580,
+      "trading_date": "2025-12-19",
+      "volume": 6511100
+    },
+    {
+      "close_price": 2600,
+      "trading_date": "2025-12-22",
+      "volume": 3851200
+    },
+    {
+      "close_price": 2600,
+      "trading_date": "2025-12-23",
+      "volume": 4586100
+    },
+    {
+      "close_price": 2670,
+      "trading_date": "2025-12-24",
+      "volume": 1135500
+    },
+    {
+      "close_price": 2700,
+      "trading_date": "2025-12-29",
+      "volume": 2811700
+    },
+    {
+      "close_price": 2690,
+      "trading_date": "2025-12-30",
+      "volume": 2492400
+    },
+    {
+      "close_price": 2720,
+      "trading_date": "2026-01-02",
+      "volume": 1465300
+    },
+    {
+      "close_price": 2690,
+      "trading_date": "2026-01-05",
+      "volume": 1668500
+    },
+    {
+      "close_price": 2690,
+      "trading_date": "2026-01-06",
+      "volume": 2726300
+    },
+    {
+      "close_price": 2770,
+      "trading_date": "2026-01-07",
+      "volume": 3449600
+    },
+    {
+      "close_price": 2740,
+      "trading_date": "2026-01-08",
+      "volume": 3930000
+    },
+    {
+      "close_price": 2730,
+      "trading_date": "2026-01-09",
+      "volume": 1445600
+    },
+    {
+      "close_price": 2750,
+      "trading_date": "2026-01-12",
+      "volume": 5135800
+    },
+    {
+      "close_price": 2750,
+      "trading_date": "2026-01-13",
+      "volume": 3404800
+    },
+    {
+      "close_price": 2710,
+      "trading_date": "2026-01-14",
+      "volume": 2077500
+    },
+    {
+      "close_price": 2710,
+      "trading_date": "2026-01-15",
+      "volume": 1587900
+    },
+    {
+      "close_price": 2750,
+      "trading_date": "2026-01-19",
+      "volume": 2736800
+    },
+    {
+      "close_price": 2750,
+      "trading_date": "2026-01-20",
+      "volume": 2522100
+    },
+    {
+      "close_price": 2640,
+      "trading_date": "2026-01-21",
+      "volume": 6348000
+    },
+    {
+      "close_price": 2690,
+      "trading_date": "2026-01-22",
+      "volume": 5052100
+    },
+    {
+      "close_price": 2780,
+      "trading_date": "2026-01-23",
+      "volume": 7106100
+    },
+    {
+      "close_price": 2740,
+      "trading_date": "2026-01-26",
+      "volume": 5417000
+    },
+    {
+      "close_price": 2650,
+      "trading_date": "2026-01-27",
+      "volume": 5015300
+    },
+    {
+      "close_price": 2590,
+      "trading_date": "2026-01-28",
+      "volume": 8534000
+    },
+    {
+      "close_price": 2490,
+      "trading_date": "2026-01-29",
+      "volume": 10292200
+    },
+    {
+      "close_price": 2530,
+      "trading_date": "2026-01-30",
+      "volume": 8121900
+    },
+    {
+      "close_price": 2540,
+      "trading_date": "2026-02-02",
+      "volume": 3665100
+    },
+    {
+      "close_price": 2590,
+      "trading_date": "2026-02-03",
+      "volume": 2766400
+    },
+    {
+      "close_price": 2640,
+      "trading_date": "2026-02-04",
+      "volume": 1846200
+    },
+    {
+      "close_price": 2650,
+      "trading_date": "2026-02-05",
+      "volume": 1545300
+    },
+    {
+      "close_price": 2630,
+      "trading_date": "2026-02-06",
+      "volume": 1975200
+    },
+    {
+      "close_price": 2580,
+      "trading_date": "2026-02-09",
+      "volume": 4157600
+    },
+    {
+      "close_price": 2650,
+      "trading_date": "2026-02-10",
+      "volume": 1678200
+    },
+    {
+      "close_price": 2630,
+      "trading_date": "2026-02-11",
+      "volume": 3478800
+    },
+    {
+      "close_price": 2650,
+      "trading_date": "2026-02-12",
+      "volume": 1487100
+    },
+    {
+      "close_price": 2660,
+      "trading_date": "2026-02-13",
+      "volume": 4407500
+    },
+    {
+      "close_price": 2660,
+      "trading_date": "2026-02-18",
+      "volume": 787400
+    },
+    {
+      "close_price": 2680,
+      "trading_date": "2026-02-19",
+      "volume": 3308500
+    },
+    {
+      "close_price": 2710,
+      "trading_date": "2026-02-20",
+      "volume": 2015100
+    },
+    {
+      "close_price": 2750,
+      "trading_date": "2026-02-23",
+      "volume": 2467800
+    },
+    {
+      "close_price": 2700,
+      "trading_date": "2026-02-24",
+      "volume": 6569500
+    },
+    {
+      "close_price": 2810,
+      "trading_date": "2026-02-25",
+      "volume": 9346700
+    },
+    {
+      "close_price": 2780,
+      "trading_date": "2026-02-26",
+      "volume": 4580500
+    },
+    {
+      "close_price": 2900,
+      "trading_date": "2026-02-27",
+      "volume": 6782800
+    },
+    {
+      "close_price": 2840,
+      "trading_date": "2026-03-02",
+      "volume": 9856200
+    },
+    {
+      "close_price": 2800,
+      "trading_date": "2026-03-03",
+      "volume": 3648600
+    },
+    {
+      "close_price": 2750,
+      "trading_date": "2026-03-04",
+      "volume": 8274900
+    },
+    {
+      "close_price": 2780,
+      "trading_date": "2026-03-05",
+      "volume": 1690700
+    },
+    {
+      "close_price": 2770,
+      "trading_date": "2026-03-06",
+      "volume": 2553100
+    },
+    {
+      "close_price": 2600,
+      "trading_date": "2026-03-09",
+      "volume": 6533100
+    },
+    {
+      "close_price": 2650,
+      "trading_date": "2026-03-10",
+      "volume": 1942600
+    },
+    {
+      "close_price": 2640,
+      "trading_date": "2026-03-11",
+      "volume": 1065300
+    },
+    {
+      "close_price": 2630,
+      "trading_date": "2026-03-12",
+      "volume": 1268700
+    },
+    {
+      "close_price": 2540,
+      "trading_date": "2026-03-13",
+      "volume": 3196500
+    },
+    {
+      "close_price": 2520,
+      "trading_date": "2026-03-16",
+      "volume": 3244800
+    },
+    {
+      "close_price": 2560,
+      "trading_date": "2026-03-17",
+      "volume": 2267600
+    },
+    {
+      "close_price": 2600,
+      "trading_date": "2026-03-25",
+      "volume": 2110900
+    },
+    {
+      "close_price": 2620,
+      "trading_date": "2026-03-26",
+      "volume": 1950400
+    },
+    {
+      "close_price": 2580,
+      "trading_date": "2026-03-27",
+      "volume": 3988100
+    },
+    {
+      "close_price": 2600,
+      "trading_date": "2026-03-30",
+      "volume": 3552000
+    },
+    {
+      "close_price": 2610,
+      "trading_date": "2026-03-31",
+      "volume": 1114200
+    },
+    {
+      "close_price": 2640,
+      "trading_date": "2026-04-01",
+      "volume": 1567100
+    },
+    {
+      "close_price": 2570,
+      "trading_date": "2026-04-02",
+      "volume": 1898600
+    },
+    {
+      "close_price": 2560,
+      "trading_date": "2026-04-06",
+      "volume": 843700
+    },
+    {
+      "close_price": 2560,
+      "trading_date": "2026-04-07",
+      "volume": 1940100
+    },
+    {
+      "close_price": 2610,
+      "trading_date": "2026-04-08",
+      "volume": 2517600
+    },
+    {
+      "close_price": 2600,
+      "trading_date": "2026-04-09",
+      "volume": 1129500
+    },
+    {
+      "close_price": 2620,
+      "trading_date": "2026-04-10",
+      "volume": 2205100
+    },
+    {
+      "close_price": 2610,
+      "trading_date": "2026-04-13",
+      "volume": 1565600
+    },
+    {
+      "close_price": 2630,
+      "trading_date": "2026-04-14",
+      "volume": 1332200
+    },
+    {
+      "close_price": 2690,
+      "trading_date": "2026-04-15",
+      "volume": 3241900
+    },
+    {
+      "close_price": 2730,
+      "trading_date": "2026-04-16",
+      "volume": 2686700
+    },
+    {
+      "close_price": 2720,
+      "trading_date": "2026-04-17",
+      "volume": 3700200
+    },
+    {
+      "close_price": 2720,
+      "trading_date": "2026-04-20",
+      "volume": 1445000
+    },
+    {
+      "close_price": 2800,
+      "trading_date": "2026-04-21",
+      "volume": 5992300
+    },
+    {
+      "close_price": 2840,
+      "trading_date": "2026-04-22",
+      "volume": 3589100
+    },
+    {
+      "close_price": 2810,
+      "trading_date": "2026-04-23",
+      "volume": 3231300
+    },
+    {
+      "close_price": 2780,
+      "trading_date": "2026-04-24",
+      "volume": 3784500
+    },
+    {
+      "close_price": 2750,
+      "trading_date": "2026-04-27",
+      "volume": 4263400
+    },
+    {
+      "close_price": 2640,
+      "trading_date": "2026-04-28",
+      "volume": 2316400
+    },
+    {
+      "close_price": 2630,
+      "trading_date": "2026-04-29",
+      "volume": 2828400
+    },
+    {
+      "close_price": 2570,
+      "trading_date": "2026-04-30",
+      "volume": 2613900
+    },
+    {
+      "close_price": 2600,
+      "trading_date": "2026-05-04",
+      "volume": 1377900
+    },
+    {
+      "close_price": 2570,
+      "trading_date": "2026-05-05",
+      "volume": 2111300
+    },
+    {
+      "close_price": 2590,
+      "trading_date": "2026-05-06",
+      "volume": 1897200
+    },
+    {
+      "close_price": 2630,
+      "trading_date": "2026-05-07",
+      "volume": 1301800
+    },
+    {
+      "close_price": 2640,
+      "trading_date": "2026-05-08",
+      "volume": 2015200
+    },
+    {
+      "close_price": 2590,
+      "trading_date": "2026-05-11",
+      "volume": 2886500
+    },
+    {
+      "close_price": 2580,
+      "trading_date": "2026-05-12",
+      "volume": 804100
+    },
+    {
+      "close_price": 2590,
+      "trading_date": "2026-05-13",
+      "volume": 489400
+    },
+    {
+      "close_price": 2630,
+      "trading_date": "2026-05-18",
+      "volume": 4212300
+    },
+    {
+      "close_price": 2580,
+      "trading_date": "2026-05-19",
+      "volume": 2784100
+    },
+    {
+      "close_price": 2550,
+      "trading_date": "2026-05-20",
+      "volume": 3698500
+    },
+    {
+      "close_price": 2540,
+      "trading_date": "2026-05-21",
+      "volume": 3351600
+    },
+    {
+      "close_price": 2560,
+      "trading_date": "2026-05-22",
+      "volume": 2742800
+    },
+    {
+      "close_price": 2530,
+      "trading_date": "2026-05-25",
+      "volume": 2357900
+    },
+    {
+      "close_price": 2500,
+      "trading_date": "2026-05-26",
+      "volume": 4707200
+    },
+    {
+      "close_price": 2530,
+      "trading_date": "2026-05-29",
+      "volume": 7566500
+    },
+    {
+      "close_price": 2510,
+      "trading_date": "2026-06-02",
+      "volume": 2700300
+    },
+    {
+      "close_price": 2500,
+      "trading_date": "2026-06-03",
+      "volume": 6894700
+    },
+    {
+      "close_price": 2490,
+      "trading_date": "2026-06-04",
+      "volume": 4713400
+    },
+    {
+      "close_price": 2440,
+      "trading_date": "2026-06-05",
+      "volume": 4913200
+    },
+    {
+      "close_price": 2290,
+      "trading_date": "2026-06-08",
+      "volume": 3589200
+    },
+    {
+      "close_price": 2350,
+      "trading_date": "2026-06-09",
+      "volume": 1680400
+    },
+    {
+      "close_price": 2410,
+      "trading_date": "2026-06-10",
+      "volume": 1187500
+    },
+    {
+      "close_price": 2390,
+      "trading_date": "2026-06-11",
+      "volume": 1805800
+    },
+    {
+      "close_price": 2400,
+      "trading_date": "2026-06-12",
+      "volume": 1875100
+    },
+    {
+      "close_price": 2490,
+      "trading_date": "2026-06-15",
+      "volume": 1192300
+    },
+    {
+      "close_price": 2460,
+      "trading_date": "2026-06-17",
+      "volume": 1272200
+    },
+    {
+      "close_price": 2450,
+      "trading_date": "2026-06-18",
+      "volume": 1316800
+    },
+    {
+      "close_price": 2460,
+      "trading_date": "2026-06-19",
+      "volume": 1843300
+    },
+    {
+      "close_price": 2430,
+      "trading_date": "2026-06-22",
+      "volume": 1609400
+    },
+    {
+      "close_price": 2440,
+      "trading_date": "2026-06-23",
+      "volume": 448700
+    },
+    {
+      "close_price": 2390,
+      "trading_date": "2026-06-24",
+      "volume": 870300
+    },
+    {
+      "close_price": 2410,
+      "trading_date": "2026-06-25",
+      "volume": 687700
+    },
+    {
+      "close_price": 2410,
+      "trading_date": "2026-06-26",
+      "volume": 498200
+    },
+    {
+      "close_price": 2390,
+      "trading_date": "2026-06-29",
+      "volume": 1030600
+    },
+    {
+      "close_price": 2350,
+      "trading_date": "2026-06-30",
+      "volume": 707700
+    },
+    {
+      "close_price": 2350,
+      "trading_date": "2026-07-01",
+      "volume": 1284700
+    },
+    {
+      "close_price": 2360,
+      "trading_date": "2026-07-02",
+      "volume": 768000
+    },
+    {
+      "close_price": 2390,
+      "trading_date": "2026-07-03",
+      "volume": 896300
+    },
+    {
+      "close_price": 2390,
+      "trading_date": "2026-07-06",
+      "volume": 883100
+    },
+    {
+      "close_price": 2460,
+      "trading_date": "2026-07-07",
+      "volume": 2007500
+    },
+    {
+      "close_price": 2410,
+      "trading_date": "2026-07-08",
+      "volume": 726900
+    },
+    {
+      "close_price": 2430,
+      "trading_date": "2026-07-09",
+      "volume": 722900
+    },
+    {
+      "close_price": 2430,
+      "trading_date": "2026-07-10",
+      "volume": 1647300
+    },
+    {
+      "close_price": 2480,
+      "trading_date": "2026-07-13",
+      "volume": 846500
+    },
+    {
+      "close_price": 2520,
+      "trading_date": "2026-07-14",
+      "volume": 1477200
+    },
+    {
+      "close_price": 2610,
+      "trading_date": "2026-07-15",
+      "volume": 2695000
+    },
+    {
+      "close_price": 2640,
+      "trading_date": "2026-07-16",
+      "volume": 3892600
+    },
+    {
+      "close_price": 2640,
+      "trading_date": "2026-07-17",
+      "volume": 1138400
+    },
+    {
+      "close_price": 2640,
+      "trading_date": "2026-07-20",
+      "volume": 3489100
+    },
+    {
+      "close_price": 2660,
+      "trading_date": "2026-07-21",
+      "volume": 1479900
+    },
+    {
+      "close_price": 2660,
+      "trading_date": "2026-07-22",
+      "volume": 519300
+    },
+    {
+      "close_price": 2620,
+      "trading_date": "2026-07-23",
+      "volume": 764500
+    },
+    {
+      "close_price": 2570,
+      "trading_date": "2026-07-24",
+      "volume": 780000
+    },
+    {
+      "close_price": 2620,
+      "trading_date": "2026-07-27",
+      "volume": 1984900
+    },
+    {
+      "close_price": 2700,
+      "trading_date": "2026-07-28",
+      "volume": 3281500
+    },
+    {
+      "close_price": 2690,
+      "trading_date": "2026-07-29",
+      "volume": 1692800
+    },
+    {
+      "close_price": 2760,
+      "trading_date": "2026-07-30",
+      "volume": 3207200
+    },
+    {
+      "close_price": 2750,
+      "trading_date": "2026-07-31",
+      "volume": 1638800
+    },
+    {
+      "close_price": 2770,
+      "trading_date": "2026-08-03",
+      "volume": 2079700
+    },
+    {
+      "close_price": 2770,
+      "trading_date": "2026-08-04",
+      "volume": 3162500
+    },
+    {
+      "close_price": 2790,
+      "trading_date": "2026-08-05",
+      "volume": 1765500
+    },
+    {
+      "close_price": 2780,
+      "trading_date": "2026-08-06",
+      "volume": 1560200
+    },
+    {
+      "close_price": 2790,
+      "trading_date": "2026-08-07",
+      "volume": 868800
+    },
+    {
+      "close_price": 2800,
+      "trading_date": "2026-08-10",
+      "volume": 3567700
+    },
+    {
+      "close_price": 2810,
+      "trading_date": "2026-08-11",
+      "volume": 3520400
+    },
+    {
+      "close_price": 2820,
+      "trading_date": "2026-08-12",
+      "volume": 2460500
+    },
+    {
+      "close_price": 2820,
+      "trading_date": "2026-08-13",
+      "volume": 842800
+    },
+    {
+      "close_price": 2900,
+      "trading_date": "2026-08-14",
+      "volume": 5554600
+    },
+    {
+      "close_price": 2930,
+      "trading_date": "2026-08-18",
+      "volume": 1911000
+    },
+    {
+      "close_price": 2930,
+      "trading_date": "2026-08-19",
+      "volume": 2473400
+    },
+    {
+      "close_price": 2950,
+      "trading_date": "2026-08-20",
+      "volume": 1583800
+    },
+    {
+      "close_price": 3020,
+      "trading_date": "2026-08-21",
+      "volume": 3679300
+    },
+    {
+      "close_price": 3100,
+      "trading_date": "2026-08-24",
+      "volume": 6633700
+    },
+    {
+      "close_price": 3130,
+      "trading_date": "2026-08-26",
+      "volume": 14439900
+    },
+    {
+      "close_price": 3330,
+      "trading_date": "2026-08-27",
+      "volume": 14771400
+    },
+    {
+      "close_price": 3400,
+      "trading_date": "2026-08-28",
+      "volume": 8447800
+    },
+    {
+      "close_price": 3430,
+      "trading_date": "2026-08-31",
+      "volume": 12497300
+    },
+    {
+      "close_price": 3390,
+      "trading_date": "2026-09-01",
+      "volume": 7463800
+    },
+    {
+      "close_price": 3390,
+      "trading_date": "2026-09-02",
+      "volume": 3667200
+    },
+    {
+      "close_price": 3390,
+      "trading_date": "2026-09-03",
+      "volume": 2676300
+    },
+    {
+      "close_price": 3330,
+      "trading_date": "2026-09-04",
+      "volume": 6245900
+    },
+    {
+      "close_price": 3340,
+      "trading_date": "2026-09-07",
+      "volume": 1956100
+    },
+    {
+      "close_price": 3360,
+      "trading_date": "2026-09-08",
+      "volume": 1037300
+    },
+    {
+      "close_price": 3320,
+      "trading_date": "2026-09-09",
+      "volume": 5194300
+    },
+    {
+      "close_price": 3320,
+      "trading_date": "2026-09-10",
+      "volume": 2105200
+    },
+    {
+      "close_price": 3300,
+      "trading_date": "2026-09-11",
+      "volume": 1853800
+    },
+    {
+      "close_price": 3320,
+      "trading_date": "2026-09-14",
+      "volume": 3158100
+    },
+    {
+      "close_price": 3360,
+      "trading_date": "2026-09-15",
+      "volume": 2849800
+    },
+    {
+      "close_price": 3330,
+      "trading_date": "2026-09-16",
+      "volume": 3093200
+    },
+    {
+      "close_price": 3320,
+      "trading_date": "2026-09-17",
+      "volume": 2402500
+    },
+    {
+      "close_price": 3360,
+      "trading_date": "2026-09-18",
+      "volume": 3638300
+    },
+    {
+      "close_price": 3370,
+      "trading_date": "2026-09-21",
+      "volume": 2124300
+    },
+    {
+      "close_price": 3360,
+      "trading_date": "2026-09-22",
+      "volume": 2689700
+    },
+    {
+      "close_price": 3390,
+      "trading_date": "2026-09-23",
+      "volume": 3719200
+    },
+    {
+      "close_price": 3340,
+      "trading_date": "2026-09-24",
+      "volume": 1624900
+    }
+  ],
+  "row_count": 1619,
+  "source": "public.prices_daily (canonical, unmodified projection)",
+  "ticker": "AUTO",
+  "unit": {
+    "close_price": "IDR per share",
+    "volume": "shares"
+  }
+}

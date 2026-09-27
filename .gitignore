@@ -9,5 +9,11 @@ __pycache__/
 *.xlsm
 
 /Data/
-Phyton/
-Testing/
+/Phyton/
+/Testing/
+
+# Legacy scratch notebooks / experiments live under these old folders.
+# Current scripts and tests live in /scripts and /tests and are tracked.
+/scripts/**/output/
+/scripts/**/cache/
+/tests/**/__pycache__/

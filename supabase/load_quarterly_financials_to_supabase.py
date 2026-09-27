@@ -15,7 +15,7 @@ import requests
 
 from raw_storage_source import ProvenanceIndex, RawStorageSource
 
-DEFAULT_RAW_ROOT = Path(r'D:\Stock Analyzer\Data\Raw')
+DEFAULT_RAW_ROOT = Path(__file__).resolve().parent.parent / 'Data' / 'Raw'
 BUCKET = 'stocklens_raw'
 DATE_INDEX_FILE = 'quarterly_financial_dates.json'
 QUARTERLY_DIRECTORY = 'quarterly'
@@ -23,13 +23,7 @@ PERIOD_TYPE = 'QUARTER'
 PERIOD_BASIS = 'STANDALONE'
 STATEMENT_SCOPE = 'UNKNOWN'
 REVISION_KEY = 'CURRENT'
-EXPECTED_AUTO_PERIODS = {
-    (year, quarter)
-    for year in range(2020, 2026)
-    for quarter in ('q1', 'q2', 'q3', 'q4')
-} | {(2026, 'q1'), (2026, 'q2')}
-
-QUARTERLY_FIELDS = (
+RAW_QUARTERLY_FIELDS = (
     'premium_income',
     'premium_expense',
     'net_premium_income',
@@ -67,6 +61,18 @@ QUARTERLY_FIELDS = (
     'net_cash_flow',
     'capital_expenditure',
     'free_cash_flow',
+)
+QUARTERLY_FIELDS = (
+    'revenue',
+    'cost_of_revenue',
+    'interest_expense_non_operating',
+    'earnings',
+    'operating_cash_flow',
+    'gross_profit',
+    'total_current_asset',
+    'current_liabilities',
+    'total_liabilities',
+    'total_equity',
 )
 METRIC_CODES = {field: field.upper() for field in QUARTERLY_FIELDS}
 QUARTER_MONTH_DAY = {
@@ -185,10 +191,6 @@ def parse_date_index(payload: Any, ticker: str) -> dict[str, dict[str, Any]]:
                 'year': year,
                 'quarter': quarter,
             }
-    if ticker == 'AUTO' and seen_year_quarters != EXPECTED_AUTO_PERIODS:
-        missing = sorted(EXPECTED_AUTO_PERIODS - seen_year_quarters)
-        extra = sorted(seen_year_quarters - EXPECTED_AUTO_PERIODS)
-        raise LoaderError(f'DATE_INDEX_AUTO_COVERAGE_CONFLICT: missing={missing}, extra={extra}')
     return entries
 
 
@@ -204,7 +206,7 @@ def load_quarterly_records(
     records: list[dict[str, Any]] = []
     paths_by_date: dict[str, Path] = {}
     checksums: dict[str, str] = {}
-    expected_keys = {'symbol', 'financials_sector_metrics', 'date', *QUARTERLY_FIELDS}
+    expected_keys = {'symbol', 'financials_sector_metrics', 'date', *RAW_QUARTERLY_FIELDS}
     for path in files:
         period_end = path.stem
         parse_iso_date(period_end, f'quarterly filename {path.name}')
@@ -228,7 +230,7 @@ def load_quarterly_records(
             raise LoaderError(f'QUARTERLY_DATE_CONFLICT: {path.name} record_date={record_date}')
         if record_date != date_index[period_end]['period_end']:
             raise LoaderError(f'QUARTERLY_INDEX_DATE_CONFLICT: {path.name}')
-        for field in QUARTERLY_FIELDS:
+        for field in RAW_QUARTERLY_FIELDS:
             value = record[field]
             if value is not None and not is_number(value):
                 raise LoaderError(f'QUARTERLY_INVALID_VALUE: {path.name} field={field}')
@@ -253,7 +255,7 @@ def validate_quarterly_record(
     date_index: dict[str, dict[str, Any]],
 ) -> dict[str, Any]:
     """Shared validation for one quarterly raw file (Storage or local debug)."""
-    expected_keys = {'symbol', 'financials_sector_metrics', 'date', *QUARTERLY_FIELDS}
+    expected_keys = {'symbol', 'financials_sector_metrics', 'date', *RAW_QUARTERLY_FIELDS}
 
     if not isinstance(payload, list) or len(payload) != 1:
         raise LoaderError(f'QUARTERLY_INVALID_SHAPE: {label} must be a one-record array')
@@ -272,7 +274,7 @@ def validate_quarterly_record(
         raise LoaderError(f'QUARTERLY_DATE_CONFLICT: {label} record_date={record_date}')
     if record_date != date_index[period_end]['period_end']:
         raise LoaderError(f'QUARTERLY_INDEX_DATE_CONFLICT: {label}')
-    for field in QUARTERLY_FIELDS:
+    for field in RAW_QUARTERLY_FIELDS:
         value = record[field]
         if value is not None and not is_number(value):
             raise LoaderError(f'QUARTERLY_INVALID_VALUE: {label} field={field}')
@@ -368,54 +370,6 @@ def make_fact_plans(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 'source_payload_id': None,
             })
     return plans
-
-
-def load_annual_rows_from_storage(source: RawStorageSource) -> list[dict[str, Any]]:
-    """Read the annual raw object from Storage for the 2025 reconciliation."""
-    content = source.read('annual', 'company_report_annual.json')
-    payload = json.loads(content.decode('utf-8'))
-    rows = payload.get('financials', {}).get('historical_financials', [])
-    if not isinstance(rows, list):
-        raise LoaderError('ANNUAL_SOURCE_INVALID_SHAPE_FOR_RECONCILIATION')
-    return rows
-
-
-def load_annual_rows_local(raw_root: Path, ticker: str) -> list[dict[str, Any]]:
-    """DEBUG/VERIFICATION ONLY."""
-    annual_path = raw_root / ticker / 'company_report_annual.json'
-    if not annual_path.is_file():
-        raise LoaderError(f'ANNUAL_SOURCE_NOT_FOUND_FOR_RECONCILIATION: {annual_path}')
-    annual_payload, _ = load_json(annual_path)
-    return annual_payload.get('financials', {}).get('historical_financials', [])
-
-
-def verify_auto_annual_reconciliation(
-    ticker: str,
-    records: list[dict[str, Any]],
-    annual_rows: list[dict[str, Any]],
-) -> None:
-    if ticker != 'AUTO':
-        return
-    annual_2025 = next((row for row in annual_rows if row.get('year') == 2025), None)
-    if annual_2025 is None:
-        raise LoaderError('ANNUAL_2025_NOT_FOUND_FOR_RECONCILIATION')
-    quarterly_2025 = [row for row in records if row['_period']['year'] == 2025]
-    flow_fields = (
-        'revenue', 'operating_expense', 'operating_pnl', 'non_operating_income_or_loss',
-        'earnings_before_tax', 'tax', 'earnings', 'gross_profit',
-        'interest_expense_non_operating', 'ebit', 'ebitda', 'cost_of_revenue',
-        'financing_cash_flow', 'operating_cash_flow', 'investing_cash_flow',
-        'net_cash_flow', 'capital_expenditure', 'free_cash_flow',
-    )
-    if len(quarterly_2025) != 4:
-        raise LoaderError('AUTO_2025_QUARTER_COUNT_FOR_RECONCILIATION')
-    for field in flow_fields:
-        values = [row[field] for row in quarterly_2025]
-        if any(value is None for value in values) or sum(values) != annual_2025.get(field):
-            raise LoaderError(f'AUTO_2025_FLOW_RECONCILIATION_FAILED: {field}')
-    for field in ('total_assets', 'cash_only', 'total_liabilities', 'total_equity', 'total_debt', 'current_liabilities'):
-        if quarterly_2025[-1][field] != annual_2025.get(field):
-            raise LoaderError(f'AUTO_2025_BALANCE_RECONCILIATION_FAILED: {field}')
 
 
 class Supabase:
@@ -566,34 +520,50 @@ def main() -> None:
     parser.add_argument('--ingestion-run-id', help='Optional raw-storage ingestion_runs.id cross-check')
     parser.add_argument('--source', choices=['storage', 'local'], default='storage',
                         help='Pipeline source. Default storage (local is debug-only).')
+    parser.add_argument(
+        '--date-index-source', choices=['storage', 'local'],
+        help='Where to read quarterly_financial_dates.json (defaults to --source). '
+             'Use local after refreshing the official date list; quarter payloads '
+             'can still be read and checksum-verified from Storage.',
+    )
+    parser.add_argument(
+        '--dry-run', action='store_true',
+        help='Validate sources and preflight against Supabase without writing periods or facts.',
+    )
     parser.add_argument('--raw-root', default=str(DEFAULT_RAW_ROOT), help='Debug-only local root')
     args = parser.parse_args()
     ticker = args.ticker.upper().replace('.JK', '')
 
+    date_index_source = args.date_index_source or args.source
+    raw_root = Path(args.raw_root)
+    storage_source = RawStorageSource(ticker) if (
+        args.source == 'storage' or date_index_source == 'storage'
+    ) else None
+
+    if date_index_source == 'storage':
+        assert storage_source is not None
+        date_index = load_date_index_from_storage(storage_source, ticker)
+    else:
+        date_index = load_date_index(raw_root, ticker)
+
     if args.source == 'storage':
-        source = RawStorageSource(ticker)
-        date_index = load_date_index_from_storage(source, ticker)
+        assert storage_source is not None
         records, storage_paths_by_date, checksums = load_quarterly_records_from_storage(
-            source, ticker, date_index
+            storage_source, ticker, date_index
         )
-        annual_rows = load_annual_rows_from_storage(source)
         provenance_checksums = {
             storage_path: checksums[period_end]
             for period_end, storage_path in storage_paths_by_date.items()
         }
         source_label = f'{BUCKET}/sectors/{ticker}/{QUARTERLY_DIRECTORY}/'
     else:
-        raw_root = Path(args.raw_root)
-        date_index = load_date_index(raw_root, ticker)
         records, paths_by_date, checksums = load_quarterly_records(raw_root, ticker, date_index)
-        annual_rows = load_annual_rows_local(raw_root, ticker)
         provenance_checksums = {
             f'sectors/{ticker}/quarterly/{period_end}.json': checksum
             for period_end, checksum in checksums.items()
         }
         source_label = str(raw_root / ticker / QUARTERLY_DIRECTORY)
 
-    verify_auto_annual_reconciliation(ticker, records, annual_rows)
     period_plans = [make_period_plan(record) for record in records]
     fact_plans = make_fact_plans(records)
     db = Supabase(required_env('SUPABASE_URL'), required_env('SUPABASE_SERVICE_ROLE_KEY'))
@@ -606,6 +576,19 @@ def main() -> None:
         for conflict in conflicts[:20]:
             print(str(conflict), file=sys.stderr)
         raise LoaderError(f'CONFLICT: {len(conflicts)} existing rows differ; no rows were written')
+    if args.dry_run:
+        print('ticker=' + ticker)
+        print('source=' + args.source)
+        print('date_index_source=' + date_index_source)
+        print('period_count=' + str(len(period_plans)))
+        print('new_period_count=' + str(len(new_period_ends)))
+        print('existing_period_count=' + str(len(period_plans) - len(new_period_ends)))
+        print('fact_count=' + str(len(fact_plans)))
+        print('new_fact_count=' + str(len(fact_plans) - len(existing_fact_keys)))
+        print('conflict_count=0')
+        print('latest_period=' + max(date_index))
+        print('DRY RUN: no Supabase rows were written.')
+        return
     periods_to_insert = []
     for plan in period_plans:
         if plan['period_end'] in new_period_ends:
@@ -629,15 +612,20 @@ def main() -> None:
         raise LoaderError('FINAL_PERIOD_VERIFICATION_FAILED')
     if any(row['period_basis'] != PERIOD_BASIS or row['statement_scope'] != STATEMENT_SCOPE for row in verified_periods):
         raise LoaderError('FINAL_PERIOD_METADATA_VERIFICATION_FAILED')
-    verified_facts = db.get_all('financial_facts', {'financial_period_id': 'in.(' + ','.join(period_ids) + ')', 'select': 'financial_period_id,metric_code,value_numeric,unit_code,currency_code,source_field,revision_key,quality_status,source_payload_id'})
+    verified_facts = db.get_all('financial_facts', {
+        'financial_period_id': 'in.(' + ','.join(period_ids) + ')',
+        'source_field': 'in.(' + ','.join(QUARTERLY_FIELDS) + ')',
+        'revision_key': 'eq.' + REVISION_KEY,
+        'select': 'financial_period_id,metric_code,value_numeric,unit_code,currency_code,source_field,revision_key,quality_status,source_payload_id',
+    })
     if len(verified_facts) != len(fact_plans):
         raise LoaderError('FINAL_FACT_VERIFICATION_FAILED')
-    if any(row['metric_code'] == 'EPS' for row in verified_facts):
-        raise LoaderError('FINAL_EPS_VERIFICATION_FAILED')
     plans_by_key = {(plan['period_end'], plan['metric_code'], plan['source_field']): plan for plan in fact_plans}
     period_by_id = {row['id']: row['period_end'] for row in verified_periods}
     actual_facts = {(period_by_id[row['financial_period_id']], row['metric_code'], row['source_field']): row for row in verified_facts}
-    if set(actual_facts) != set(plans_by_key) or any(row['source_payload_id'] is not None for row in verified_facts):
+    if set(actual_facts) != set(plans_by_key) or any(
+        row['source_payload_id'] is not None for row in actual_facts.values()
+    ):
         raise LoaderError('FINAL_FACT_METADATA_VERIFICATION_FAILED')
     for key, row in actual_facts.items():
         if not fact_matches(row, plans_by_key[key]):

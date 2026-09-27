@@ -14,7 +14,7 @@ import requests
 
 from raw_storage_source import ProvenanceIndex, RawStorageSource
 
-DEFAULT_RAW_ROOT = Path(r'D:\Stock Analyzer\Data\Raw')
+DEFAULT_RAW_ROOT = Path(__file__).resolve().parent.parent / 'Data' / 'Raw'
 BUCKET = 'stocklens_raw'
 DIVIDEND_FILE = 'company_report_dividend.json'
 STORAGE_CATEGORY = 'dividend'
@@ -92,18 +92,11 @@ def validate_source(payload: dict[str, Any], ticker: str) -> dict[str, Any]:
         entry = historical.get(str(year))
         if not isinstance(entry, dict):
             raise LoaderError(f'DIVIDEND_YEAR_INVALID: {year}')
-        for field in ('total_yield', 'total_dividend'):
-            if field not in entry:
-                raise LoaderError(f'DIVIDEND_FIELD_MISSING: {year}.{field}')
-            value = entry[field]
-            if value is not None and not is_number(value):
-                raise LoaderError(f'DIVIDEND_FIELD_INVALID: {year}.{field}')
-    for field in ('dividend_ttm', 'payout_ratio'):
-        if field not in dividend:
-            raise LoaderError(f'DIVIDEND_AGGREGATE_MISSING: {field}')
-        value = dividend[field]
+        if 'total_dividend' not in entry:
+            raise LoaderError(f'DIVIDEND_FIELD_MISSING: {year}.total_dividend')
+        value = entry['total_dividend']
         if value is not None and not is_number(value):
-            raise LoaderError(f'DIVIDEND_AGGREGATE_INVALID: {field}')
+            raise LoaderError(f'DIVIDEND_FIELD_INVALID: {year}.total_dividend')
     return dividend
 
 
@@ -124,31 +117,6 @@ def make_fact_plans(dividend: dict[str, Any], ticker: str) -> list[dict[str, Any
             'source_payload_id': None,
             'source_field': f'historical_dividends.{year}.total_dividend',
         })
-        plans.append({
-            'fact_type': 'YIELD',
-            'period_year': year,
-            'event_date': None,
-            'amount_per_share': None,
-            'yield_ratio': entry['total_yield'],
-            'currency_code': 'IDR',
-            'source_label': SOURCE_LABEL,
-            'source_payload_id': None,
-            'source_field': f'historical_dividends.{year}.total_yield',
-        })
-    plans.extend((
-        {
-            'fact_type': 'TTM', 'period_year': None, 'event_date': None,
-            'amount_per_share': dividend['dividend_ttm'], 'yield_ratio': None,
-            'currency_code': 'IDR', 'source_label': SOURCE_LABEL,
-            'source_payload_id': None, 'source_field': 'dividend.dividend_ttm',
-        },
-        {
-            'fact_type': 'PAYOUT_RATIO', 'period_year': None, 'event_date': None,
-            'amount_per_share': None, 'yield_ratio': dividend['payout_ratio'],
-            'currency_code': 'IDR', 'source_label': SOURCE_LABEL,
-            'source_payload_id': None, 'source_field': 'dividend.payout_ratio',
-        },
-    ))
     return plans
 
 
@@ -277,7 +245,7 @@ def main() -> None:
 
     dividend = validate_source(payload, ticker)
     plans = make_fact_plans(dividend, ticker)
-    expected_count = len(EXPECTED_YEARS) * 2 + 2 if ticker == 'AUTO' else len(plans)
+    expected_count = len(EXPECTED_YEARS) if ticker == 'AUTO' else len(plans)
     if len(plans) != expected_count:
         raise LoaderError(f'CANONICAL_FACT_COUNT: expected {expected_count}, got {len(plans)}')
     db = Supabase(required_env('SUPABASE_URL'), required_env('SUPABASE_SERVICE_ROLE_KEY'))
@@ -321,9 +289,6 @@ def main() -> None:
     print('skipped_fact_count=' + str(len(skips)))
     print('conflict_count=0')
     print('annual_total_count=' + str(sum(plan['fact_type'] == 'ANNUAL_TOTAL' for plan in plans)))
-    print('yield_count=' + str(sum(plan['fact_type'] == 'YIELD' for plan in plans)))
-    print('ttm_count=' + str(sum(plan['fact_type'] == 'TTM' for plan in plans)))
-    print('payout_ratio_count=' + str(sum(plan['fact_type'] == 'PAYOUT_RATIO' for plan in plans)))
     print('verified_file_count=1')
     print('checksum_failure_count=0')
 

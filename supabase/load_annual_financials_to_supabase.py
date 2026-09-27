@@ -14,7 +14,7 @@ import requests
 
 from raw_storage_source import ProvenanceIndex, RawStorageSource
 
-DEFAULT_RAW_ROOT = Path(r'D:\Stock Analyzer\Data\Raw')
+DEFAULT_RAW_ROOT = Path(__file__).resolve().parent.parent / 'Data' / 'Raw'
 BUCKET = 'stocklens_raw'
 ANNUAL_FILE = 'company_report_annual.json'
 ANNUAL_CATEGORY = 'annual'
@@ -24,7 +24,7 @@ STATEMENT_SCOPE = 'UNKNOWN'
 PERIOD_BASIS = 'UNKNOWN'
 REVISION_KEY = 'CURRENT'
 
-MONETARY_FIELDS = (
+RAW_MONETARY_FIELDS = (
     'tax', 'ebit', 'ebitda', 'revenue', 'earnings', 'net_debt', 'cash_only',
     'total_debt', 'inventories', 'fixed_assets', 'gross_profit', 'total_assets',
     'total_equity', 'net_cash_flow', 'operating_pnl', 'current_assets',
@@ -36,10 +36,19 @@ MONETARY_FIELDS = (
     'non_operating_income_or_loss', 'interest_expense_non_operating',
 )
 SHARES_FIELD = 'outstanding_shares'
-EXCLUDED_NULL_FIELDS = (
-    'industry_breakdown', 'net_increased_decreased', 'total_cash_and_due_from_banks',
+ANNUAL_FIELDS = (
+    'revenue',
+    'cost_of_revenue',
+    'interest_expense_non_operating',
+    'earnings',
+    'operating_cash_flow',
+    'gross_profit',
+    'current_assets',
+    'current_liabilities',
+    'total_liabilities',
+    'total_equity',
 )
-METRIC_CODES = {field: field.upper() for field in MONETARY_FIELDS}
+METRIC_CODES = {field: field.upper() for field in ANNUAL_FIELDS}
 
 
 class LoaderError(RuntimeError):
@@ -120,7 +129,7 @@ def validate_source(payload: dict[str, Any], ticker: str) -> tuple[list[dict[str
         if isinstance(year, bool) or not isinstance(year, int):
             raise LoaderError(f'ANNUAL_SOURCE_INVALID_YEAR: row {index} year must be an integer')
         years.append(year)
-        for field in MONETARY_FIELDS + (SHARES_FIELD,):
+        for field in RAW_MONETARY_FIELDS + (SHARES_FIELD,):
             if field not in row:
                 raise LoaderError(f'ANNUAL_SOURCE_MISSING_FIELD: row {index} missing {field}')
         for field, value in row.items():
@@ -130,15 +139,6 @@ def validate_source(payload: dict[str, Any], ticker: str) -> tuple[list[dict[str
                 raise LoaderError(f'ANNUAL_SOURCE_INVALID_VALUE: row {index} field {field} must be numeric or null')
     if len(set(years)) != len(years) or tuple(sorted(years)) != EXPECTED_YEARS:
         raise LoaderError(f'ANNUAL_SOURCE_YEAR_RANGE: expected {EXPECTED_YEARS[0]}..{EXPECTED_YEARS[-1]}, got {sorted(years)}')
-    historical_eps = financials.get('historical_eps')
-    if not isinstance(historical_eps, dict):
-        raise LoaderError('ANNUAL_SOURCE_INVALID_SHAPE: historical_eps must be an object')
-    for year in range(2020, 2026):
-        entry = historical_eps.get(str(year))
-        if not isinstance(entry, dict) or 'eps' not in entry:
-            raise LoaderError(f'ANNUAL_SOURCE_MISSING_EPS: historical_eps.{year}.eps')
-        if entry['eps'] is not None and not is_number(entry['eps']):
-            raise LoaderError(f'ANNUAL_SOURCE_INVALID_EPS: historical_eps.{year}.eps')
     return rows, financials
 
 
@@ -153,10 +153,10 @@ def make_period_plan(year: int) -> dict[str, Any]:
     }
 
 
-def make_fact_plans(rows: list[dict[str, Any]], financials: dict[str, Any]) -> list[dict[str, Any]]:
+def make_fact_plans(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     plans: list[dict[str, Any]] = []
     for row in rows:
-        for source_field in MONETARY_FIELDS:
+        for source_field in ANNUAL_FIELDS:
             value = row[source_field]
             plans.append({
                 'period_year': row['year'], 'metric_code': METRIC_CODES[source_field],
@@ -170,15 +170,6 @@ def make_fact_plans(rows: list[dict[str, Any]], financials: dict[str, Any]) -> l
             'period_year': row['year'], 'metric_code': 'OUTSTANDING_SHARES',
             'value_numeric': value, 'unit_code': 'SHARES', 'currency_code': None,
             'source_field': SHARES_FIELD, 'revision_key': REVISION_KEY,
-            'quality_status': 'MISSING' if value is None else 'VALID',
-            'source_payload_id': None,
-        })
-    for year in range(2020, 2026):
-        value = financials['historical_eps'][str(year)]['eps']
-        plans.append({
-            'period_year': year, 'metric_code': 'EPS', 'value_numeric': value,
-            'unit_code': 'IDR_PER_SHARE', 'currency_code': 'IDR',
-            'source_field': f'historical_eps.{year}.eps', 'revision_key': REVISION_KEY,
             'quality_status': 'MISSING' if value is None else 'VALID',
             'source_payload_id': None,
         })
@@ -356,9 +347,9 @@ def main() -> None:
         storage_path = f'sectors/{ticker}/annual/{ANNUAL_FILE}'
         source_label = str(local_path)
 
-    rows, financials = validate_source(payload, ticker)
+    rows, _financials = validate_source(payload, ticker)
     period_plans = [make_period_plan(row['year']) for row in rows]
-    fact_plans = make_fact_plans(rows, financials)
+    fact_plans = make_fact_plans(rows)
     db = Supabase(required_env('SUPABASE_URL'), required_env('SUPABASE_SERVICE_ROLE_KEY'))
     provenance_id = ProvenanceIndex(
         required_env('SUPABASE_URL'),

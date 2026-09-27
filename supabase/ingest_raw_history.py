@@ -15,11 +15,11 @@ Scope rules enforced by this script:
       `ingestion_files` = raw file that is stored in Storage
   No new history tables, no migrations, no canonical conversion.
 - NEVER writes to canonical tables
-  (companies, instruments, financial_periods, financial_facts,
-   prices_daily, dividend_facts).
+  (companies, instruments, sectors, instrument_sector_classifications,
+   financial_periods, financial_facts, prices_daily, dividend_facts).
 - Uploads the raw response AS-IS using the collector's existing write
   convention (json.dump, ensure_ascii=False, indent=2 - same as
-  Phyton/01_download_sectors.py::write_json). No semantic transformation.
+  scripts/data_pipeline/01_download_sectors.py::write_json). No semantic transformation.
 - NEVER overwrites an existing Storage object and never deletes anything.
 - Refuses to run against a bucket other than `stocklens_raw`.
 
@@ -76,14 +76,14 @@ BUCKET = 'stocklens_raw'
 BASE_URL = 'https://api.sectors.app/v2'
 COLLECTOR_VERSION = 'raw-history-ingest-0.1'
 
-DEFAULT_RAW_ROOT = Path(r'D:\Stock Analyzer\Data\Raw')
+DEFAULT_RAW_ROOT = Path(__file__).resolve().parent.parent / 'Data' / 'Raw'
 
 SOURCE_CODE = 'SECTORS_APP'
 
 # ----------------------------------------------------------------------------
 # REQUEST CATALOG
 # ----------------------------------------------------------------------------
-# Every definition mirrors Phyton/01_download_sectors.py exactly (endpoint,
+# Every definition mirrors scripts/data_pipeline/01_download_sectors.py exactly (endpoint,
 # method, parameters, local filename). No endpoint is invented here.
 #
 # `kind`:
@@ -169,7 +169,7 @@ REQUEST_DEFINITIONS: dict[str, dict[str, Any]] = {
     },
 }
 
-# Collector constants reused verbatim (Phyton/01_download_sectors.py).
+# Collector constants reused verbatim (scripts/data_pipeline/01_download_sectors.py).
 MAX_WINDOW_DAYS = 90
 DEFAULT_MIN_DATE = '2020-01-01'
 
@@ -246,7 +246,7 @@ def extract_quarterly_report_dates(raw_data: Any) -> list[str]:
     """
     Read report_date values from the quarterly dates response.
 
-    Mirrors Phyton/01_download_sectors.py::extract_quarterly_report_dates:
+Mirrors scripts/data_pipeline/01_download_sectors.py::extract_quarterly_report_dates:
     accepts plain YYYY-MM-DD strings, date-like keys, and nested containers.
     Never modifies the raw response.
     """
@@ -468,12 +468,6 @@ class SupabaseHistory:
         ticker = symbol.upper()
         provider_symbol = ticker + '.JK'
 
-        companies = self.rest(
-            'GET',
-            'companies',
-            {'provider_identity': 'eq.' + ticker, 'select': 'id'},
-        ) or []
-
         instruments = self.rest(
             'GET',
             'instruments',
@@ -484,7 +478,6 @@ class SupabaseHistory:
         ) or []
 
         counts = {
-            'companies': len(companies),
             'instruments': len(instruments),
             'financial_periods': 0,
             'financial_facts': 0,

@@ -10,7 +10,7 @@ Why a fixture
 The Layer-1 PIT primitives must be verifiable **without** network access and
 without a live database, so their behaviour cannot change between CI runs. This
 script dumps the canonical `prices_daily` rows for one instrument into
-`Testing/fixtures/{ticker}_prices_daily.json`, together with the expected
+`tests/fixtures/{ticker}_prices_daily.json`, together with the expected
 year-end prices and the expected 3-month average volume recorded in the Phase 4
 blueprint.
 
@@ -35,7 +35,7 @@ from typing import Any
 import requests
 
 #: Fixture directory, relative to the repository root.
-FIXTURE_DIR = Path(__file__).resolve().parent.parent / 'Testing' / 'fixtures'
+FIXTURE_DIR = Path(__file__).resolve().parent.parent / 'tests' / 'fixtures'
 
 #: Year-end prices verified in the Phase 4 blueprint (section 4.11.4).
 #: 2019 is `null` because canonical price history starts 2020-01-02, so

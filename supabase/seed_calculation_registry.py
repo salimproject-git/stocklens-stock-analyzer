@@ -45,7 +45,11 @@ from typing import Any
 
 import requests
 
-from calculation_methodology_registry import METHOD_VERSION, methodology_seeds
+from calculation_methodology_registry import (
+    METHOD_VERSION,
+    methodology_seeds,
+    supplemental_methodology_seeds,
+)
 from calculation_parameter_catalogue import all_parameters
 from calculation_registry import RegistryError, canonical_json, sha256_json
 
@@ -132,7 +136,7 @@ def parameter_rows() -> list[dict[str, Any]]:
 def methodology_rows() -> list[dict[str, Any]]:
     """Build the `methodology_versions` rows from the methodology registry."""
     rows: list[dict[str, Any]] = []
-    for seed in methodology_seeds():
+    for seed in methodology_seeds() + supplemental_methodology_seeds():
         rows.append(
             {
                 'method_code': seed['method_code'],

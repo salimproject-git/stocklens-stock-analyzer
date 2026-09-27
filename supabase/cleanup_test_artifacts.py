@@ -59,10 +59,14 @@ PROTECTED_PREFIXES = [
     'sectors/AUTO/manifest/',
 ]
 
+# Canonical and identity tables that cleanup must never mutate.
+
 # Canonical tables that must never be referenced by a deleted file row.
 CANONICAL_TABLES = [
     'companies',
     'instruments',
+    'sectors',
+    'instrument_sector_classifications',
     'financial_periods',
     'financial_facts',
     'prices_daily',

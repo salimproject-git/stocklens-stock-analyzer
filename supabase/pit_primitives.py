@@ -62,7 +62,7 @@ identical to ``Stock_Database!N`` and therefore returns ``Close``. Per the
 Phase 4 rule ("do not silently fix the workbook"), this module models the
 **documented intended** formula, which is the correct quarterly formula
 ``Stock_Database_Quarter!O``. The annual defect is recorded in
-``docs/PHASE4_CALCULATION_BLUEPRINT.md`` section 2.3.
+``docs/archive/PHASE4_CALCULATION_BLUEPRINT.md`` section 2.3.
 """
 
 from __future__ import annotations

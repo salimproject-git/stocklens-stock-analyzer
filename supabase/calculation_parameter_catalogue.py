@@ -582,10 +582,17 @@ PARAMETERS_FORENSIC: tuple[tuple[str, str, Any, str, str, str, str], ...] = (
         '0.05',
         'ratio',
         RESOLUTION_UNRESOLVED_DEFINITION,
-        'FinancialHealth!B16 / D16 text only',
-        'Only the diagnostic text was extractable. The numeric formula for B16 '
-        '(debt growth minus profit growth) must be re-read from the workbook '
-        'before implementation (blueprint open question Q18).',
+        'FinancialHealth!B23 `B16>0.05`; B16 = IFERROR(RRI(Years_Compare, '
+        'INDEX(Range_Total_Liabilities,Years_Compare+1), '
+        'INDEX(Range_Total_Liabilities,1)), 0) - Metric_EPS_CAGR_Short',
+        'Phase 4.2 re-read the workbook and extracted B16 exactly: the '
+        'comparison-window CAGR of TOTAL_LIABILITIES minus the comparison-window '
+        'EPS CAGR. The threshold 0.05 is confirmed by B23. The status stays '
+        'UNRESOLVED_DEFINITION because the extracted formula contradicts the '
+        'documented intent: D16 describes "hutang tumbuh lebih cepat dari Laba" '
+        '(debt versus PROFIT), while the formula subtracts an EPS CAGR, which is '
+        'share-count dependent. Debt-vs-EPS and debt-vs-net-income are different '
+        'rules, so the discrepancy is preserved rather than silently chosen.',
     ),
     (
         'forensic_margin_spike_threshold',
@@ -593,9 +600,42 @@ PARAMETERS_FORENSIC: tuple[tuple[str, str, Any, str, str, str, str], ...] = (
         '0.1',
         'ratio',
         RESOLUTION_UNRESOLVED_DEFINITION,
-        'FinancialHealth!B17 / D17 text only',
-        'Only the diagnostic text was extractable. The numeric formula for B17 '
-        '(margin spike) must be re-read (blueprint open question Q18).',
+        'FinancialHealth!B23 `B17>0.1`; B17 = '
+        '(INDEX(Range_Gross_Profit,1)/INDEX(Range_Revenue,1)) - '
+        'AVERAGE(Range_Gross_Profit/Range_Revenue)',
+        'Phase 4.2 re-read the workbook and extracted B17 exactly: the latest '
+        'annual gross margin minus the mean of the annual gross margins. The '
+        'threshold 0.1 is confirmed by B23. The status stays '
+        'UNRESOLVED_DEFINITION because the average is a mean of ratios, and '
+        'which periods enter it is not settled: the 2019 row has blank COGS in '
+        'Excel (gross margin 100 percent) while canonical data carries '
+        'GROSS_PROFIT = 2188.244 bn for 2019, so the two engines average '
+        'different period sets. See blueprint gap G-2019-COGS.',
+    ),
+    (
+        'forensic_margin_spike_average_mode',
+        METHOD_FORENSIC_FLAGS,
+        'mean_of_annual_ratios',
+        'text_enum',
+        RESOLUTION_RESOLVED,
+        'FinancialHealth!B17 AVERAGE(Range_Gross_Profit/Range_Revenue)',
+        'B17 averages the per-year gross-margin RATIOS, not the ratio of the '
+        'summed gross profit to the summed revenue. The two differ, so the mode '
+        'is versioned rather than assumed.',
+    ),
+    (
+        'forensic_debt_growth_gap_definition',
+        METHOD_FORENSIC_FLAGS,
+        'liabilities_cagr_minus_eps_cagr',
+        'text_enum',
+        RESOLUTION_RESOLVED,
+        'FinancialHealth!B16 (extracted in Phase 4.2)',
+        'Records which of the two competing readings the engine implements. '
+        'The engine reproduces the workbook formula (liabilities CAGR minus EPS '
+        'CAGR) so parity is measurable; the documented-intent variant '
+        '(liabilities CAGR minus net-income CAGR) is deliberately NOT '
+        'implemented, because choosing it would change the reported fraud '
+        'signal without a product decision.',
     ),
 )
 

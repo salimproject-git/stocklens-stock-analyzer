@@ -5,7 +5,6 @@ import hashlib
 import json
 import os
 import sys
-from datetime import date
 from pathlib import Path
 from typing import Any
 
@@ -13,7 +12,7 @@ import requests
 
 from upload_raw_storage_only import StorageClient
 
-DEFAULT_RAW_ROOT = Path(r'D:\Stock Analyzer\Data\Raw')
+DEFAULT_RAW_ROOT = Path(__file__).resolve().parent.parent / 'Data' / 'Raw'
 BUCKET = 'stocklens_raw'
 INFO_FILE = 'company_report_info.json'
 
@@ -82,18 +81,10 @@ def source_values(payload: dict[str, Any], ticker: str) -> dict[str, Any]:
     subsector_name = overview.get('sub_sector')
     if subsector_name is not None and sector_name is None:
         raise RuntimeError('IDENTITY_SOURCE_INVALID: subsector exists without sector')
-    listing_date = overview.get('listing_date')
-    if listing_date is not None:
-        try:
-            date.fromisoformat(str(listing_date))
-        except ValueError as error:
-            raise RuntimeError(f'IDENTITY_SOURCE_INVALID: listing_date={listing_date}') from error
     return {
         'provider_identity': provider_symbol,
         'legal_name': company_name,
-        'website': overview.get('website'),
-        'headquarters': overview.get('address'),
-        'listing_date': listing_date,
+        'company_name': company_name,
         'provider_symbol': provider_symbol,
         'sector_name': sector_name,
         'subsector_name': subsector_name,
@@ -119,6 +110,28 @@ class Supabase:
             raise RuntimeError(f'Supabase GET {table} returned a non-list response')
         return value
 
+    def has_column(self, table: str, column: str) -> bool:
+        """Check a column through PostgREST without exposing database credentials."""
+        response = self.session.get(
+            self.base_url + '/' + table,
+            params={'select': column, 'limit': '0'},
+            timeout=60,
+        )
+        if response.ok:
+            return True
+        try:
+            error = response.json()
+        except ValueError:
+            error = {}
+        code = error.get('code') if isinstance(error, dict) else None
+        message = error.get('message', '') if isinstance(error, dict) else ''
+        if code in {'42703', 'PGRST204'} and column in message:
+            return False
+        raise RuntimeError(
+            f'Supabase schema check {table}.{column} failed '
+            f'({response.status_code}): {response.text[:1000]}'
+        )
+
     def insert(self, table: str, row: dict[str, Any]) -> dict[str, Any]:
         response = self.session.post(
             self.base_url + '/' + table,
@@ -132,6 +145,21 @@ class Supabase:
         rows = response.json()
         if not isinstance(rows, list) or len(rows) != 1:
             raise RuntimeError(f'Supabase INSERT {table} returned an unexpected response')
+        return rows[0]
+
+    def patch(self, table: str, row_id: str, values: dict[str, Any]) -> dict[str, Any]:
+        response = self.session.patch(
+            self.base_url + '/' + table,
+            params={'id': 'eq.' + row_id, 'select': '*'},
+            json=values,
+            headers={'Prefer': 'return=representation'},
+            timeout=60,
+        )
+        if not response.ok:
+            raise RuntimeError(f'Supabase UPDATE {table} failed ({response.status_code}): {response.text[:1000]}')
+        rows = response.json()
+        if not isinstance(rows, list) or len(rows) != 1:
+            raise RuntimeError(f'Supabase UPDATE {table} returned an unexpected response')
         return rows[0]
 
 
@@ -174,98 +202,87 @@ def compare_fields(existing: dict[str, Any], incoming: dict[str, Any], fields: t
     return differences
 
 def load_identity(db: Supabase, ticker: str, values: dict[str, Any]) -> tuple[str, list[str]]:
-    company_fields = ('legal_name', 'website', 'headquarters', 'listing_date')
-    companies = db.get('companies', {'provider_identity': 'eq.' + values['provider_identity'], 'select': '*'})
     notes: list[str] = []
-    if len(companies) > 1:
-        raise RuntimeError('COMPANY_NOT_UNIQUE: %s' % values['provider_identity'])
-    if not companies:
-        company = db.insert('companies', {
-            'provider_identity': values['provider_identity'],
-            **{field: values[field] for field in company_fields},
-        })
-        notes.append('company=INSERT')
-    else:
-        company = companies[0]
-        differences = compare_fields(company, values, company_fields)
-        if differences:
-            notes.append('company=DIFFERENCE ' + '; '.join(differences))
-        else:
-            notes.append('company=SKIP')
-
+    legacy_company_fk = db.has_column('instruments', 'company_id')
+    instrument_columns = 'id,exchange_code,ticker,provider_symbol,currency_code,company_name,sector_name,subsector_name'
+    if legacy_company_fk:
+        instrument_columns += ',company_id'
     instruments = db.get('instruments', {
         'exchange_code': 'eq.IDX',
         'ticker': 'eq.' + ticker,
-        'select': '*',
+        'select': instrument_columns,
     })
     if len(instruments) > 1:
         raise RuntimeError(f'INSTRUMENT_NOT_UNIQUE: IDX/{ticker}')
-    if instruments and instruments[0]['provider_symbol'] != values['provider_symbol']:
-        raise RuntimeError(
-            'INSTRUMENT_PROVIDER_CONFLICT: existing=%r, incoming=%r'
-            % (instruments[0]['provider_symbol'], values['provider_symbol'])
-        )
+
     if instruments:
         instrument = instruments[0]
-        if instrument['company_id'] != company['id']:
-            raise RuntimeError('INSTRUMENT_COMPANY_CONFLICT: existing company differs')
-        notes.append('instrument=SKIP')
+        if instrument['provider_symbol'] != values['provider_symbol']:
+            raise RuntimeError(
+                'INSTRUMENT_PROVIDER_CONFLICT: existing=%r, incoming=%r'
+                % (instrument['provider_symbol'], values['provider_symbol'])
+            )
+        if legacy_company_fk and not instrument.get('company_id'):
+            raise RuntimeError('INSTRUMENT_COMPANY_FK_MISSING: IDX/%s' % ticker)
     else:
-        instrument = db.insert('instruments', {
-            'company_id': company['id'],
+        instrument_values = {
             'exchange_code': 'IDX',
             'ticker': ticker,
             'provider_symbol': values['provider_symbol'],
             'currency_code': 'IDR',
-        })
-        notes.append('instrument=INSERT')
-
-    if values['sector_name'] is None and values['subsector_name'] is None:
-        notes.append('sector=SKIP(no source sector)')
-        return instrument['id'], notes
-    sector_rows = db.get('sectors', {
-        'taxonomy': 'eq.SECTORS_APP',
-        'sector_name': 'eq.' + str(values['sector_name']),
-        'subsector_name': 'eq.' + str(values['subsector_name']) if values['subsector_name'] is not None else 'is.null',
-        'select': '*',
-    })
-    if len(sector_rows) > 1:
-        raise RuntimeError('SECTOR_NOT_UNIQUE: source taxonomy row is ambiguous')
-    if sector_rows:
-        sector = sector_rows[0]
-        notes.append('sector=SKIP')
-    else:
-        sector = db.insert('sectors', {
-            'taxonomy': 'SECTORS_APP',
+            'company_name': values['company_name'],
             'sector_name': values['sector_name'],
             'subsector_name': values['subsector_name'],
-        })
-        notes.append('sector=INSERT')
+        }
+        if legacy_company_fk:
+            companies = db.get('companies', {
+                'provider_identity': 'eq.' + values['provider_identity'],
+                'select': 'id,provider_identity,legal_name',
+            })
+            if len(companies) > 1:
+                raise RuntimeError('COMPANY_NOT_UNIQUE: %s' % values['provider_identity'])
+            if companies:
+                company = companies[0]
+                differences = compare_fields(company, values, ('legal_name',))
+                if differences:
+                    raise RuntimeError('COMPANY_VALUE_CONFLICT: ' + '; '.join(differences))
+                notes.append('legacy_company=SKIP')
+            else:
+                company = db.insert('companies', {
+                    'provider_identity': values['provider_identity'],
+                    'legal_name': values['legal_name'],
+                })
+                notes.append('legacy_company=INSERT(required by existing company_id FK)')
+            instrument_values['company_id'] = company['id']
+        else:
+            notes.append('legacy_company=NOT_REQUIRED(company_id column absent)')
 
-    sector_name = values['sector_name']
-    subsector_name = values['subsector_name'] or ''
-    relationship_key = f'IDX:{ticker}:SECTORS_APP:{sector_name}:{subsector_name}'
-    classifications = db.get('instrument_sector_classifications', {
-        'relationship_key': 'eq.' + relationship_key,
-        'select': '*',
-    })
-    if len(classifications) > 1:
-        raise RuntimeError(f'CLASSIFICATION_NOT_UNIQUE: {relationship_key}')
-    if classifications:
-        classification = classifications[0]
-        if classification['instrument_id'] != instrument['id'] or classification['sector_id'] != sector['id']:
-            raise RuntimeError(f'CLASSIFICATION_RELATIONSHIP_CONFLICT: {relationship_key}')
-        notes.append('classification=SKIP')
-    else:
-        db.insert('instrument_sector_classifications', {
-            'relationship_key': relationship_key,
-            'instrument_id': instrument['id'],
-            'sector_id': sector['id'],
-            'effective_from': None,
-            'effective_to': None,
-            'source_payload_id': None,
-        })
-        notes.append('classification=INSERT(source_payload_id=NULL; Storage provenance limitation)')
+        instrument = db.insert('instruments', instrument_values)
+        notes.append('instrument=INSERT(master fields included)')
+
+    if instruments:
+        master_fields = ('company_name', 'sector_name', 'subsector_name')
+        conflicts = [
+            f'{field}: existing={instrument.get(field)!r}, incoming={values[field]!r}'
+            for field in master_fields
+            if values[field] is not None
+            and instrument.get(field) is not None
+            and instrument[field] != values[field]
+        ]
+        if conflicts:
+            raise RuntimeError('INSTRUMENT_MASTER_VALUE_CONFLICT: ' + '; '.join(conflicts))
+
+        missing_master_values = {
+            field: values[field]
+            for field in master_fields
+            if instrument.get(field) is None and values[field] is not None
+        }
+        if missing_master_values:
+            instrument = db.patch('instruments', instrument['id'], missing_master_values)
+            notes.append('instrument_master=PATCH_MISSING_FIELDS')
+        else:
+            notes.append('instrument_master=SKIP')
+
     return instrument['id'], notes
 
 def main() -> None:
@@ -310,7 +327,8 @@ def main() -> None:
     print(f'instrument_id={instrument_id}')
     for note in notes:
         print(note)
-    print('provenance_limitation=instrument_sector_classifications has no ingestion_files FK; source_payload_id remains NULL')
+    print('company_information_target=instruments(ticker,company_name,sector_name,subsector_name)')
+    print('legacy_company_table=retained for existing company_id foreign key')
 
 
 if __name__ == '__main__':

@@ -261,3 +261,78 @@ def methodology_seeds() -> list[dict[str, Any]]:
             }
         )
     return seeds
+
+
+def supplemental_methodology_seeds() -> list[dict[str, Any]]:
+    """Methodologies added by later additive migrations.
+
+    The nine Phase 4.1 seeds remain frozen for their migration/test contract.
+    New independent methodologies are registered here so the registry checker
+    can still verify them without rewriting that historical seed set.
+    """
+    from calculation_registry import methodology_hashes
+
+    method_code = 'VALUATION_CURRENT'
+    formula_text = (
+        'Peter Lynch adaptive PER/PBV/liquidation; blended PER/PBV sector-type weights; '
+        'quarterly PBV mean minus population standard deviation; Gordon DDM; five-year '
+        'discounted earnings; missing inputs fail closed.'
+    )
+    parameter_spec: dict[str, Any] = {
+        'reference_version': '1.0.0',
+        'years_compare_thresholds': {
+            'years_avail_ge_7': '5', 'years_avail_ge_5': '3',
+            'years_avail_ge_3': '2', 'default': '0',
+        },
+        'target_per_by_type': {
+            'SLOW GROWER': {'bottom': '8', 'top': '12'},
+            'STALWART': {'bottom': '10', 'top': '16'},
+            'STALWART_FINANCIAL': {'bottom': '15', 'top': '25'},
+            'FAST GROWER': {
+                'bottom': 'growth_rate * 100 * 0.8',
+                'top': 'growth_rate * 100 * 1.2',
+            },
+            'CYCLICAL': {'bottom': '0', 'top': '0'},
+            'ASSET PLAY': {'bottom': '0', 'top': '0'},
+            'TURN AROUND': {'bottom': '0', 'top': '0'},
+            'DEFAULT': {'bottom': '0', 'top': '0'},
+        },
+        'target_pbv_by_mode': {
+            'Conservative_bottom': '0.4', 'Moderate_bottom': '0.5',
+            'Aggressive_bottom': '0.7', 'Conservative_top': '0.8',
+            'Moderate_top': '1', 'Aggressive_top': '1.2',
+        },
+        'type_to_valuation_mode': {
+            'FAST GROWER': 'Aggressive', 'CYCLICAL': 'Moderate',
+            'ASSET PLAY': 'Moderate', 'STALWART': 'Moderate',
+            'TURN AROUND': 'Conservative',
+            'DEFAULT': 'Conservative',
+        },
+        'mean_reversion_min_quarters': '3',
+        'pe_average_outlier_factor': '0.25',
+        'ddm_growth_cap': '0.04',
+        'equity_risk_premium_ddm': '0.06',
+        'discounted_earnings_growth_cap': '0.15',
+        'discounted_earnings_per_cap': '25',
+        'discounted_earnings_horizon_years': '5',
+        'discounted_earnings_discount_premium': '0.04',
+        'quarterly_shares_policy': 'latest_annual_share_count_as_approximation',
+        'risk_free_rate': 'UNRESOLVED_SOURCE',
+    }
+    formula_hash, parameter_hash = methodology_hashes(formula_text, parameter_spec)
+    return [{
+        'method_code': method_code,
+        'method_version': '1.0.0',
+        'method_name': 'Current Stock Valuation',
+        'description': (
+            'Five workbook current-valuation methods using a selected active projection scenario, '
+            'explicit stock type, history windows and versioned reference tables.'
+        ),
+        'formula_text': formula_text,
+        'formula_hash': formula_hash,
+        'parameter_spec': parameter_spec,
+        'parameter_hash': parameter_hash,
+        'code_version': 'stocklens-valuation-v1',
+        'input_vocabulary_version': INPUT_VOCABULARY_VERSION,
+        'status': 'DRAFT',
+    }]

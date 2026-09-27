@@ -15,7 +15,7 @@ import requests
 
 from raw_storage_source import ProvenanceIndex, RawStorageSource
 
-DEFAULT_RAW_ROOT = Path(r'D:\Stock Analyzer\Data\Raw')
+DEFAULT_RAW_ROOT = Path(__file__).resolve().parent.parent / 'Data' / 'Raw'
 BUCKET = 'stocklens_raw'
 EXPECTED_FIELDS = ('open', 'high', 'low', 'close', 'volume', 'market_cap')
 DAILY_CATEGORY = 'daily'

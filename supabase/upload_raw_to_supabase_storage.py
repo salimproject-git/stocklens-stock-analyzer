@@ -12,7 +12,7 @@ from urllib.parse import quote
 
 import requests
 
-DEFAULT_RAW_ROOT = Path(r'D:\Stock Analyzer\Data\Raw')
+DEFAULT_RAW_ROOT = Path(__file__).resolve().parent.parent / 'Data' / 'Raw'
 BUCKET = 'stocklens_raw'
 
 def required_env(name: str) -> str:
