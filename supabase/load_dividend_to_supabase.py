@@ -81,6 +81,18 @@ def validate_source(payload: dict[str, Any], ticker: str) -> dict[str, Any]:
     if not isinstance(dividend, dict):
         raise LoaderError('DIVIDEND_SOURCE_INVALID_SHAPE: dividend must be an object')
     historical = dividend.get('historical_dividends')
+    if historical is None or historical == {}:
+        # A company with no recorded dividend history is a legitimate state, not
+        # corrupt input: the provider returns `null` for these tickers (ARII,
+        # DSSA, GOLD among the current set). Treating it as an error blocked the
+        # whole pipeline for such a ticker. Normalise to an empty mapping so the
+        # caller loads zero dividend facts and everything downstream keeps
+        # working: an absent dividend series is all zeros, which is exactly what
+        # a no-dividend company should produce.
+        if ticker == 'AUTO':
+            raise LoaderError(f'DIVIDEND_YEAR_RANGE: expected {EXPECTED_YEARS}, got none')
+        dividend['historical_dividends'] = {}
+        return dividend
     if not isinstance(historical, dict):
         raise LoaderError('DIVIDEND_SOURCE_INVALID_SHAPE: historical_dividends must be an object')
     years = tuple(sorted(int(year) for year in historical if str(year).isdigit()))

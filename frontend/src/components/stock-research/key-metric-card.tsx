@@ -2,15 +2,21 @@ import React from "react";
 import { StockDetail } from "@/data/mock-stock-details";
 import { formatRupiah } from "@/utils/currency";
 import { getMainValuationMethod } from "@/lib/analysis";
+import { toDayLabel } from "@/utils/dates";
 export function KeyMetricSummary({ stock }: { stock: StockDetail }) {
+  // The card states *when* the price was last refreshed instead of a daily
+  // change: the database stores point-in-time closes, so a "% today" figure
+  // would imply an intraday feed the pipeline does not have.
+  const lastDataLabel = `Last updated: ${toDayLabel(stock.updatedAt) ?? "Not available"}`;
+
   return (
     <section className="mb-6 grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-5">
       {/* 1. Current Price */}
       <KeyMetricCard
         label="Current Price"
         value={formatRupiah(stock.price)}
-        subtext={`+${stock.changePercent.toFixed(2).replace(".", ",")}% today`}
-        subtextTone="green"
+        subtext={lastDataLabel}
+        subtextTone="slate"
         icon={<TrendingUpIcon className="h-4 w-4" />}
         iconTone="green"
       />
@@ -29,7 +35,7 @@ export function KeyMetricSummary({ stock }: { stock: StockDetail }) {
       {/* 3. Margin of Safety */}
       <KeyMetricCard
         label="Margin of Safety"
-        value={`${stock.mos.toFixed(1).replace(".", ",")}%`}
+        value={stock.mos != null ? `${stock.mos.toFixed(1).replace(".", ",")}%` : "Not available"}
         subtext="Below intrinsic value"
         secondarySubtext={`Method: ${getMainValuationMethod(stock.stockType)}`}
         subtextTone="green"
@@ -50,7 +56,11 @@ export function KeyMetricSummary({ stock }: { stock: StockDetail }) {
       {/* 5. Historical Evidence */}
       <KeyMetricCard
         label="Historical Evidence"
-        value={`${stock.evidenceWins} / ${stock.evidenceTotal}`}
+        value={
+          stock.evidenceWins != null && stock.evidenceTotal != null
+            ? `${stock.evidenceWins} / ${stock.evidenceTotal}`
+            : "Not available"
+        }
         subtext="successful cases"
         secondarySubtext="Similar conditions in the past"
         subtextTone="slate"

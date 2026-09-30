@@ -1,6 +1,8 @@
 ﻿import React from "react";
 import { StockDetail } from "@/data/mock-stock-details";
 import { analyzeHistoricalGrowth } from "@/lib/analysis";
+import { ChartEmptyState } from "@/components/ui/chart-empty-state";
+import { formatDecimal } from "@/utils/currency";
 
 type AnnualTrendCard = NonNullable<StockDetail["financialHistory"]>["annualTrendCards"][number];
 type AnnualTable = NonNullable<StockDetail["financialHistory"]>["annualTable"];
@@ -26,9 +28,9 @@ function parseNumeric(value: string | undefined) {
 }
 
 function formatTick(value: number) {
-  return new Intl.NumberFormat("id-ID", {
-    maximumFractionDigits: value >= 100 ? 0 : 2,
-  }).format(value);
+  // Large axis values stay readable without decimals; everything else uses the
+  // shared two-decimal default.
+  return formatDecimal(value, value >= 100 ? 0 : 2);
 }
 
 // Projected periods are detected from the period label so reusable components
@@ -344,7 +346,7 @@ export function HistoricalGrowthSection({ stock }: { stock: StockDetail }) {
       )}
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-        {revenueSeries && (
+        {revenueSeries ? (
           <LineChart
             primary={revenueSeries}
             secondary={netIncomeSeries}
@@ -354,12 +356,26 @@ export function HistoricalGrowthSection({ stock }: { stock: StockDetail }) {
                 : `Revenue across the available annual periods, reported in ${revenueSeries.unit}.`
             }
           />
+        ) : (
+          <ChartEmptyState
+            title="Revenue & Net Income"
+            subtitle="Annual trend"
+            hint="The annual revenue series is not available in the database for this ticker yet."
+            height={260}
+          />
         )}
 
-        {epsSeries && (
+        {epsSeries ? (
           <LineChart
             primary={epsSeries}
             caption={`Earnings per share across the available annual periods, reported in ${epsSeries.unit}.`}
+          />
+        ) : (
+          <ChartEmptyState
+            title="Earnings per Share (EPS)"
+            subtitle="Annual trend"
+            hint="Annual EPS cannot be computed yet because earnings or the share count are not stored in the database."
+            height={260}
           />
         )}
       </div>

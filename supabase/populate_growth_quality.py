@@ -8,9 +8,12 @@ calculation run and its result rows to the existing Phase 4.2 result tables.
 Annual Class-B metrics are calculated as one trailing-history snapshot per
 annual period, capped at the requested maximum window (seven years by default).
 Quarterly growth and quality metrics are calculated independently for every
-available quarter. Use ``--ticker`` to select the instrument. This script does
-not write MetricsClassification outputs because projected valuation inputs are
-not stored in the canonical tables.
+available quarter. Use ``--ticker`` to select the instrument.
+
+MetricsClassification is written by ``populate_metrics_classification.py``,
+which derives the classifier inputs from these annual results plus the active
+projection scenario. Keeping the two runs separate keeps each run's
+``input_snapshot`` limited to what that calculation actually consumed.
 """
 
 from __future__ import annotations
@@ -510,7 +513,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         f"Quarterly metrics: {counts[QUARTERLY_GROWTH_TABLE]} growth rows + "
         f"{counts[QUARTERLY_QUALITY_TABLE]} quality rows"
     )
-    print('Classification final: not written (projection/valuation inputs are unavailable).')
+    print(
+        'Classification final: written separately by '
+        'populate_metrics_classification.py (derives its inputs from these rows).'
+    )
     print('Point-in-time: not claimed; report_date and available_date are missing.')
 
     if not args.apply or db is None:

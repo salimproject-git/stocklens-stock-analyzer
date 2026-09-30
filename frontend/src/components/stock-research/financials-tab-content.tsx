@@ -6,6 +6,7 @@ import { FinancialTrendCard } from "./financial-trend-card";
 import { FinancialMetricsSummary } from "./financial-metrics-summary";
 import { HistoricalFinancialTable } from "./historical-financial-table";
 import { classifyFinancialMetric } from "@/lib/analysis";
+import { ChartEmptyState } from "@/components/ui/chart-empty-state";
 
 type PeriodType = "annual" | "quarterly";
 type FinancialMetric = NonNullable<StockDetail["financialHistory"]>["annualMetrics"][number];
@@ -50,7 +51,7 @@ function getMetricContext(
     "Total Assets": "Rp Trillion",
     "Total Equity": "Rp Trillion",
     "Total Liabilities": "Rp Trillion",
-    "Interest Expense": "M Rp",
+    "Interest Expense": "Rp Billion",
   };
 
   return units[metric.label] ?? metric.subtext;
@@ -131,11 +132,24 @@ export function FinancialsTabContent({ stock }: { stock: StockDetail }) {
       </div>
 
       {/* Primary Financial Trend Cards */}
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {trendCards.map((card) => (
-          <FinancialTrendCard key={card.id} card={card} />
-        ))}
-      </div>
+      {trendCards.length > 0 ? (
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {trendCards.map((card) => (
+            <FinancialTrendCard key={card.id} card={card} />
+          ))}
+        </div>
+      ) : (
+        <ChartEmptyState
+          title={isAnnual ? "Annual Financial Trends" : "Quarterly Financial Trends"}
+          subtitle="Revenue, net income, and operating cash flow trends"
+          hint={
+            isAnnual
+              ? `Annual statement data for ${stock.ticker} is not stored in the database yet, so the trend chart cannot be drawn.`
+              : `Quarterly statement data for ${stock.ticker} is not stored in the database yet, so the trend chart cannot be drawn.`
+          }
+          height={200}
+        />
+      )}
 
       {/* Supporting Financial Metrics */}
       <FinancialMetricsSummary metrics={metrics} />

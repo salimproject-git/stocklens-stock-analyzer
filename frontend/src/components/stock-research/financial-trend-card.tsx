@@ -1,5 +1,6 @@
 import React from "react";
 import { StockDetail } from "@/data/mock-stock-details";
+import { formatDecimal } from "@/utils/currency";
 
 type TrendCardData = NonNullable<StockDetail["financialHistory"]>["annualTrendCards"][number];
 
@@ -31,7 +32,7 @@ export function FinancialTrendCard({ card }: { card: TrendCardData }) {
               <div key={item.year} className="flex flex-1 flex-col items-center gap-1 h-full justify-end">
                 {isLatest && (
                   <span className="text-[10px] font-bold text-[#f4d18b]">
-                    {item.value}
+                    {formatDecimal(item.value)}
                   </span>
                 )}
                 <div className="w-full max-w-[28px] h-full flex items-end rounded-t bg-white/5">

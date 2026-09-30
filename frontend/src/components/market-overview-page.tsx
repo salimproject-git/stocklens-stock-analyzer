@@ -2,49 +2,85 @@
 
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { useMemo, useState } from "react";
-import { mockMarketOverviewStocks, type MarketOverviewStock } from "@/data/mock-stock-details";
-import { formatRupiah as formatCurrencyRupiah, formatRupiahValue } from "@/utils/currency";
+import { useState } from "react";
+import type { MarketOverviewStock } from "@/lib/stock-types";
+import type { MarketOverviewData } from "@/lib/stock-data";
+import {
+  DEFAULT_MARKET_PAGE_SIZE,
+  MARKET_PAGE_SIZE_OPTIONS,
+  parseMarketPageSize,
+  type MarketPageSize,
+} from "@/lib/market-page-size";
+import { formatRupiah as formatCurrencyRupiah } from "@/utils/currency";
+import { UnavailableBadge } from "@/components/ui/unavailable-badge";
 
 type ViewMode = "grid" | "list";
 
 const SIDEBAR_WIDTH = 240;
-const PAGE_SIZE = 5;
 
-const totalPages = Math.ceil(mockMarketOverviewStocks.length / PAGE_SIZE);
+type MarketOverviewPageProps = {
+  initialData: MarketOverviewData;
+  currentPage: number;
+};
 
-export function MarketOverviewPage() {
-  const [currentPage, setCurrentPage] = useState(1);
+export function MarketOverviewPage({ initialData, currentPage }: MarketOverviewPageProps) {
+  const router = useRouter();
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
+  // Seeded from the server so the picker reflects `?size=` on first paint, and
+  // then owned by the client to keep the selection responsive while the next
+  // page streams in.
+  const [pageSize, setPageSize] = useState<MarketPageSize>(() =>
+    parseMarketPageSize(initialData.pageSize),
+  );
 
-  const visibleStocks = useMemo(() => {
-    const start = (currentPage - 1) * PAGE_SIZE;
-    return mockMarketOverviewStocks.slice(start, start + PAGE_SIZE);
-  }, [currentPage]);
-
+  // Derived from the *returned* page size rather than a hardcoded constant, so
+  // the page count cannot drift when the size changes.
+  const effectivePageSize =
+    initialData.pageSize > 0 ? initialData.pageSize : DEFAULT_MARKET_PAGE_SIZE;
+  const totalPages = Math.max(1, Math.ceil(initialData.totalCount / effectivePageSize));
+  const visibleStocks = initialData.stocks;
   const showingCount = visibleStocks.length;
+
+  const handlePageChange = (page: number) => {
+    router.push(buildMarketHref(page, pageSize));
+  };
+
+  const handlePageSizeChange = (nextSize: MarketPageSize) => {
+    setPageSize(nextSize);
+    // Reset to page 1: page 3 of 5-per-page may not exist at 20-per-page, and
+    // the server clamps out-of-range pages, so staying put would silently
+    // renumber the view.
+    router.push(buildMarketHref(1, nextSize));
+  };
 
   return (
     <>
       <PageIntro />
       <Toolbar
         showingCount={showingCount}
-        totalCount={mockMarketOverviewStocks.length}
+        totalCount={initialData.totalCount}
         viewMode={viewMode}
         onViewModeChange={setViewMode}
+        pageSize={pageSize}
+        onPageSizeChange={handlePageSizeChange}
       />
       <StockCollection
         stocks={visibleStocks}
         viewMode={viewMode}
-        showDiscoveryCard={currentPage === 1}
+        showDiscoveryCard={currentPage >= totalPages}
       />
       <Pagination
         currentPage={currentPage}
         totalPages={totalPages}
-        onPageChange={setCurrentPage}
+        onPageChange={handlePageChange}
       />
     </>
   );
+}
+
+/** Keeps `page` and `size` together so neither is dropped when the other changes. */
+function buildMarketHref(page: number, size: MarketPageSize) {
+  return `/market?page=${page}&size=${size}`;
 }
 
 function Sidebar() {
@@ -133,18 +169,29 @@ function Toolbar({
   totalCount,
   viewMode,
   onViewModeChange,
+  pageSize,
+  onPageSizeChange,
 }: {
   showingCount: number;
   totalCount: number;
   viewMode: ViewMode;
   onViewModeChange: (mode: ViewMode) => void;
+  pageSize: MarketPageSize;
+  onPageSizeChange: (size: MarketPageSize) => void;
 }) {
   return (
-    <section className="mt-4 flex items-center justify-between gap-4">
-      <p className="shrink-0 whitespace-nowrap text-[13px] text-[#ced7e5]">
-        Showing {showingCount} of {totalCount} stocks
+    <section className="mt-4 flex flex-wrap items-center justify-between gap-4">
+      <p className="flex shrink-0 flex-wrap items-center gap-x-1.5 whitespace-nowrap text-[13px] text-[#ced7e5]">
+        <span>Showing</span>
+        <PageSizeSelect pageSize={pageSize} onPageSizeChange={onPageSizeChange} />
+        <span>of {totalCount} stocks</span>
+        {/* Only on a short last page: the dropdown states the chosen page size,
+            so without this the sentence would overstate what is on screen. */}
+        {showingCount < pageSize ? (
+          <span className="text-[#8f9db1]">({showingCount} on this page)</span>
+        ) : null}
       </p>
-      <div className="flex min-w-0 items-center justify-end gap-2">
+      <div className="flex min-w-0 flex-wrap items-center justify-end gap-2">
         <FilterPill label="All Sectors" />
         <FilterPill label="All Stock Type" size="wide" />
         <FilterPill label="Syariah" />
@@ -159,6 +206,43 @@ function Toolbar({
         </button>
       </div>
     </section>
+  );
+}
+
+/**
+ * Inline page-size picker that sits inside the "Showing … of N stocks"
+ * sentence. It keeps the sentence's own type size (13px) but is drawn as a
+ * boxed control, so it reads as something clickable rather than as a plain
+ * number.
+ *
+ * A native `<select>` is used on purpose: it already handles keyboard
+ * navigation, focus and the mobile picker sheet, which a custom dropdown would
+ * have to reimplement for four static options.
+ */
+function PageSizeSelect({
+  pageSize,
+  onPageSizeChange,
+}: {
+  pageSize: MarketPageSize;
+  onPageSizeChange: (size: MarketPageSize) => void;
+}) {
+  return (
+    <span className="relative inline-flex shrink-0 items-center">
+      <select
+        value={pageSize}
+        onChange={(event) => onPageSizeChange(parseMarketPageSize(event.target.value))}
+        aria-label="Stocks per page"
+        title="Stocks per page"
+        className="cursor-pointer appearance-none rounded-lg border border-white/15 bg-[#0c1728]/90 py-0.5 pl-2 pr-6 text-[13px] font-semibold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] outline-none transition hover:border-[#f2bb5c]/50 hover:bg-[#12203a] focus-visible:border-[#f2bb5c]/70 focus-visible:ring-1 focus-visible:ring-[#f2bb5c]/40"
+      >
+        {MARKET_PAGE_SIZE_OPTIONS.map((option) => (
+          <option key={option} value={option} className="bg-[#091322] text-[#d9e1ed]">
+            {option}
+          </option>
+        ))}
+      </select>
+      <ChevronDownIcon className="pointer-events-none absolute right-1.5 h-3.5 w-3.5 text-[#8f9db1]" />
+    </span>
   );
 }
 
@@ -237,10 +321,8 @@ function StockCollection({
   if (viewMode === "list") {
     return (
       <section className="mt-4 space-y-4">
-        {stocks.map((stock) => (
-          <StockCard key={stock.ticker} stock={stock} compact />
-        ))}
-        {showDiscoveryCard ? <DiscoveryCard compact /> : null}
+        <StockTable stocks={stocks} />
+        {showDiscoveryCard ? <DiscoveryCard /> : null}
       </section>
     );
   }
@@ -255,18 +337,25 @@ function StockCollection({
   );
 }
 
-function StockCard({ stock, compact = false }: { stock: MarketOverviewStock; compact?: boolean }) {
+/** Verdict pill colours, shared by the grid card and the list table. */
+function verdictToneClass(verdict: MarketOverviewStock["verdict"]) {
+  if (verdict === "Undervalued") return "border-[#1fcf86]/35 bg-[#0d2b22] text-[#3ef0a9]";
+  if (verdict === "Overvalued") return "border-[#ff4b5f]/30 bg-[#32161e] text-[#ff5f73]";
+  if (verdict === "Not available") return "border-[#8f9db1]/30 bg-[#1a2332]/60 text-[#9aa9bf]";
+  return "border-[#c79d51]/35 bg-[#2f2717] text-[#f1c56d]";
+}
+
+function isPositiveMove(stock: MarketOverviewStock) {
+  return (stock.change ?? 0) >= 0;
+}
+
+function StockCard({ stock }: { stock: MarketOverviewStock }) {
   const router = useRouter();
 
-  const isPositive = stock.change >= 0;
+  const isPositive = isPositiveMove(stock);
   const priceTone = isPositive ? "text-[#49f3ae]" : "text-[#ff5967]";
   const sparklineTone = isPositive ? "#2de49d" : "#ff485f";
-  const verdictTone =
-    stock.verdict === "Undervalued"
-      ? "border-[#1fcf86]/35 bg-[#0d2b22] text-[#3ef0a9]"
-      : stock.verdict === "Overvalued"
-        ? "border-[#ff4b5f]/30 bg-[#32161e] text-[#ff5f73]"
-        : "border-[#c79d51]/35 bg-[#2f2717] text-[#f1c56d]";
+  const verdictTone = verdictToneClass(stock.verdict);
 
   const handleCardClick = () => {
     router.push(`/market/${stock.ticker}`);
@@ -300,10 +389,10 @@ function StockCard({ stock, compact = false }: { stock: MarketOverviewStock; com
         "transition duration-200 ease-out",
         "hover:-translate-y-0.5 hover:border-white/20 hover:shadow-[0_28px_56px_rgba(0,0,0,0.38)]",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f2bb5c]/60",
-        compact ? "flex gap-5 p-5" : "p-[14px]",
+        "p-[14px]",
       ].join(" ")}
     >
-      <div className={compact ? "flex-1" : undefined}>
+      <div>
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
             <h2 className="text-[16px] font-semibold tracking-[-0.02em] text-white md:text-[17px]">
@@ -333,18 +422,12 @@ function StockCard({ stock, compact = false }: { stock: MarketOverviewStock; com
 
         <div
           className={
-            compact
-              ? "mt-5 grid grid-cols-[minmax(0,180px)_minmax(0,1fr)] items-end gap-5"
-              : "mt-3.5 grid grid-cols-[minmax(0,0.85fr)_minmax(120px,1.15fr)] items-end gap-4"
+            "mt-3.5 grid grid-cols-[minmax(0,0.85fr)_minmax(120px,1.15fr)] items-end gap-4"
           }
         >
           <div>
             <p className="text-[16px] font-semibold tracking-[-0.03em] text-white sm:text-[17px]">
               {formatRupiah(stock.price)}
-            </p>
-
-            <p className={["mt-1 text-[14px] font-semibold", priceTone].join(" ")}>
-              {formatSignedRupiah(stock.change)} ({formatPercent(stock.changePercent)})
             </p>
           </div>
 
@@ -370,24 +453,33 @@ function StockCard({ stock, compact = false }: { stock: MarketOverviewStock; com
           </div>
 
           <MetricBlock label="MoS">
-            <span className={["text-[16px] font-semibold", priceTone].join(" ")}>
-              {formatSignedPercent(stock.mos)}
-            </span>
+            {stock.mos != null ? (
+              <span className={["text-[16px] font-semibold", priceTone].join(" ")}>
+                {formatSignedPercent(stock.mos)}
+              </span>
+            ) : (
+              <UnavailableBadge />
+            )}
           </MetricBlock>
 
           <MetricBlock label="Historical Evidence">
-            <div className="text-[16px] font-semibold text-white">
-              {stock.evidenceWins} / {stock.evidenceTotal}
-            </div>
-
-            <div className="mt-0.5 text-[11px] text-[#a4afbf]">
-              successful cases
-            </div>
+            {stock.evidenceWins != null && stock.evidenceTotal != null ? (
+              <>
+                <div className="text-[16px] font-semibold text-white">
+                  {stock.evidenceWins} / {stock.evidenceTotal}
+                </div>
+                <div className="mt-0.5 text-[11px] text-[#a4afbf]">
+                  successful cases
+                </div>
+              </>
+            ) : (
+              <UnavailableBadge />
+            )}
           </MetricBlock>
         </div>
 
         <div className="mt-3.5 flex items-center justify-between gap-4 text-[12px] text-[#9eabbe]">
-          <span>Updated {stock.updatedAt}</span>
+          <span>Updated {stock.updatedAt ?? "Not available"}</span>
 
           <span className="flex items-center gap-1.5 text-[12px] font-semibold text-[#efbf63] transition group-hover:text-[#ffd88a]">
             View Analysis
@@ -396,6 +488,134 @@ function StockCard({ stock, compact = false }: { stock: MarketOverviewStock; com
         </div>
       </div>
     </article>
+  );
+}
+
+/**
+ * List view: the same fields the grid card shows, laid out as one wide table so
+ * many stocks can be scanned down a single column each instead of across
+ * separate cards.
+ */
+function StockTable({ stocks }: { stocks: MarketOverviewStock[] }) {
+  const router = useRouter();
+
+  const openStock = (ticker: string) => router.push(`/market/${ticker}`);
+  const handleRowKeyDown = (
+    event: React.KeyboardEvent<HTMLTableRowElement>,
+    ticker: string,
+  ) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      openStock(ticker);
+    }
+  };
+
+  return (
+    <div className="overflow-x-auto rounded-2xl border border-white/10 bg-[linear-gradient(180deg,_rgba(11,23,37,0.94),_rgba(7,16,28,0.96))] shadow-[0_24px_48px_rgba(0,0,0,0.28)]">
+      <table className="w-full min-w-[1100px] border-collapse text-left text-xs">
+        <thead className="bg-[#081523] text-[10px] uppercase tracking-[0.1em] text-[#7f8fa6]">
+          <tr>
+            <th className="whitespace-nowrap px-4 py-3 font-semibold">Ticker</th>
+            <th className="whitespace-nowrap px-4 py-3 font-semibold">Sector</th>
+            <th className="whitespace-nowrap px-4 py-3 font-semibold">Stock Type</th>
+            <th className="whitespace-nowrap px-4 py-3 font-semibold">Price</th>
+            <th className="whitespace-nowrap px-4 py-3 font-semibold">1Y Trend</th>
+            <th className="whitespace-nowrap px-4 py-3 font-semibold">Valuation</th>
+            <th className="whitespace-nowrap px-4 py-3 font-semibold">MoS</th>
+            <th className="whitespace-nowrap px-4 py-3 font-semibold">Historical Evidence</th>
+            <th className="whitespace-nowrap px-4 py-3 font-semibold">Updated</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-white/[0.06]">
+          {stocks.map((stock) => (
+            <tr
+              key={stock.ticker}
+              role="link"
+              tabIndex={0}
+              onClick={() => openStock(stock.ticker)}
+              onKeyDown={(event) => handleRowKeyDown(event, stock.ticker)}
+              className="cursor-pointer transition hover:bg-white/[0.03] focus-visible:bg-white/[0.04] focus-visible:outline-none"
+            >
+              <td className="px-4 py-3 align-middle">
+                <div className="text-[13px] font-semibold tracking-[-0.01em] text-white">
+                  {stock.ticker}
+                </div>
+                <div className="mt-0.5 max-w-[220px] truncate text-[11px] leading-4 text-[#8f9db1]">
+                  {stock.companyName}
+                </div>
+              </td>
+
+              <td className="whitespace-nowrap px-4 py-3 align-middle">
+                <TagChip label={stock.sector} tone="blue" />
+              </td>
+
+              <td className="whitespace-nowrap px-4 py-3 align-middle">
+                <TagChip label={stock.stockType} tone="slate" />
+              </td>
+
+              <td className="whitespace-nowrap px-4 py-3 align-middle">
+                <span
+                  className={[
+                    "text-[13px] font-semibold",
+                    isPositiveMove(stock) ? "text-[#49f3ae]" : "text-[#ff5967]",
+                  ].join(" ")}
+                >
+                  {formatRupiah(stock.price)}
+                </span>
+              </td>
+
+              <td className="w-[170px] px-4 py-3 align-middle">
+                <Sparkline
+                  className="max-w-[170px]"
+                  points={stock.sparkline}
+                  stroke={isPositiveMove(stock) ? "#2de49d" : "#ff485f"}
+                />
+              </td>
+
+              <td className="whitespace-nowrap px-4 py-3 align-middle">
+                <span
+                  className={[
+                    "inline-flex rounded-[10px] border px-2.5 py-1 text-[11px] font-semibold",
+                    verdictToneClass(stock.verdict),
+                  ].join(" ")}
+                >
+                  {stock.verdict}
+                </span>
+              </td>
+
+              <td className="whitespace-nowrap px-4 py-3 align-middle">
+                {stock.mos != null ? (
+                  <span
+                    className={[
+                      "text-[13px] font-semibold",
+                      isPositiveMove(stock) ? "text-[#49f3ae]" : "text-[#ff5967]",
+                    ].join(" ")}
+                  >
+                    {formatSignedPercent(stock.mos)}
+                  </span>
+                ) : (
+                  <UnavailableBadge />
+                )}
+              </td>
+
+              <td className="whitespace-nowrap px-4 py-3 align-middle">
+                {stock.evidenceWins != null && stock.evidenceTotal != null ? (
+                  <span className="text-[13px] font-semibold text-white">
+                    {stock.evidenceWins} / {stock.evidenceTotal}
+                  </span>
+                ) : (
+                  <UnavailableBadge />
+                )}
+              </td>
+
+              <td className="whitespace-nowrap px-4 py-3 align-middle text-[11px] text-[#9eabbe]">
+                {stock.updatedAt ?? "Not available"}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }
 
@@ -424,7 +644,7 @@ function TagChip({
   return (
     <span
       className={[
-        "rounded-full px-3 py-1.5 text-[12px] font-medium",
+        "rounded-full px-2 py-0.5 text-[10px] font-medium leading-4",
         tone === "blue"
           ? "bg-[#123551] text-[#92cdf4]"
           : "bg-white/8 text-[#ced8e6]",
@@ -435,12 +655,12 @@ function TagChip({
   );
 }
 
-function DiscoveryCard({ compact = false }: { compact?: boolean }) {
+function DiscoveryCard() {
   return (
     <article
       className={[
         "relative overflow-hidden rounded-[20px] border border-white/10 bg-[radial-gradient(circle_at_top,_rgba(242,187,92,0.12),_transparent_38%),linear-gradient(180deg,_rgba(12,22,35,0.96),_rgba(9,18,29,0.98))] shadow-[0_24px_48px_rgba(0,0,0,0.28)]",
-        compact ? "p-5" : "min-h-[258px] p-6",
+        "min-h-[258px] p-6",
       ].join(" ")}
     >
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,_rgba(242,187,92,0.08),_transparent_45%)]" />
@@ -545,6 +765,15 @@ function Sparkline({
 }) {
   const width = 124;
   const height = 44;
+
+  if (points.length < 2) {
+    return (
+      <div className={["flex min-w-0 w-full items-end justify-end gap-3", className ?? ""].join(" ")}>
+        <span className="text-[11px] text-[#8f9db1]">Not available</span>
+      </div>
+    );
+  }
+
   const max = Math.max(...points);
   const min = Math.min(...points);
   const range = max - min || 1;
@@ -590,24 +819,13 @@ function Sparkline({
   );
 }
 
-function formatRupiah(value: number) {
+function formatRupiah(value: number | null) {
+  if (value == null || !Number.isFinite(value)) return "N/A";
   return formatCurrencyRupiah(value);
 }
 
-function formatSignedRupiah(value: number) {
-  const sign = value > 0 ? "+" : "";
-  return `${sign}${formatRupiahValue(value).replace(/^Rp/, "")}`;
-}
-
-function formatPercent(value: number) {
-  const sign = value > 0 ? "+" : "";
-  return `${sign}${new Intl.NumberFormat("id-ID", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(value)}%`;
-}
-
-function formatSignedPercent(value: number) {
+function formatSignedPercent(value: number | null) {
+  if (value == null || !Number.isFinite(value)) return "N/A";
   const sign = value > 0 ? "" : "";
   return `${sign}${new Intl.NumberFormat("id-ID", {
     minimumFractionDigits: 1,

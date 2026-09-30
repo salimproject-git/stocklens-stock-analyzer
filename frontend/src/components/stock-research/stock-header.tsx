@@ -1,12 +1,8 @@
 import React from "react";
 import { StockDetail } from "@/data/mock-stock-details";
-import { StatusBadge } from "@/components/ui/status-badge";
-import { formatRupiah as formatCurrencyRupiah, formatRupiahValue } from "@/utils/currency";
+import { formatRupiah as formatCurrencyRupiah } from "@/utils/currency";
 
 export function StockHeader({ stock }: { stock: StockDetail }) {
-  const isPositive = stock.change >= 0;
-  const changeTone = isPositive ? "text-[#49f3ae]" : "text-[#ff5967]";
-
   return (
     <section className="mb-6 flex flex-wrap items-start justify-between gap-6 rounded-[20px] border border-white/10 bg-[linear-gradient(180deg,_rgba(11,23,37,0.95),_rgba(7,16,28,0.97))] p-6 shadow-[0_24px_48px_rgba(0,0,0,0.28)]">
       {/* Left Identity Block */}
@@ -21,11 +17,13 @@ export function StockHeader({ stock }: { stock: StockDetail }) {
             />
           ) : (
             <div className="flex flex-col items-center justify-center leading-none text-[#1b2b40]">
-              <span className="text-xs font-black tracking-tighter text-[#cc0000]">
-                ASTRA
+              {/* No logo asset is stored in the database yet, so fall back to
+                  the ticker itself instead of another company's branding. */}
+              <span className="text-sm font-black tracking-tighter">
+                {stock.ticker}
               </span>
-              <span className="text-[9px] font-semibold text-[#003399]">
-                Otoparts
+              <span className="mt-1 text-[9px] font-semibold text-[#5b6b80]">
+                IDX
               </span>
             </div>
           )}
@@ -45,26 +43,15 @@ export function StockHeader({ stock }: { stock: StockDetail }) {
             </button>
           </div>
           <p className="mt-1 text-sm text-[#b6c2d4]">{stock.companyName}</p>
-          <div className="mt-2.5 flex flex-wrap gap-2">
-            <span className="rounded-full bg-[#123551] px-3 py-1 text-xs font-medium text-[#92cdf4]">
-              {stock.sector}
-            </span>
-            <span className="rounded-full bg-white/8 px-3 py-1 text-xs font-medium text-[#ced8e6]">
-              {stock.stockType}
-            </span>
-          </div>
         </div>
       </div>
 
       {/* Right Price & Valuation Block */}
       <div className="flex flex-wrap items-center gap-6">
-        {/* Price & Change */}
+        {/* Price */}
         <div className="text-right">
           <div className="text-3xl font-bold tracking-tight text-white">
             {formatRupiah(stock.price)}
-          </div>
-          <div className={["mt-1 text-sm font-semibold", changeTone].join(" ")}>
-            {formatSignedRupiah(stock.change)} ({formatPercent(stock.changePercent)})
           </div>
           <div className="mt-1 text-xs text-[#8f9db1]">
             As of {stock.updatedAt}
@@ -91,21 +78,8 @@ export function StockHeader({ stock }: { stock: StockDetail }) {
   );
 }
 
-function formatRupiah(val: number) {
+function formatRupiah(val: number | null) {
   return formatCurrencyRupiah(val);
-}
-
-function formatSignedRupiah(val: number) {
-  const sign = val > 0 ? "+" : "";
-  return `${sign}${formatRupiahValue(val).replace(/^Rp/, "")}`;
-}
-
-function formatPercent(val: number) {
-  const sign = val > 0 ? "+" : "";
-  return `${sign}${new Intl.NumberFormat("id-ID", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(val)}%`;
 }
 
 function StarIcon({ className }: { className?: string }) {

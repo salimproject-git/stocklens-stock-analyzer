@@ -3,47 +3,65 @@ import type { BacktestCase, BacktestVerdict } from "@/data/mock-stock-details";
 export const backtestMethodology = {
   observationMonths: 12,
   horizonsMonths: [3, 6, 9, 12] as const,
-  undervalued: { upsideThreshold: 0.2, downsideThreshold: -0.15 },
-  overvaluedOrMixed: { upsideThreshold: 0.15, downsideThreshold: -0.1 },
+  /**
+   * One threshold for both classifications: up +20%, down -15%.
+   *
+   * Previously `OVERVALUED` used +15%/-10%, so the classification also decided
+   * the thresholds. Now the classification only picks the verdict **name**.
+   */
+  upsideThreshold: 0.2,
+  downsideThreshold: -0.15,
   valuationMethodCount: 5,
   classification: { methodUndervaluedMinimum: 3, mosMainThreshold: 0.3 },
 } as const;
 
-export type ValuationClassification = "UNDERVALUED" | "OVERVALUED_MIXED";
+export type ValuationClassification = "UNDERVALUED" | "OVERVALUED";
+
+/**
+ * Classification from a list of intrinsic values.
+ *
+ * **`IV = 0` is not a valid method.** The workbook marks it `⚪ N/A (Skip)`
+ * (`=IF(B25=0, "N/A (Skip)", ...)`) and removes it from the denominator, so a
+ * stock without dividends yields `3|4`, not `3|5`. `null` is skipped too.
+ *
+ * A negative `IV` **stays** valid: a model producing a negative value still
+ * says something about the price.
+ */
+export function classifyIntrinsicValuesAbovePrice(values: (number | null)[], analysisPrice: number) {
+  const valid = values.filter((value) => value !== null && value !== 0);
+  const undervaluedMethods = valid.filter((value) => (value as number) > analysisPrice).length;
+  return {
+    classification: undervaluedMethods >= backtestMethodology.classification.methodUndervaluedMinimum
+      ? "UNDERVALUED" as const
+      : "OVERVALUED" as const,
+    undervaluedMethods,
+    //: Number of valid methods, not slots. This is the `/3`, `/4`, `/5` denominator.
+    totalMethods: valid.length,
+  };
+}
 
 export function classifyMethodsAbovePrice(methods: BacktestCase["methods"], analysisPrice: number) {
   return classifyIntrinsicValuesAbovePrice(methods.map((method) => method.intrinsicValue), analysisPrice);
 }
 
-export function classifyIntrinsicValuesAbovePrice(values: (number | null)[], analysisPrice: number) {
-  const undervaluedMethods = values.filter((value) => value !== null && value > analysisPrice).length;
-  return {
-    classification: undervaluedMethods >= backtestMethodology.classification.methodUndervaluedMinimum
-      ? "UNDERVALUED" as const
-      : "OVERVALUED_MIXED" as const,
-    undervaluedMethods,
-    totalMethods: values.length,
-  };
-}
-
 export function backtestConsensusDescription(kind: "method" | "mos") {
   if (kind === "method") {
-    return `Undervalued jika minimal ${backtestMethodology.classification.methodUndervaluedMinimum} dari ${backtestMethodology.valuationMethodCount} metode menghasilkan intrinsic value di atas harga analisis. Selain itu overvalued.`;
+    return `Undervalued when at least ${backtestMethodology.classification.methodUndervaluedMinimum} valid methods produce an intrinsic value above the analysis price. Methods whose value is zero (e.g. DDM without dividends) count as N/A and stay out of the denominator, so the figure can be /3, /4, or /5.`;
   }
   const mosPercent = backtestMethodology.classification.mosMainThreshold * 100;
-  return `Undervalued jika MoS Main ${mosPercent}% atau lebih. Di bawah ${mosPercent}% berarti overvalued.`;
+  return `Undervalued when MoS Main is ${mosPercent}% or higher. Below ${mosPercent}% means overvalued.`;
 }
 
 export function buildBacktestOutcomeExplanation() {
-  const upsidePercent = backtestMethodology.undervalued.upsideThreshold * 100;
-  const downsidePercent = Math.abs(backtestMethodology.undervalued.downsideThreshold) * 100;
-  return `A WIN means an undervalued case reached the +${upsidePercent}% target before the -${downsidePercent}% downside`;
+  const upsidePercent = backtestMethodology.upsideThreshold * 100;
+  const downsidePercent = Math.abs(backtestMethodology.downsideThreshold) * 100;
+  return `A WIN means the case reached the +${upsidePercent}% target before the -${downsidePercent}% downside`;
 }
 
 export function classifyMosMain(mosMain: number | null) {
   return mosMain !== null && mosMain >= backtestMethodology.classification.mosMainThreshold
     ? "UNDERVALUED" as const
-    : "OVERVALUED_MIXED" as const;
+    : "OVERVALUED" as const;
 }
 
 export function classifyCurrentValuationMos(mosPercent: number) {
@@ -65,11 +83,23 @@ function getObservationPath(testCase: BacktestCase) {
     .sort((left, right) => left.date.localeCompare(right.date));
 }
 
+/**
+ * Verdict for a user-entered entry price, used only by the detail drawer's
+ * "Your Entry Simulation" panel.
+ *
+ * The stored verdict is always shown as-is; this recomputes only for a price the
+ * user typed, and it must follow the same rules as the backend so the simulation
+ * cannot contradict the table:
+ *
+ *   * one threshold pair for both classifications (+20% / -15%);
+ *   * neither touched -> `FLAT` (never `OBSERVE`);
+ *   * up first (or same day) -> `WIN` / `REPRICE`;
+ *   * down first -> `RECOVERED` / `CONFIRMED`.
+ */
 export function calculateSimulatedVerdict(testCase: BacktestCase, entryPrice: number): BacktestVerdict {
   const isUndervalued = classifyMethodsAbovePrice(testCase.methods, testCase.analysisPrice).classification === "UNDERVALUED";
-  const thresholds = isUndervalued ? backtestMethodology.undervalued : backtestMethodology.overvaluedOrMixed;
-  const upsideTarget = entryPrice * (1 + thresholds.upsideThreshold);
-  const downsideTarget = entryPrice * (1 + thresholds.downsideThreshold);
+  const upsideTarget = entryPrice * (1 + backtestMethodology.upsideThreshold);
+  const downsideTarget = entryPrice * (1 + backtestMethodology.downsideThreshold);
   let upsideDate: string | null = null;
   let downsideDate: string | null = null;
 
@@ -79,9 +109,13 @@ export function calculateSimulatedVerdict(testCase: BacktestCase, entryPrice: nu
     if (upsideDate || downsideDate) break;
   }
 
-  if (!upsideDate && !downsideDate) return isUndervalued ? "FLAT" : "OBSERVE";
-  if (upsideDate && (!downsideDate || upsideDate < downsideDate)) return isUndervalued ? "WIN" : "OBSERVE";
-  return isUndervalued ? "RECOVERED" : "CONFIRMED";
+  if (!upsideDate && !downsideDate) return "FLAT";
+  // Down yang lebih dulu berarti tesis sempat salah; kalau up yang lebih dulu
+  // (atau hari yang sama), arah yang benar menang.
+  if (downsideDate && (!upsideDate || downsideDate < upsideDate)) {
+    return isUndervalued ? "RECOVERED" : "CONFIRMED";
+  }
+  return isUndervalued ? "WIN" : "REPRICE";
 }
 
 function rangeAtHorizon(testCase: BacktestCase, horizon: number, analysisPrice: number) {

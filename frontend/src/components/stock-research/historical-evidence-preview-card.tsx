@@ -1,12 +1,38 @@
 import React from "react";
 import { StockDetail } from "@/data/mock-stock-details";
 import { SectionCard } from "@/components/ui/section-card";
+import { UnavailableBadge } from "@/components/ui/unavailable-badge";
+import { DemoDataBadge } from "@/components/ui/demo-data-badge";
 
 export function HistoricalEvidencePreviewCard({
   evidence,
 }: {
-  evidence: StockDetail["historicalEvidencePreview"];
+  evidence?: StockDetail["historicalEvidencePreview"];
 }) {
+  if (!evidence) {
+    return (
+      <SectionCard
+        icon={<HistoryIcon className="h-4 w-4" />}
+        title="Historical Evidence"
+        subtitle="Similar valuation conditions · historical outcomes"
+        actionSlot={
+          <span className="text-xs font-semibold text-[#f4d18b]">
+            View Backtest →
+          </span>
+        }
+      >
+        <div className="flex flex-col items-start gap-2.5">
+          <UnavailableBadge label="Not available" />
+          <p className="text-xs leading-relaxed text-[#8e9bb0]">
+            Backtest and historical evidence are not stored in the database for
+            this ticker yet. The figures will appear once the backtest process
+            has run and its results are loaded into the database.
+          </p>
+        </div>
+      </SectionCard>
+    );
+  }
+
   return (
     <SectionCard
       icon={<HistoryIcon className="h-4 w-4" />}
@@ -19,6 +45,11 @@ export function HistoricalEvidencePreviewCard({
       }
     >
       <div className="grid gap-3 sm:grid-cols-2">
+        {evidence.isDemoData && (
+          <div className="sm:col-span-2">
+            <DemoDataBadge />
+          </div>
+        )}
         {/* Verdict Based Method */}
         <div className="rounded-xl border border-white/8 bg-[#07111c]/60 p-3.5">
           <div className="text-[12px] font-semibold text-[#d4dcec]">

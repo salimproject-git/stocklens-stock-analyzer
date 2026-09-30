@@ -25,9 +25,11 @@ from valuation_engine import (  # noqa: E402
     CODE_VERSION,
     REFERENCE_VERSION,
     DEFAULT_YEARS_COMPARE,
+    STOCK_TYPES,
     ValuationError,
     calculate_valuation_snapshot,
     decimal_text,
+    decimal_value,
 )
 
 METHOD_CODE = 'VALUATION_CURRENT'
@@ -35,6 +37,9 @@ METHOD_VERSION = '1.0.0'
 INPUT_TABLE = 'calc_valuation_inputs'
 METHOD_TABLE = 'calc_valuation_methods'
 PAGE_SIZE = 1000
+
+#: `rate_code` of the 10Y SBN yield row in `risk_free_rate_reference`.
+REFERENCE_RATE_CODE = 'SBN_10Y_YIELD'
 
 
 def load_env_file(path: Path) -> None:
@@ -130,6 +135,47 @@ def _reference_type_name(stock_type: str) -> str:
         'TURN AROUND': 'Turn around',
         'ASSET PLAY': 'Asset Play',
     }[stock_type.upper().replace('_', ' ')]
+
+
+def resolve_risk_free_rate(db: SupabaseRest, rate_code: str = REFERENCE_RATE_CODE) -> tuple[str, str]:
+    """Resolve a risk-free rate and its provenance from `risk_free_rate_reference`.
+
+    Returns ``(rate_text, source_text)`` ready to pass to the valuation engine.
+    The newest dated ``MARKET_OBSERVATION`` row wins; when no dated observation
+    exists, the single ``is_default`` row is used (the workbook constant).
+
+    The rate is never invented: a missing reference row is a hard error, and the
+    returned source text always names the row that produced the number so the
+    value stays auditable in `calc_valuation_inputs.details`.
+    """
+    rows = db.get_all('risk_free_rate_reference', {
+        'reference_version': 'eq.' + REFERENCE_VERSION,
+        'rate_code': 'eq.' + rate_code,
+        'select': 'rate,observation_date,source_kind,source_name,source_reference,is_default',
+        'order': 'observation_date.desc.nullslast',
+    })
+    if not rows:
+        raise CalculationError(f'RISK_FREE_RATE_REFERENCE_MISSING:{rate_code}')
+
+    dated = [row for row in rows if row.get('observation_date')]
+    if dated:
+        chosen = dated[0]
+    else:
+        defaults = [row for row in rows if row.get('is_default')]
+        if len(defaults) != 1:
+            raise CalculationError(f'RISK_FREE_RATE_REFERENCE_DEFAULT_ROW_INVALID:{rate_code}')
+        chosen = defaults[0]
+
+    rate = decimal_value(chosen.get('rate'))
+    if rate is None or rate <= 0:
+        raise CalculationError(f'RISK_FREE_RATE_REFERENCE_VALUE_INVALID:{rate_code}')
+
+    observation_date = chosen.get('observation_date') or 'no observation date recorded'
+    source = (
+        f"{chosen.get('source_kind')} via {chosen.get('source_name')} "
+        f"({chosen.get('source_reference')}); observation_date={observation_date}"
+    )
+    return decimal_text(rate), source
 
 
 def _persist_batch(db: SupabaseRest, table: str, rows: list[dict[str, Any]]) -> None:
@@ -264,7 +310,7 @@ def calculate_live(
     db: SupabaseRest,
     *,
     ticker: str,
-    stock_type: str,
+    stock_type: str | None,
     scenario_code: str | None,
     valuation_date: str | None,
     years_available: int | None,
@@ -280,6 +326,14 @@ def calculate_live(
         raise CalculationError('INSTRUMENT_NOT_FOUND_OR_NOT_UNIQUE')
     instrument = instruments[0]
     instrument_id = str(instrument['id'])
+    # The classifier is the source of truth. An explicit --stock-type is an
+    # override for investigation only, never the default path.
+    if stock_type is None:
+        stock_type, classification_run_id = _resolve_stock_type(db, instrument_id)
+        print(
+            f'Stock type resolved from classifier: {stock_type} '
+            f'(run={classification_run_id})'
+        )
     selected_type = stock_type.upper().replace('_', ' ')
     if selected_type == 'TURNAROUND':
         selected_type = 'TURN AROUND'
@@ -381,24 +435,117 @@ def calculate_live(
     return result, instrument_id, methodology_id
 
 
+def normalise_classifier_type(stock_type: str, asset_play_matched: bool = False) -> str:
+    """Map a stored classifier type onto a valuation-engine stock type.
+
+    ``UNCLASSIFIED`` has two very different causes and they must not be
+    conflated:
+
+    * **Score-10 fall-through.** ASSET PLAY matched, but the workbook's score
+      ladder has no branch for score 10, so the IFS falls through to
+      ``UNCLASSIFIED`` (GOLD). The valuation engine and the reference tables both
+      model that situation as ``ASSET PLAY``, so ``asset_play_matched=True`` maps
+      it there.
+    * **No rule matched at all.** Nothing matched, so there is no defensible type
+      (INDF). Valuing such a ticker as an asset play would invent a methodology
+      the classifier never chose, so this stays an error and the ticker must be
+      given an explicit ``--stock-type`` if a valuation is genuinely wanted.
+    """
+    normalized = stock_type.strip().upper()
+    if normalized == 'UNCLASSIFIED':
+        if asset_play_matched:
+            return 'ASSET PLAY'
+        raise CalculationError(
+            'CLASSIFICATION_UNCLASSIFIED_NO_RULE_MATCHED: no stock-type rule '
+            'matched, so no type can be derived. Pass an explicit --stock-type '
+            'to value this ticker.'
+        )
+    if normalized not in STOCK_TYPES:
+        raise CalculationError(f'CLASSIFICATION_FINAL_TYPE_UNSUPPORTED: {stock_type}')
+    return normalized
+
+
+def _resolve_stock_type(db: SupabaseRest, instrument_id: str) -> tuple[str, str]:
+    """Resolve the stock type from the persisted classifier result.
+
+    Returns ``(stock_type, run_id)``. The classifier is the source of truth, so
+    a valuation run no longer needs a hand-passed ``--stock-type``. A ticker
+    without a stored classification must be classified first; guessing a type
+    would silently change every downstream method, so this fails closed.
+
+    The ASSET PLAY rule flag is read alongside the final type because
+    ``UNCLASSIFIED`` needs it to be interpreted (see
+    :func:`normalise_classifier_type`).
+    """
+    rows = db.get_all('calc_metrics_classification', {
+        'instrument_id': 'eq.' + instrument_id,
+        'metric_code': 'in.(CLASSIFICATION_FINAL_TYPE,CLASSIFICATION_ASSET_PLAY)',
+        'calculation_status': 'eq.VALID',
+        'select': 'metric_code,classification_code,value_numeric,calculation_run_id',
+        'order': 'created_at.desc',
+    })
+    if not rows:
+        raise CalculationError(
+            'CLASSIFICATION_RESULT_NOT_FOUND: run populate_metrics_classification.py first'
+        )
+    by_code: dict[str, dict[str, Any]] = {}
+    for row in rows:
+        # Rows arrive newest-first, so the first sighting is the latest run.
+        by_code.setdefault(str(row['metric_code']), row)
+
+    final_row = by_code.get('CLASSIFICATION_FINAL_TYPE')
+    if final_row is None:
+        raise CalculationError('CLASSIFICATION_FINAL_TYPE_MISSING')
+    stock_type = str(final_row.get('classification_code') or '').strip()
+    if not stock_type:
+        raise CalculationError('CLASSIFICATION_FINAL_TYPE_EMPTY')
+
+    asset_play_row = by_code.get('CLASSIFICATION_ASSET_PLAY')
+    asset_play_matched = (
+        asset_play_row is not None
+        and str(asset_play_row.get('value_numeric') or '').strip() == '1'
+    )
+    return (
+        normalise_classifier_type(stock_type, asset_play_matched),
+        str(final_row['calculation_run_id']),
+    )
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--ticker', required=True, help='IDX ticker, e.g. AUTO')
-    parser.add_argument('--stock-type', required=True, choices=[
-        'SLOW GROWER', 'STALWART', 'FAST GROWER', 'CYCLICAL', 'TURN AROUND', 'ASSET PLAY',
-    ], help='Explicit classification; no classifier result is currently persisted.')
+    parser.add_argument(
+        '--stock-type',
+        choices=[*STOCK_TYPES, 'TURNAROUND'],
+        help=(
+            'Explicit classification override. Default: the persisted '
+            'CLASSIFICATION_FINAL_TYPE for the ticker.'
+        ),
+    )
     parser.add_argument('--scenario-code', help='Active scenario code when the ticker has multiple active scenarios.')
     parser.add_argument('--valuation-date', help='Market price cutoff date; default latest available daily close.')
     parser.add_argument('--years-available', type=int, help='Default: scenario years_available.')
     parser.add_argument('--years-compare', type=int, help='Default: workbook ladder from years_available.')
     parser.add_argument('--risk-free-rate', help='Optional decimal rate, e.g. 0.0633; required for DDM/discounted earnings.')
     parser.add_argument('--risk-free-source', help='Required source/date/reference whenever --risk-free-rate is supplied.')
+    parser.add_argument(
+        '--risk-free-from-reference',
+        action='store_true',
+        help='Resolve --risk-free-rate and --risk-free-source from public.risk_free_rate_reference.',
+    )
     parser.add_argument('--apply', action='store_true', help='Persist valuation snapshot to Supabase.')
     args = parser.parse_args(argv)
+    if args.risk_free_from_reference and (args.risk_free_rate or args.risk_free_source):
+        parser.error('--risk-free-from-reference cannot be combined with --risk-free-rate/--risk-free-source.')
     if (args.risk_free_rate is None) != (args.risk_free_source is None):
         parser.error('--risk-free-rate and --risk-free-source must be supplied together.')
     load_env_file(REPO_ROOT / '.env')
     db = SupabaseRest(os.getenv('SUPABASE_URL', ''), os.getenv('SUPABASE_SERVICE_ROLE_KEY', ''))
+    risk_free_rate = args.risk_free_rate
+    risk_free_source = args.risk_free_source
+    if args.risk_free_from_reference:
+        risk_free_rate, risk_free_source = resolve_risk_free_rate(db)
+        print(f'Risk-free rate resolved from reference table: {risk_free_rate} ({risk_free_source})')
     result, instrument_id, methodology_id = calculate_live(
         db,
         ticker=args.ticker.upper().replace('.JK', ''),
@@ -407,8 +554,8 @@ def main(argv: list[str] | None = None) -> int:
         valuation_date=args.valuation_date,
         years_available=args.years_available,
         years_compare=args.years_compare,
-        risk_free_rate=args.risk_free_rate,
-        risk_free_source=args.risk_free_source,
+        risk_free_rate=risk_free_rate,
+        risk_free_source=risk_free_source,
     )
     compact_result = {
         **{key: value for key, value in result.items() if key not in ('input_snapshot', 'input_hash')},

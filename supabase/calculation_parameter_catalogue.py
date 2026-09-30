@@ -153,9 +153,15 @@ PARAMETERS: tuple[tuple[str, str, Any, str, str, str, str], ...] = (
         'ratio',
         RESOLUTION_UNRESOLVED_SOURCE,
         'DataInput!B11',
-        'Excel hard-codes 0.0633 as the 10Y SBN yield. No canonical or Sectors '
-        'source exists, so this is an explicit configuration gap, not a value '
-        'the engine may invent. Blocks DDM IV and Discounted Earnings IV.',
+        'Excel hard-codes 0.0633 as the 10Y SBN yield. The workbook records no '
+        'observation date and names no market source, so the value itself stays '
+        'flagged UNRESOLVED_SOURCE rather than being promoted to a dated market '
+        'observation. An explicit, versioned home now exists: '
+        'public.risk_free_rate_reference (migration 0020), seeded with this exact '
+        'literal as source_kind=WORKBOOK_CONSTANT. '
+        'calculate_valuation.py --risk-free-from-reference reads that table and '
+        'prefers the newest MARKET_OBSERVATION row, so DDM IV and Discounted '
+        'Earnings IV can be computed without any value being invented here.',
     ),
     (
         'equity_risk_premium_ddm',

@@ -4,9 +4,11 @@ Panduan ini untuk menjalankan alur data StockLens secara **manual** dari Windows
 
 ## Jawaban singkat: metrik dan proyeksi sudah jalan?
 
-- **Metrik Growth & Quality:** kalkulasi dan penyimpanan ke Supabase sudah berjalan untuk AUTO dan MIDI (`SUCCEEDED`). Data historis masing-masing saat ini berisi 7 periode annual dan 26 periode quarterly.
-- **Proyeksi:** yang sudah tersimpan adalah satu skenario **AUTO Q2 2026**, 10 nilai proyeksi. Proyeksi merupakan input workbook terpisah dari actual financial facts, bukan hasil kalkulasi otomatis untuk semua ticker.
-- **Belum berarti semua analisis lengkap atau otomatis:** `MetricsClassification` akhir belum ditulis; workflow tidak berjalan otomatis/scheduled. `report_date` dan `available_date` periode finansial juga masih kosong, sehingga hasil tidak boleh dianggap point-in-time/backtest-safe.
+- **Semua 19 ticker sudah lengkap:** AMRT, ARII, AUTO, BIRD, DSSA, ERAA, GEMA, GOLD, INDF, INDS, INKP, IPOL, ITMG, JSMR, MIDI, PTBA, SIDO, WIFI. Masing-masing punya periode finansial, harga harian, growth/quality, skenario proyeksi aktif, tipe saham tersimpan, dan 5–15 metode valuasi.
+- **Satu perintah per ticker:** `python run_pipeline.py TICKER` menjalankan seluruh alur (upload raw, ingest, load canonical, growth, proyeksi, klasifikasi, valuasi).
+- **Proyeksi:** skenario diturunkan dari actuals oleh `supabase/derive_projection_scenario.py` (rumus `DataInputProyeksi`), jadi setiap ticker yang actualnya sudah dimuat bisa punya skenario sendiri.
+- **Klasifikasi tipe saham:** sudah otomatis. `supabase/derive_classifier_inputs.py` menurunkan input classifier dari data canonical, `supabase/populate_metrics_classification.py` menyimpan hasilnya ke `calc_metrics_classification`, dan `calculate_valuation.py` membacanya sehingga `--stock-type` tidak lagi wajib.
+- **Belum berarti semua analisis lengkap atau otomatis:** workflow belum berjalan otomatis/scheduled. `report_date` dan `available_date` periode finansial juga masih kosong, sehingga hasil tidak boleh dianggap point-in-time/backtest-safe. Backtest belum dijalankan.
 - Data yang dimuat sudah lolos validasi skema/checksum dan perbandingan skenario historis yang dikerjakan. Ini bukan jaminan independen bahwa seluruh nilai sumber benar; tetap cocokkan raw/API dengan laporan emiten bila angka dipakai untuk keputusan.
 
 ## 1. Prasyarat sekali per sesi terminal
@@ -29,7 +31,335 @@ python --version
 python -c "import requests; print('requests OK')"
 ```
 
+## 1.5 Cara cepat: satu perintah untuk seluruh alur ticker
+
+Seluruh langkah di bagian 3 dan 4 sudah dibungkus menjadi satu perintah. Jalankan dari root repository:
+
+```powershell
+python run_pipeline.py TICKER
+```
+
+Untuk ticker yang belum pernah diunduh sama sekali, perintah yang sama juga bekerja (langkah raw otomatis mengambil dari API):
+
+```powershell
+python run_pipeline.py AADI
+```
+
+Orchestrator menjalankan langkah-langkah berikut secara berurutan, memakai script yang sama seperti jalur manual:
+
+| # | Step | Perintah yang dijalankan |
+|---|---|---|
+| 1 | `upload-raw` | `supabase/upload_raw_storage_only.py TICKER --yes` |
+| 2 | `ingest-raw` | `supabase/ingest_raw_history.py --symbol TICKER --apply` |
+| 3 | `load-identity` | `supabase/load_identity_to_supabase.py TICKER --ingestion-run-id ...` |
+| 4 | `load-annual` | `supabase/load_annual_financials_to_supabase.py TICKER` |
+| 5 | `load-quarterly` | `supabase/load_quarterly_financials_to_supabase.py TICKER` |
+| 6 | `load-dividend` | `supabase/load_dividend_to_supabase.py TICKER` |
+| 7 | `load-prices` | `supabase/load_daily_prices_to_supabase.py TICKER` |
+| 8 | `growth-quality` | `supabase/populate_growth_quality.py --ticker TICKER --apply` |
+| 9 | `projection` | `supabase/derive_projection_scenario.py TICKER --apply` |
+| 10 | `classification` | `supabase/populate_metrics_classification.py --ticker TICKER --apply` |
+| 11 | `valuation` | `supabase/calculate_valuation.py --ticker TICKER --risk-free-from-reference --apply` |
+| 12 | `backtest` | `supabase/run_backtest.py --ticker TICKER --apply` |
+
+Langkah 12 adalah backtest historis: daftar kasus, metrik harga murni
+(`Ret 3M`…`Ret 12M`, `Harga Peak`/`trough`, `Bln Peak`, `Ret Peak`/`Ret Down`),
+valuasi per kasus, konsensus, dan MoS dari lima metode workbook, lalu
+**verdict** (`Verdict by Method`) dan `verdict_mos` (`Verdict MoS`) dengan
+rumus workbook apa adanya (`docs/BACKTEST_ARCHITECTURE.md` bagian 5.4.1).
+
+Yang **belum** dikerjakan: tidak ada. Fase 4 (RPC + UI) selesai lewat
+`supabase/migrations/0026_stock_research_backtest_rpc.sql`.
+
+**Fase 4 — RPC dan UI.** `get_stock_backtest(p_ticker)` mengembalikan hasil
+tersimpan untuk satu ticker: run `SUCCEEDED` terbaru, seluruh kasus dengan lima
+IV, konsensus, MoS, verdict, dan `context` (Revenue YoY, Net Income YoY, EPS /
+Revenue momentum). Tabel `calc_backtest_*` tetap privat - RPC adalah satu-satunya
+permukaan yang diekspos, dan `anon`/`authenticated` tidak punya grant SELECT ke
+tabelnya (dijaga blok `$verify$` di migration).
+
+`context` **tidak** disimpan di `calc_backtest_cases` (skema bagian 4.1 tidak
+punya kolomnya). Nilainya diturunkan PIT di dalam RPC:
+
+- Revenue YoY / Net Income YoY = kuartal vs kuartal yang sama setahun sebelumnya,
+  dari `financial_facts`. Hanya periode dengan `period_end <= analysis_date` yang
+  dibaca. Dicocokkan ke workbook untuk 18 kasus AUTO: sama persis sampai 12
+  desimal (2022-Q1 revenue `0.266892321647`, earnings `0.374660655568`).
+- EPS / Revenue momentum = metrik annual `QUALITY_*_MOMENTUM` pada **base year**
+  kasus itu (`1` = Accelerating, `0` = Slowing). Juga dicocokkan 18/18.
+
+Tiga kolom context sengaja `null` karena belum ada aturannya di repo ini:
+`ROE Trend`, `Yield (%)`, dan `OCF / NI Ratio`. Mengarang aturan untuk ketiganya
+akan menghasilkan angka palsu, jadi UI menampilkannya sebagai "Belum Tersedia".
+
+Dua kolom baru ikut ditambahkan sepanjang Fase 4:
+
+- `trough_month` (`Bln Trough`). Pasangan `peak_month`. Ini **wajib disimpan**:
+  workbook memakai `DATEDIF` (bulan penuh) sedangkan `monthsBetween` di frontend
+  menghitung batas bulan, sehingga kasus ber-tanggal-akhir-bulan berbeda satu
+  bulan. 75 dari 367 kasus bernilai `0` dan akan salah tampil kalau dihitung ulang
+  di browser.
+- `return_magnitude` / `return_magnitude_down` (ambang ±10%, dari perilaku
+  frontend, bukan dari workbook).
+
+**Versi 1.3.0 - penyempurnaan aturan (4 perubahan).** Hasil lama tetap utuh;
+`1.3.0` adalah versi baru, bukan timpaan.
+
+1. **`IV = 0` keluar dari penyebut konsensus.** Workbook menandainya
+   `IF(B25=0, "⚪ N/A (Skip)", ...)`, jadi saham tanpa dividen menghasilkan `3|4`,
+   bukan `3|5`. Ini yang membuat penyebutnya benar-benar bervariasi (`/3`, `/4`,
+   `/5`) dan bukan selalu 5. Bukti: dari 72 baris ber-IV lengkap, aturan "IV=0
+   di-skip" cocok 72/72 sedangkan "IV=0 valid" gagal di INDF 2024-Q4 dan 2025-Q2.
+   `IV` negatif tetap valid (D5).
+2. **Satu ambang harga untuk kedua klasifikasi: `×1.20` naik, `×0.85` turun.**
+   Sebelumnya `OVERVALUED` memakai `×1.15`/`×0.9`.
+3. **`OBSERVE` tidak dipakai lagi** (cabang "tidak menyentuh apa pun" jadi `FLAT`),
+   dan **hari yang sama** jatuh ke `WIN`/`REPRICE` karena cabang terakhir memakai
+   `<`. `RECOVERED` sekarang hanya untuk yang benar-benar turun dulu lalu naik.
+   Konsensus tetap **dua kelas** - `MIXED` tidak pernah dihasilkan.
+4. **Kasus yang belum berumur 4 bulan dibuang.** Laporan kuartalan IDX baru terbit
+   sekitar 3-4 bulan setelah akhir periode. Kuartal terbaru (mis. `2026-Q2` per
+   30 September) tidak ditampilkan; DSSA yang kuartal terakhirnya `2026-Q1` tetap
+   ada karena sudah 6 bulan.
+
+Hasil `1.3.0`: 348 kasus (dari 367), 0 `OBSERVE`, penyebut `/3` 23 kasus, `/4` 74
+kasus, `/5` 225 kasus.
+
+UI: `get_stock_backtest` dibaca di `app/market/[ticker]/page.tsx` bersama
+`get_stock_research_data` (dua-duanya paralel), lalu diadaptasi oleh
+`frontend/src/lib/backtest-adapter.ts`. Verdict **ditampilkan apa adanya** dari
+DB; `calculateSimulatedVerdict` tidak dipakai lagi, supaya tidak menghidupkan
+kembali drift D4. Badge "Demo Data" hilang sendiri karena `isDemoData` tidak lagi
+diisi saat hasil tersimpan ada; dataset sampel hanya jadi fallback untuk AUTO.
+
+Dua kolom verdict tetap NULL bila memang tidak bisa dihitung, dan itu disengaja:
+kasus yang konsensusnya `N/A` (metode valid < 3) atau yang `MoS Main`-nya NULL
+tidak punya `K`, jadi rumusnya tidak menghasilkan verdict. Mengisinya dengan
+`FLAT` akan menciptakan klaim yang tidak bisa dibedakan dari verdict asli.
+Flag `VERDICT_NO_CONSENSUS` / `VERDICT_MOS_UNDEFINED` / `VERDICT_NO_PRICE_WINDOW`
+di `flags` menandai alasannya.
+
+Setiap kali aturan verdict ikut berubah, `formula_text`/`parameter_spec` di
+`backtest_engine.py` berubah, sehingga hash-nya berubah. Naikkan `METHOD_VERSION`
+- jangan pernah menimpa baris registry yang sudah ada. Versi lama sengaja
+dibiarkan hidup supaya hasil lama tetap bisa direproduksi; `run_backtest.py`
+akan menolak jalan (`BACKTEST_METHODOLOGY_REGISTRY_DRIFT`) kalau hash di registry
+tidak lagi cocok dengan kode, dan itu memang sinyal untuk menaikkan versi.
+
+Jalankan tanpa `--apply` untuk melihat angkanya lebih dulu. Ticker yang
+classifier-nya belum menghasilkan tipe (INDF, JSMR) tetap tersimpan metrik
+harganya, dengan valuasi bertanda `VALUATION_UNAVAILABLE` dan alasannya.
+
+Yang **tidak** lagi perlu dikerjakan manual:
+
+- **Mencari `ingestion_run_id`.** Orchestrator membacanya dari `ingestion_runs` + `ingestion_files` (run sukses terbaru yang punya file family `info`). Tidak perlu copy-paste dari output terminal.
+- **Mengunggah raw dari disk.** Langkah 1 melakukannya, sehingga ticker dengan raw lokal tidak memerlukan API.
+- **Mengisi `--stock-type`.** Langkah 10 menyimpan hasil classifier, dan langkah 11 membacanya. `calculate_valuation.py` menolak berjalan bila hasil klasifikasi belum ada, sehingga tipe tidak pernah ditebak.
+
+Opsi berguna:
+
+```powershell
+python run_pipeline.py TICKER --dry-run                      # cetak perintah saja
+python run_pipeline.py TICKER --offline                      # lewati kedua langkah raw
+python run_pipeline.py TICKER --from-step classification     # lanjut setelah gagal
+python run_pipeline.py TICKER --only valuation               # satu langkah saja
+```
+
+Bila satu langkah gagal, orchestrator berhenti dan mencetak perintah `--from-step` untuk melanjutkan dari titik itu.
+
+### 1.5.1 Dua sumber data: lokal vs API
+
+Perbedaan terpenting yang perlu diketahui: `ingest_raw_history.py` **tidak** mengunggah file dari disk lokal. Ia hanya merekonsiliasi Storage dengan database:
+
+| Keadaan | Yang dilakukan `ingest_raw_history.py` | Panggilan API? |
+|---|---|---|
+| File ada di Storage, provenance ada | `SKIP_ALREADY_INGESTED` | Tidak |
+| File ada di Storage, provenance belum ada | `REPAIRED_FROM_EXISTING_STORAGE` (baca byte dari Storage) | Tidak |
+| File **tidak** ada di Storage (baik file lokal ada maupun tidak) | ambil dari API, simpan raw, unggah, lalu catat provenance | **Ya** |
+
+Baris ketiga adalah yang mudah disalahpahami: kalau raw belum ada di Storage, script **tidak** memakai file lokal — ia memanggil API. Karena itu `run_pipeline.py` menjalankan `upload_raw_storage_only.py` lebih dulu, yang mengunggah byte lokal apa adanya ke Storage tanpa menyentuh API. Dengan begitu `ingest_raw_history.py` menemukan byte di Storage dan hanya meregistrasi provenance (tanpa API).
+
+**Perilaku otomatis berdasarkan ketersediaan raw lokal:**
+
+| Raw lokal | Yang dilakukan `run_pipeline.py` |
+|---|---|
+| Ada | Jalankan `upload-raw`, lalu `ingest-raw`. Hasil: `API_CALLS=0`, tidak perlu `SECTORS_API_KEY`. |
+| Tidak ada | Lewati `upload-raw` secara otomatis (tidak ada yang bisa diunggah), lalu `ingest-raw` mengambil dari API. Perlu `SECTORS_API_KEY`. |
+
+Orchestrator mencetak jalur mana yang dipakai sebelum menjalankan langkah apa pun, jadi tidak ada tebakan.
+
+**Yang diambil saat ticker benar-benar baru** (`ingest-raw` tanpa raw lokal maupun Storage): info, annual, dividend, 26 statement quarter, dan 28 window harga harian. Dua hal ini dulu membuat ticker baru gagal dan sekarang sudah diperbaiki:
+
+| Masalah lama | Perbaikan |
+|---|---|
+| `quarterly` direncanakan sebelum `quarterly-dates` di-fetch, sehingga 0 target quarter | Keluarga direncanakan dan direkonsiliasi **satu per satu sesuai urutan**, bukan semua di muka. `quarterly` sekarang melihat tanggal yang baru diambil. |
+| `daily` punya 0 window karena tidak ada raw lokal maupun Storage | Fallback ke rentang default collector (`2020-01-01` sampai hari ini, window 90 hari) saat belum ada window sama sekali. |
+| `manifest` di-fetch dari API padahal `endpoint=None` → 404 dan `FAILED=1` | `manifest` bertanda `local_only`, jadi dilaporkan sebagai skip, bukan kegagalan fetch. |
+
+**Untuk ticker yang raw-nya sudah ada di `Data\Raw\{TICKER}`** — cukup satu perintah, tanpa `SECTORS_API_KEY`:
+
+```powershell
+python run_pipeline.py ERAA
+```
+
+**Untuk ticker yang belum pernah diunduh** (misalnya AADI):
+
+```powershell
+python run_pipeline.py AADI          # ambil dari API
+```
+
+Atau unduh dulu ke lokal, lalu jalankan:
+
+```powershell
+python .\scripts\data_pipeline\01_download_sectors.py AADI --task all
+python run_pipeline.py AADI
+```
+
+`--task all` mencakup identity, annual, dividend, date index, quarterly statements, dan harga harian. Untuk update quarter baru pada ticker yang sudah ada, lihat bagian 4.
+
+Bila raw sudah ada di Storage dan Anda ingin melewati kedua langkah raw:
+
+```powershell
+python run_pipeline.py ERAA --offline     # sama dengan --skip-raw
+```
+
+### 1.5.3 Status 19 ticker (per verifikasi terakhir)
+
+| Ticker | Sektor | Tipe saham | Confidence | Metode valuasi |
+|---|---|---|---:|---:|
+| AMRT | Consumer Non-Cyclicals | STALWART | 0.95 | 10 |
+| ARII | Energy | CYCLICAL | 0.95 | 5 |
+| AUTO | Consumer Cyclicals | CYCLICAL | 0.70 | 15 |
+| BIRD | Transportation & Logistic | CYCLICAL | 0.95 | 5 |
+| DSSA | Energy | CYCLICAL | 0.70 | 5 |
+| ERAA | Consumer Cyclicals | CYCLICAL | 0.70 | 5 |
+| GEMA | Consumer Cyclicals | TURN AROUND | 0.40 | 5 |
+| GOLD | Infrastructures | UNCLASSIFIED → ASSET PLAY saat valuasi | 0.00 | 5 |
+| INDF | Consumer Non-Cyclicals | UNCLASSIFIED (tidak ada rule cocok) | 0.00 | 5 |
+| INDS | Consumer Cyclicals | CYCLICAL | 0.70 | 5 |
+| INKP | Basic Materials | CYCLICAL | 0.70 | 5 |
+| IPOL | Basic Materials | CYCLICAL | 0.70 | 5 |
+| ITMG | Energy | CYCLICAL | 0.95 | 5 |
+| JSMR | Infrastructures | UNCLASSIFIED → ASSET PLAY saat valuasi | 0.00 | 5 |
+| MIDI | Consumer Non-Cyclicals | STALWART | 0.95 | 10 |
+| PTBA | Energy | CYCLICAL | 0.70 | 5 |
+| SIDO | Healthcare | SLOW GROWER | 0.95 | 5 |
+| TLKM | Infrastructures | SLOW GROWER | 0.70 | 5 |
+| WIFI | Technology | FAST GROWER | 0.95 | 5 |
+
+Catatan: jumlah metode bervariasi (5, 10, atau 15) karena hasil valuasi menumpuk per run; 5 adalah jumlah metode unik terkini. AMRT/AUTO/MIDI punya lebih banyak baris karena dimuat beberapa kali sebelum classifier ada.
+
+`GOLD` dan `JSMR` sengaja disimpan sebagai `UNCLASSIFIED` (hasil workbook apa adanya) dan baru dipetakan ke `ASSET PLAY` pada saat valuasi. `INDF` tidak punya rule yang cocok, jadi valuasinya perlu `--stock-type` eksplisit.
+
+### 1.5.4 Jalankan manual (tanpa orchestrator)
+
+Setiap langkah tetap bisa dijalankan sendiri. Yang perlu diperhatikan:
+
+**Set credential dulu** — loader (`load_*.py`) dan `ingest_raw_history.py` membaca `os.environ` langsung dan **tidak** memuat `.env` otomatis, berbeda dengan script kalkulasi (`calculate_*.py`, `populate_*.py`) yang memuat `.env` sendiri. Dari PowerShell:
+
+```powershell
+Set-Location 'D:\Stock Analyzer'
+Get-Content '.env' | ForEach-Object {
+  if ($_ -match '^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$') {
+    $v = $matches[2].Trim()
+    if ($v.Length -ge 2 -and ($v[0] -eq '"' -or $v[0] -eq "'")) { $v = $v.Substring(1,$v.Length-2) }
+    [Environment]::SetEnvironmentVariable($matches[1], $v, 'Process')
+  }
+}
+```
+
+**Urutan manual untuk ticker dari data lokal:**
+
+```powershell
+# 1. Upload byte lokal ke Storage (tanpa API). Preview dulu tanpa --yes.
+python .\supabase\upload_raw_storage_only.py BIRD --dry-run
+python .\supabase\upload_raw_storage_only.py BIRD --yes
+
+# 2. Daftarkan provenance. Semua target jadi SKIP_ALREADY_INGESTED.
+python .\supabase\ingest_raw_history.py --symbol BIRD --apply
+
+# 3. Ambil ingestion_run_id family "info" (bukan copy-paste: query DB)
+python -c "import sys;sys.path.insert(0,'supabase');from calculation_v1_common import SupabaseRest;import os;from derive_classifier_inputs import load_env_file;load_env_file(__import__('pathlib').Path('.env'));db=SupabaseRest(os.getenv('SUPABASE_URL'),os.getenv('SUPABASE_SERVICE_ROLE_KEY'));r=db.get_all('ingestion_runs',{'symbol':'eq.BIRD','status':'eq.SUCCESS','select':'id','order':'started_at.desc'});f=db.get_all('ingestion_files',{'ingestion_run_id':'eq.'+r[0]['id'],'source_file_type':'eq.info','select':'id'});print(r[0]['id'] if f else 'check other runs')"
+
+# 4. Load canonical
+python .\supabase\load_identity_to_supabase.py BIRD --ingestion-run-id <RUN_ID>
+python .\supabase\load_annual_financials_to_supabase.py BIRD
+python .\supabase\load_quarterly_financials_to_supabase.py BIRD --dry-run
+python .\supabase\load_quarterly_financials_to_supabase.py BIRD
+python .\supabase\load_dividend_to_supabase.py BIRD
+python .\supabase\load_daily_prices_to_supabase.py BIRD
+
+# 5. Kalkulasi (script ini memuat .env sendiri)
+python .\supabase\populate_growth_quality.py --ticker BIRD --apply
+python .\supabase\derive_projection_scenario.py BIRD --apply
+python .\supabase\populate_metrics_classification.py --ticker BIRD --apply
+python .\supabase\calculate_valuation.py --ticker BIRD --risk-free-from-reference --apply
+```
+
+Catatan penting:
+
+- `--source local` pada loader **bukan** pengganti Storage. Loader tetap memverifikasi checksum dan provenance dari Storage, jadi `PROVENANCE_NOT_FOUND` akan muncul bila langkah 1–2 belum dijalankan. Opsi itu hanya mengubah sumber pembacaan payload, bukan menghilangkan kebutuhan provenance.
+- `load_quarterly_financials_to_supabase.py` punya `--dry-run`; `load_annual_financials_to_supabase.py` **tidak** punya dan langsung menulis.
+- Loader berhenti pada konflik nilai, tidak menimpa fakta existing.
+
+### 1.6 Klasifikasi tipe saham (stock type)
+
+Tipe saham dihitung dari data canonical oleh `classify_metrics_classification()` (aturan `MetricsClassification!B80`, lengkap dengan score ladder dan override Energy). Inputnya diturunkan oleh `supabase/derive_classifier_inputs.py`, lalu disimpan oleh `supabase/populate_metrics_classification.py` ke tabel `calc_metrics_classification`.
+
+```powershell
+python .\supabase\derive_classifier_inputs.py --ticker TICKER
+python .\supabase\populate_metrics_classification.py --ticker TICKER
+python .\supabase\populate_metrics_classification.py --ticker TICKER --apply
+```
+
+Perintah terakhir menyimpan 9 baris: enam flag aturan, `SYSTEM_RECOMMENDATION`, `FINAL_TYPE`, dan `CONFIDENCE`.
+
+Dua catatan penting yang sudah terverifikasi terhadap workbook AUTO Q2 2026:
+
+1. `Metric_PE_Fwd` dan `Metric_PBV_Fwd` adalah **multiple** (harga ÷ nilai per saham forward). Kolom `PE_PROJECTED`/`PBV_PROJECTED` di `calc_valuation_inputs` bernilai **harga**, jadi keduanya tidak bisa dipakai bergantian.
+2. `CLASSIFICATION_CONFIDENCE` disimpan dengan flag `REGISTRY_VERSION_UPDATE_REQUIRED` karena entri registry `classifier_confidence_level` masih `UNRESOLVED_DEFINITION` (blueprint Q17), walaupun rumusnya sudah diimplementasikan dan cocok dengan workbook.
+
+Override manual (setara `B81`) didukung lewat `--manual-override "STALWART"`. Hasil aturan tetap disimpan, sehingga hasil aturan dan override bisa dibedakan.
+
+### 1.7 Perbedaan yang diketahui terhadap workbook
+
+Perbedaan berikut **diharapkan** dan terdokumentasi, bukan bug:
+
+| Metrik | Workbook | Canonical | Penyebab |
+|---|---|---|---|
+| `CLASSIFICATION_CYCLICAL` (SIDO) | `True` | `False` | Artefak `G-2019-COGS`: COGS 2019 kosong di Excel sehingga Gross Margin 2019 = 100% dan `GPM Range` membengkak ke 44.87 ppt (> 0.2). Canonical punya `GROSS_PROFIT` 2019 sehingga range hanya 3.9%. |
+| `Payout Ratio Avg` (SIDO) | 0.871867 | 0.876597 | `G-2019-DPS`: Excel punya baris 2019 dengan DPS 0; `dividend_facts` mulai dari 2020. |
+| `CLASSIFICATION_ASSET_PLAY` (BIRD) | `True` | `False` | Tanggal harga. Workbook memakai harga `1485` → PBV `0.5965`, di bawah minimum historis `0.626` → percentile `0`. Canonical memakai close terbaru `1625` (2026-09-09) → PBV `0.6527`, berada di dalam rentang `0.626`–`0.7953` → percentile `0.25` (ambang `0.2`). |
+| `eps_long` (BIRD) | 0.124447 | `UNAVAILABLE` | `OUTSTANDING_SHARES` tahun 2025 bertanda `MISSING` pada data sumber API, sehingga `GROWTH_EPS_CAGR_LONG` tidak bisa dihitung. Klasifikasi tetap benar karena CYCLICAL tidak memakai input ini. |
+
+`FINAL TYPE` dan `CONFIDENCE` tetap identik dengan workbook pada kedua ticker:
+
+- SIDO: SLOW GROWER / 0.95 — `system_cyclical` hanya memakai `RevCoV > 0.35` (0.0956), tidak memakai cabang GPM.
+- BIRD: CYCLICAL / 0.95 — score ladder memilih CYCLICAL (60) di atas ASSET PLAY (10).
+
+Perbedaan nilai akibat tanggal harga adalah hal yang wajar: workbook adalah snapshot pada tanggal penyusunannya, sedangkan pipeline selalu memakai close terbaru. Untuk mereproduksi angka workbook persis, pakai `--valuation-date` dan bandingkan pada tanggal yang sama.
+
+### 1.8 Kuirk data sumber dan cara penanganannya
+
+Beberapa ticker punya data sumber yang tidak lengkap. Ini ditangani secara eksplisit, bukan dianggap error:
+
+| Kuirk | Ticker terdampak | Penanganan |
+|---|---|---|
+| `historical_dividends` bernilai `null` | ARII, DSSA, GOLD | `load_dividend_to_supabase.py` menormalkannya menjadi kosong dan memuat **nol** baris dividen. Perusahaan tanpa dividen adalah keadaan sah, bukan input rusak. Sebelumnya ini menghentikan seluruh pipeline. |
+| `OUTSTANDING_SHARES` tahun terakhir `null` | BIRD (2025) | EPS/BVPS memakai jumlah saham dari tahun terakhir yang melaporkannya. Backend (`annual_share_count`) dan frontend (`buildValuationMetrics`) sama-sama mundur ke tahun sebelumnya. Di UI, catatan kartu menampilkan `(shares from 2024; latest year not reported)` supaya aproksimasi ini terlihat. |
+| Annual source punya tahun ekstra (2018) | GOLD, WIFI | Loader annual menerima **superset** selama rentang wajib 2019–2025 tercakup; tahun ekstra ikut dimuat sebagai histori tambahan. Sebelumnya jumlah baris dikunci tepat 7 sehingga kedua ticker ini ditolak. |
+| Field deskriptif berisi objek, bukan angka | ITMG 2025 (`industry_breakdown` = cadangan batu bara) | Validasi hanya memeriksa field yang benar-benar dipetakan ke metrik canonical (`ANNUAL_FIELDS` + `outstanding_shares`). Field deskriptif yang tidak punya padanan metrik tidak lagi menolak seluruh file. |
+| `interest_expense_non_operating` `null` di semua quarter | GOLD (26/26) | Metrik yang tidak pernah disediakan provider dianggap **tidak tersedia secara struktural**: dikeluarkan dari syarat `resolve_base_quarter` dan dihilangkan dari output proyeksi, bukan diisi nol. Mengisi nol akan salah menyatakan run-rate. |
+| Hanya `ASSET PLAY` yang cocok (score 10) | GOLD | Score ladder workbook tidak punya cabang untuk score 10, sehingga hasilnya `UNCLASSIFIED`. Karena engine valuasi dan reference table memodelkan kondisi ini sebagai `ASSET PLAY`, tipe tersebut dipetakan ke `ASSET PLAY` saat valuasi. Hasil classifier yang tersimpan tetap `UNCLASSIFIED` apa adanya. |
+| Tidak ada rule yang cocok sama sekali | INDF | Semua enam rule `False`, jadi `UNCLASSIFIED` tanpa dasar tipe apa pun. Ini **tidak** dipetakan ke `ASSET PLAY` — valuasi akan memakai metodologi berbasis aset yang tidak pernah dipilih classifier. `calculate_valuation.py` menolak dengan `CLASSIFICATION_UNCLASSIFIED_NO_RULE_MATCHED` dan menyarankan `--stock-type` eksplisit bila valuasi memang diinginkan. |
+| COGS 2019 kosong di workbook | AUTO (dan pola serupa di ticker lain) | Canonical memakai `GROSS_PROFIT` sebenarnya, sehingga `GPM Range` tidak membengkak. Efeknya `CLASSIFICATION_CYCLICAL` bisa berbeda dari workbook (lihat 1.7), tapi `FINAL TYPE` tidak terpengaruh. |
+
+`eps_long` yang `UNAVAILABLE` adalah konsekuensi langsung dari kuirk kedua. Klasifikasi tetap dapat dijalankan selama tipe akhirnya tidak memerlukan input tersebut; rule yang tidak bisa dievaluasi menghasilkan `None` dan dilaporkan lewat flag `CLASSIFIER_INPUT_MISSING`.
+
+**Prinsip yang dipakai:** data yang tidak ada tidak pernah diganti dengan nol atau tebakan. Kalau sebuah metrik tidak tersedia untuk seluruh histori, ia dihilangkan dari output dan disebutkan di flag/catatan; kalau sebuah tipe saham tidak bisa dipastikan, hasilnya dibiarkan eksplisit (`UNCLASSIFIED`) dan hanya dipetakan pada titik konsumsi yang memang punya padanan resmi.
+
 ## 2. Gambaran urutan kerja
+
 
 ```text
 Sectors API
@@ -130,7 +460,7 @@ Periksa ticker, banyak periode, dan jumlah output. Bila sesuai, simpan:
 python .\supabase\populate_growth_quality.py --ticker TICKER_BARU --apply
 ```
 
-Output sukses harus menyebut `Persisted and verified` dan status run `SUCCEEDED`. Perhitungan memakai semua periode aktual yang tersedia (annual dibatasi 7 tahun secara default), menyimpan run beserta hasil ke tiga tabel `calc_*`. Ini **tidak** menghitung/menyimpan MetricsClassification final.
+Output sukses harus menyebut `Persisted and verified` dan status run `SUCCEEDED`. Perhitungan memakai semua periode aktual yang tersedia (annual dibatasi 7 tahun secara default), menyimpan run beserta hasil ke tiga tabel `calc_*`. Script ini **tidak** menulis MetricsClassification final; itu dikerjakan langkah terpisah (`populate_metrics_classification.py`, lihat bagian 1.6) yang membaca hasil annual di sini.
 
 ## 4. Update ketika ada quarter baru
 
@@ -260,16 +590,53 @@ join latest_run lr on lr.id = r.calculation_run_id;
 
 Tabel hasil menyimpan banyak metrik per periode. Jumlah rows yang diharapkan ditampilkan oleh script kalkulasi; jangan mengharapkan jumlah row sama dengan jumlah periode.
 
-## 7. Proyeksi workbook (jalur terpisah, opsional)
+## 7. Proyeksi (jalur terpisah, opsional)
 
-Proyeksi bukan quarter actual dan tidak dijalankan oleh kalkulasi Growth & Quality. File skenario JSON yang sudah divalidasi bisa di-preview lalu disimpan terpisah:
+Proyeksi bukan quarter actual dan tidak dijalankan oleh kalkulasi Growth & Quality. Skrip menulis hasilnya ke `projection_scenarios` + `projection_values` di Supabase, bukan ke `financial_facts`.
+
+Ada dua jalur, dan keduanya **tidak** memerlukan file JSON saat menyimpan:
+
+| Jalur | Kapan dipakai | Sumber skenario |
+|---|---|---|
+| Turunan otomatis | Ticker yang actual-nya sudah dimuat (semua 19 ticker saat ini) | Dihitung dari tabel canonical |
+| File skenario manual | Skenario yang diisi tangan dari workbook, atau file yang ingin dipakai ulang | File JSON di disk |
+
+### 7.1 Menurunkan skenario otomatis dari actual kanonis
+
+```powershell
+python .\supabase\derive_projection_scenario.py TICKER_BARU          # preview
+python .\supabase\derive_projection_scenario.py TICKER_BARU --apply  # simpan
+```
+
+Alurnya `Supabase → Python → Supabase`. Tanpa `--apply` skenario ditulis ke file JSON agar bisa diperiksa; dengan `--apply` file itu **tidak** dibuat karena datanya sudah tersimpan di database.
+
+Aturan turunan (sudah diverifikasi cocok dengan skenario workbook AUTO yang tersimpan):
+
+| Bagian | Rumus |
+|---|---|
+| Item arus (revenue, COGS, interest, earnings, OCF) | `sum(Q1..Q_asof) × 4 / jumlah_quarter` |
+| Item neraca (aset lancar, liabilitas lancar/total, ekuitas) | nilai pada `Q_asof` |
+| Avg DPR | `TRIMMEAN(seri DPS/EPS annual sepanjang Years_Avail, 0.4)` |
+| Potential DPS | `EPS forward × Avg DPR` |
+
+### 7.2 Menyimpan file skenario manual
+
+Untuk skenario yang diisi tangan dari workbook:
 
 ```powershell
 python .\supabase\store_projection_scenario.py --scenario .\supabase\projection_auto_2026_q2.json
 python .\supabase\store_projection_scenario.py --scenario .\supabase\projection_auto_2026_q2.json --apply
 ```
 
-Untuk ticker/periode lain siapkan file skenario baru dengan schema yang sama dan actual historis yang cocok. Jangan salin forecast ke `financial_facts`; script memvalidasi actual dan menulis forecast ke `projection_scenarios`/`projection_values`.
+Siapkan file dengan schema yang sama dan actual historis yang cocok. Script memvalidasi actual terhadap `financial_facts` dan menulis forecast ke `projection_scenarios`/`projection_values`.
+
+Catatan penting:
+
+- Tahun tanpa dividen tetap masuk seri dengan DPR 0 dan tahun merugi masuk negatif; keduanya **tidak** di-skip, karena `TRIMMEAN` yang membuang outlier — bukan penyaringan input. Men-skip akan mengubah DPR dan DPS.
+- COGS disimpan negatif mengikuti penyajian workbook (raw kanonis positif).
+- Script **menolak** menulis bila ticker sudah punya scenario ACTIVE, karena `calculate_valuation.py` mensyaratkan tepat satu. Untuk versi baru, naikkan `--scenario-version` setelah menonaktifkan yang lama secara sadar.
+- Tanpa riwayat dividen, DPR = 0 (sesuai `IFERROR(TRIMMEAN(...), 0)` di workbook), sehingga DDM menjadi tidak berlaku — bukan error.
+
 
 ## 8. Jika gagal: aturan aman
 
@@ -285,11 +652,166 @@ Untuk ticker/periode lain siapkan file skenario baru dengan schema yang sama dan
 Migration `0014_valuation_reference_and_results.sql` dan `0015_valuation_methodology_alignment.sql` sudah diterapkan pada Supabase yang terhubung. Tabel acuan berisi 12 sektor, 6 tipe saham, dan 6 threshold DER/CR/ICR; hasil aktual disimpan terpisah dari input projection. Preview AUTO Q2 2026:
 
 ```powershell
-python .\supabase\calculate_valuation.py --ticker AUTO --stock-type CYCLICAL
+python .\supabase\calculate_valuation.py --ticker AUTO
 ```
 
-`stock-type` wajib dipilih eksplisit karena hasil classifier belum menjadi input persisted yang siap dipakai. Script memilih satu projection scenario ACTIVE; bila ada lebih dari satu, sebut `--scenario-code`. `Years Available` default dari scenario; `Comparison Period` memakai ladder workbook (>=7: 5 tahun, >=5: 3, >=3: 2, selain itu 0), atau dapat diatur lewat `--years-available`/`--years-compare`. Annual window dibatasi pada tahun sampai as-of quarter.
+`--stock-type` sekarang **opsional**: tanpa argumen itu, script membaca `CLASSIFICATION_FINAL_TYPE` yang tersimpan (lihat bagian 1.6) dan mencetak `Stock type resolved from classifier: ...`. Argumen `--stock-type` tetap tersedia sebagai override untuk investigasi, misalnya `--stock-type CYCLICAL`.
 
-Harga menggunakan close terakhir pada/before `--valuation-date` (default harga daily terakhir). Projection harus ber-as-of tidak lebih baru dari valuation date. Risk-free rate belum bersumber; karena itu DDM dan Discounted Earnings akan `UNAVAILABLE` kecuali rate serta referensinya diberikan eksplisit, contoh `--risk-free-rate 0.0633 --risk-free-source "10Y SBN, source and observation date"`. Jangan gunakan angka contoh tanpa verifikasi sumber aktual.
+Script memilih satu projection scenario ACTIVE; bila ada lebih dari satu, sebut `--scenario-code`. `Years Available` default dari scenario; `Comparison Period` memakai ladder workbook (>=7: 5 tahun, >=5: 3, >=3: 2, selain itu 0), atau dapat diatur lewat `--years-available`/`--years-compare`. Annual window dibatasi pada tahun sampai as-of quarter.
+
+Harga menggunakan close terakhir pada/before `--valuation-date` (default harga daily terakhir). Projection harus ber-as-of tidak lebih baru dari valuation date.
+
+Risk-free rate kini punya tabel acuan sendiri: `public.risk_free_rate_reference` (migration `0020_risk_free_rate_reference.sql`, sudah diterapkan). Tabel ini **versioned dan bertanggal**, berisi:
+
+| Kolom | Arti |
+|---|---|
+| `reference_version` / `rate_code` | Versi acuan dan kode rate; saat ini `1.0.0` / `SBN_10Y_YIELD` |
+| `observation_date` | Tanggal observasi yield; `NULL` hanya untuk baris konstanta workbook |
+| `rate` | Nilai desimal, mis. `0.0633` |
+| `source_kind` | `WORKBOOK_CONSTANT` (literal workbook) atau `MARKET_OBSERVATION` (observasi bertanggal) |
+| `source_name` / `source_reference` | Sumber dan rujukan tepatnya, wajib diisi |
+| `is_default` | Satu baris default per versi; dipakai bila belum ada observasi bertanggal |
+
+Baris yang di-seed sekarang adalah konstanta workbook `DataInput!B11` = **6,33% (Yield SBN 10Y)**, dengan catatan eksplisit bahwa workbook **tidak** mencatat tanggal observasi maupun nama sumber pasar. Jadi DDM dan Discounted Earnings bisa dihitung, tetapi provenance-nya jujur tertulis sebagai konstanta workbook — bukan observasi pasar.
+
+Untuk memakai rate dari tabel (tanpa mengetik ulang angkanya):
+
+```powershell
+python .\supabase\calculate_valuation.py --ticker AMRT --stock-type STALWART --risk-free-from-reference
+python .\supabase\calculate_valuation.py --ticker AMRT --stock-type STALWART --risk-free-from-reference --apply
+```
+
+Resolver memilih **observasi `MARKET_OBSERVATION` terbaru** bila ada; kalau tidak ada, baris `is_default` (konstanta workbook) yang dipakai. `--risk-free-from-reference` tidak boleh digabung dengan `--risk-free-rate`/`--risk-free-source`.
+
+Menambah observasi pasar yang sebenarnya (supaya menggantikan konstanta workbook) — jalankan di SQL Editor:
+
+```sql
+insert into public.risk_free_rate_reference
+  (reference_version, rate_code, observation_date, rate, currency_code, tenor_years,
+   source_kind, source_name, source_reference, is_default)
+values
+  ('1.0.0', 'SBN_10Y_YIELD', '2026-09-25', 0.0588, 'IDR', 10,
+   'MARKET_OBSERVATION', '<nama sumber resmi>', '<URL/tanggal rujukan>', false);
+```
+
+Setelah baris bertanggal masuk, resolver otomatis memakainya. Jangan mengubah nilai `0.0633` pada baris workbook; nilai itu harus tetap sama persis dengan `DataInput!B11`. Tabel hanya dapat dibaca `service_role` (bukan `anon`/`authenticated`), dan migration memverifikasi RLS, default tunggal, serta nilai workbook sebelum commit.
+
+Migration `0021_stock_research_latest_valuation_run.sql` juga sudah diterapkan: RPC `get_stock_research_data` sekarang mengambil **snapshot terbaru per `method_code`** pada `valuation_date` terakhir. Ini penting karena menjalankan ulang valuasi dengan asumsi baru (mis. menambahkan risk-free rate) membuat calculation run baru di tanggal yang sama; tanpa dedup, frontend akan menerima setiap metode dua kali.
 
 Mean Reversion PBV diberi status `APPROXIMATED`: quarterly shares belum tersedia, sehingga angka annual terakhir yang tersedia dipakai dan flag dicatat. Financial `available_date` juga masih kosong, sehingga output belum point-in-time/backtest-safe. Setelah memeriksa preview, penyimpanan dilakukan eksplisit dengan menambah `--apply`; hasil masuk ke `calc_valuation_inputs`/`calc_valuation_methods`, bukan ke actual financial facts.
+
+## 10. Frontend: status data per grafik
+
+Halaman `/market/[ticker]` membaca data lewat RPC `get_stock_research_data` (hanya `anon`/`authenticated` boleh EXECUTE; tabel mentah tetap privat). Adapter `frontend/src/lib/stock-detail-adapter.ts` mengubah payload itu menjadi bentuk UI.
+
+Prinsip yang dipakai sekarang:
+
+- **Grafik selalu dirender.** Kalau seri datanya kosong, kerangka grafik tetap muncul dengan label `No data yet` (`frontend/src/components/ui/chart-empty-state.tsx`), bukan menghilang. Jadi bagian yang belum ada datanya terlihat jelas dan bisa diisi bertahap.
+- **Tidak ada angka palsu.** Tahun yang datanya belum ada menghasilkan `null` di seri, dan `null` digambar sebagai **gap**, bukan `0`. Ini penting untuk EPS, growth rate, dan dividen: tahun tanpa dividen tidak boleh tampil sebagai payout 0.
+- **Data yang sudah nyata** (per ticker, dari `financial_facts`): Revenue, Net Income, Operating Cash Flow, EPS (earnings / outstanding shares), Revenue & EPS YoY, tabel tahunan/kuartalan, kartu metrik tahunan/kuartalan, kartu forensic growth, dan kartu EPS/BVPS/P-E/P-BV.
+
+Daftar grafik yang **masih kosong** dan perlu diisi satu per satu:
+
+| Grafik | Sumber data yang dibutuhkan |
+|---|---|
+| Price Chart (Overview) | `prices_daily.close_price` untuk ticker tersebut (sudah ada untuk AMRT/AUTO/MIDI; ticker lain belum di-ingest) |
+| Dividend Trend (Growth) | `dividend_facts` + `yield_ratio`; **`yield_ratio` masih NULL** untuk semua baris, jadi sumbu yield kosong walau DPS ada |
+| Backtest & Historical Evidence | Belum ada tabel backtest; untuk ticker selain AUTO memang kosong, untuk AUTO masih data contoh (`DemoDataBadge`) |
+| DDM & Discounted Earnings (Valuation) | Sudah terisi setelah `--risk-free-from-reference` dijalankan; ticker yang belum di-run ulang masih `UNAVAILABLE` |
+
+Cara memverifikasi cepat setelah mengisi data:
+
+```powershell
+python .\supabase\calculate_valuation.py --ticker <TICKER> --stock-type <TYPE> --risk-free-from-reference
+```
+
+lalu cek jumlah metode yang dikembalikan RPC (harus 5, tanpa duplikasi):
+
+```sql
+select jsonb_array_length(public.get_stock_research_data('AMRT') -> 'valuation_methods');
+```
+
+### 10.1 Ukuran halaman Market Overview (8 / 12 / 16 / 20)
+
+Halaman `/market` menampilkan kartu saham per halaman. Jumlahnya bisa dipilih dari dropdown di toolbar: **8 (default), 12, 16, 20**.
+
+- Angkanya berasal dari parameter `p_page_size` di RPC `get_market_overview_page(p_page, p_page_size)` (migration `0027_market_overview_page_size.sql`). Sebelumnya nilai ini **hardcode 5** di dua tempat (`limit 5` dan `offset ... * 5`), jadi halaman market tidak pernah bisa menampilkan lebih dari 5 kartu.
+- Pilihan dikirim lewat query string `?page=<n>&size=<n>`, jadi ukuran halaman ikut ter-bookmark dan bertahan saat pindah halaman.
+- Nilai di luar daftar (mis. `?size=99`) **jatuh ke 8**, bukan error, supaya klien lama tetap tampil.
+- Daftar ukuran ada di satu tempat: `frontend/src/lib/market-page-size.ts` (`MARKET_PAGE_SIZE_OPTIONS`). File itu terpisah dari `lib/stock-data.ts` karena halaman market adalah Client Component, sedangkan `stock-data.ts` bertanda `server-only`. Daftar ini **harus sama** dengan whitelist `array[8, 12, 16, 20]` di dalam RPC.
+- Ganti ukuran halaman akan **reset ke halaman 1**, karena halaman terakhir pada ukuran lama bisa tidak ada di ukuran baru.
+- Batas atas tetap dijaga: maksimum 20 baris per panggilan, jadi RPC tetap mengembalikan potongan terbatas, bukan seluruh tabel.
+
+Verifikasi cepat:
+
+```sql
+select
+  jsonb_array_length(public.get_market_overview_page(1, 8)  -> 'stocks') as size_8,
+  jsonb_array_length(public.get_market_overview_page(1, 12) -> 'stocks') as size_12,
+  jsonb_array_length(public.get_market_overview_page(1, 20) -> 'stocks') as size_20,
+  jsonb_array_length(public.get_market_overview_page(1, 7)  -> 'stocks') as size_7_falls_back_to_8;
+```
+
+Catatan: migration `0027` **menghapus** signature lama `get_market_overview_page(integer)` sebelum membuat `(integer, integer)`. Kalau signature lama dibiarkan, PostgREST tidak bisa memilih kandidat saat pemanggil hanya mengirim `p_page`, dan gagal dengan `Could not choose the best candidate function`.
+
+### 10.2 Hasil audit: tabel vs yang tampil di UI
+
+Audit membandingkan isi tabel Postgres dengan yang benar-benar dirender. Dua jenis masalah ditemukan dan sudah diperbaiki.
+
+**(a) Ada di tabel, tapi tidak pernah sampai ke UI (sudah diperbaiki)**
+
+| Metrik | Baris valid di tabel | Masalah | Perbaikan |
+|---|---|---|---|
+| `INTEREST_EXPENSE_NON_OPERATING` (QUARTER) | 49 | Tidak ada di whitelist RPC, jadi baris "Interest Expense" selalu `Belum Tersedia` walau datanya ada | Migration `0022` menambahkannya ke whitelist; adapter kini mengisi baris itu |
+| `CURRENT_ASSETS` (ANNUAL) | 18 | Tidak ada di whitelist RPC, jadi current assets tahunan tidak bisa dibaca | Migration `0022` menambahkannya (kode kuartal tetap `TOTAL_CURRENT_ASSET`) |
+
+**(b) Skala satuan salah baca (sudah diperbaiki)**
+
+Kolom berlabel `M Rp` di workbook sebenarnya berisi **miliar** IDR, bukan juta (lihat `docs/reference/EXCEL_POSTGRES_VALIDATION.md` §"Unit reality check": `1 template unit = 1,000,000,000 IDR`). Konversi awal memakai `÷1e6` sehingga nilainya 1000× terlalu besar. Sekarang `÷1e9` dan label UI diganti menjadi `Interest Expense (Rp Bn)` agar tidak menyesatkan.
+
+Verifikasi terhadap angka workbook: AUTO 2026-Q2 = `9.224.000.000` IDR → tampil **9,22**; 2026-Q1 → **9,06**. Ini persis cocok dengan tabel validasi Excel (`Interest Exp | 2026-Q2 | 9.224`).
+
+**(c) Masih kosong di DB (bukan bug UI, memang datanya belum ada)**
+
+| Metrik | Status di tabel | Dampak |
+|---|---|---|
+| `dividend_facts.yield_ratio` | **NULL di seluruh 21 baris** | Sumbu Yield pada chart Dividend Trend kosong; DPS tetap ada |
+| `dividend_facts.event_date` | **NULL di seluruh 21 baris** | Tidak ada tanggal pembayaran dividen |
+| `financial_periods.report_date` / `available_date` | **NULL di seluruh 99 periode** | Output belum point-in-time; backtest belum aman secara as-of |
+| `COST_OF_REVENUE` (ANNUAL) | 3 baris `MISSING` (2019 di ketiga ticker) | Baris 2019 kosong; tahun lain lengkap |
+| `CURRENT_ASSETS` (ANNUAL) | 3 baris `MISSING` (2019) | Sama seperti di atas |
+| `INTEREST_EXPENSE_NON_OPERATING` (QUARTER) | 29 baris `MISSING` (AUTO 12, MIDI 12, AMRT 5 — mayoritas 2020–2022) | Kuartal lama tampil `Belum Tersedia` |
+| `COST_OF_REVENUE` (QUARTER) | 1 baris `MISSING` (AUTO 2023-Q4) | Satu kuartal kosong |
+
+Catatan: baris `MISSING` **sengaja disimpan** sebagai baris dengan `value_numeric` NULL, bukan dihapus. Jadi gap-nya terlihat dan bisa diisi nanti; UI menampilkannya sebagai `Belum Tersedia`, bukan `0`.
+
+### 10.3 Kartu "Workbook Sample vs Tabel" — **dihapus dari UI**
+
+Kartu **Workbook Sample vs Tabel** dulu ada di tab Overview untuk memverifikasi bahwa isi tabel sudah setara dengan sampel workbook. Kartu itu sudah **tidak dirender lagi** (dihapus dari `frontend/src/components/stock-research/overview-tab-content.tsx`), karena fungsinya hanya audit sementara saat migrasi data dan tidak berguna bagi pembaca laporan.
+
+Yang masih ada di repo, tetapi tidak dipakai oleh halaman mana pun:
+
+| Berkas | Isi |
+|---|---|
+| `frontend/src/data/workbook-sample-auto.ts` | Transkrip angka sampel workbook AUTO |
+| `frontend/src/lib/sample-comparison.ts` | Logika pembanding sampel vs database |
+| `frontend/src/components/stock-research/sample-comparison-card.tsx` | Komponen kartunya |
+
+Kalau audit itu perlu dijalankan lagi, panggil `buildSampleComparison(data)` dari `frontend/src/lib/sample-comparison.ts` dan render lewat `SampleComparisonCard`. Status yang dulu dipakai:
+
+| Status | Arti |
+|---|---|
+| **COCOK** | Selisih ada di dalam toleransi metrik tersebut |
+| **BEDA** | Ada selisih di luar toleransi — perlu ditinjau |
+| **TABEL KOSONG** | Database belum punya nilainya |
+| **ADA, TIDAK DIEKSPOS** | Nilainya ada di tabel, tetapi hanya bisa dibaca `service_role` (mis. `risk_free_rate_reference`) |
+
+Sumber angka sampel (bukan dikarang): `docs/reference/Template_Sample_data.md` dan `docs/reference/EXCEL_POSTGRES_VALIDATION.md` §9.
+
+Hasil verifikasi terakhir saat kartu masih tampil di halaman AUTO: **41 COCOK, 1 BEDA, 0 TABEL KOSONG, 1 ADA TETAPI TIDAK DIEKSPOS**.
+
+- **BEDA — Dividend Discount Model**: sampel workbook Rp1.418 vs tabel Rp1.423,29 (selisih 0,37%). Penyebabnya detail pembulatan/metodologi di workbook, bukan kesalahan data: formula workbook yang tertulis (`DPS / (WACC − g)`) tidak mereproduksi angka cache-nya sendiri, sedangkan engine kita memakai `DPS × (1+g) / (WACC − g)` dengan `g` dibatasi 4% dan WACC = risk-free 6,33% + 6%. Perbedaan sekecil ini sengaja **ditampilkan apa adanya** alih-alih disembunyikan.
+- **ADA, TIDAK DIEKSPOS — Risk Free Rate (SBN 10Y)**: nilainya **ada** di `risk_free_rate_reference`, tetapi tabel itu hanya bisa dibaca `service_role` sehingga browser tidak dapat membandingkannya. Statusnya sengaja dibedakan dari "tabel kosong" supaya tidak salah lapor: datanya ada, hanya belum diekspos ke UI.
+
+Audit yang sama juga jadi tempat mengecek unit: kolom yang di workbook dilabeli `M Rp` sebenarnya **miliar** IDR. Perbandingannya dilakukan dalam satuan yang sama, sehingga salah skala akan langsung terlihat sebagai `BEDA` (seperti yang sempat terjadi pada Interest Expense sebelum diperbaiki).
+

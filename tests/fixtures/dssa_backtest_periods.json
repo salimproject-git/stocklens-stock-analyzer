@@ -1,0 +1,273 @@
+{
+  "instrument_id": "707288f8-190a-4c35-9cba-bae333c1195d",
+  "period_count": 32,
+  "periods": [
+    {
+      "available_date": null,
+      "id": "992e1f64-2f5b-4220-8648-e1525e675c11",
+      "instrument_id": "707288f8-190a-4c35-9cba-bae333c1195d",
+      "period_end": "2019-12-31",
+      "period_label": "2019",
+      "period_type": "ANNUAL"
+    },
+    {
+      "available_date": null,
+      "id": "038cc2b2-1776-4c96-8803-2b234cb3c544",
+      "instrument_id": "707288f8-190a-4c35-9cba-bae333c1195d",
+      "period_end": "2020-03-31",
+      "period_label": "2020-Q1",
+      "period_type": "QUARTER"
+    },
+    {
+      "available_date": null,
+      "id": "cc448864-04e9-44b8-8491-7d21c66fb370",
+      "instrument_id": "707288f8-190a-4c35-9cba-bae333c1195d",
+      "period_end": "2020-06-30",
+      "period_label": "2020-Q2",
+      "period_type": "QUARTER"
+    },
+    {
+      "available_date": null,
+      "id": "577f69f5-b4d0-4144-86aa-3f2699d27477",
+      "instrument_id": "707288f8-190a-4c35-9cba-bae333c1195d",
+      "period_end": "2020-09-30",
+      "period_label": "2020-Q3",
+      "period_type": "QUARTER"
+    },
+    {
+      "available_date": null,
+      "id": "ddf93f90-09c4-4554-8656-112fe280add8",
+      "instrument_id": "707288f8-190a-4c35-9cba-bae333c1195d",
+      "period_end": "2020-12-31",
+      "period_label": "2020",
+      "period_type": "ANNUAL"
+    },
+    {
+      "available_date": null,
+      "id": "3c6b0216-24c9-4cae-bc7a-02236ed1f52d",
+      "instrument_id": "707288f8-190a-4c35-9cba-bae333c1195d",
+      "period_end": "2020-12-31",
+      "period_label": "2020-Q4",
+      "period_type": "QUARTER"
+    },
+    {
+      "available_date": null,
+      "id": "491a4cd3-6883-490b-b45e-00d25fba0b1a",
+      "instrument_id": "707288f8-190a-4c35-9cba-bae333c1195d",
+      "period_end": "2021-03-31",
+      "period_label": "2021-Q1",
+      "period_type": "QUARTER"
+    },
+    {
+      "available_date": null,
+      "id": "d82d1a02-ad0f-465f-9256-3a2967124c01",
+      "instrument_id": "707288f8-190a-4c35-9cba-bae333c1195d",
+      "period_end": "2021-06-30",
+      "period_label": "2021-Q2",
+      "period_type": "QUARTER"
+    },
+    {
+      "available_date": null,
+      "id": "77fbed6c-65aa-4620-bd7b-355a5dbee20e",
+      "instrument_id": "707288f8-190a-4c35-9cba-bae333c1195d",
+      "period_end": "2021-09-30",
+      "period_label": "2021-Q3",
+      "period_type": "QUARTER"
+    },
+    {
+      "available_date": null,
+      "id": "c39cb675-35fe-49ee-bd4b-83dce8d832af",
+      "instrument_id": "707288f8-190a-4c35-9cba-bae333c1195d",
+      "period_end": "2021-12-31",
+      "period_label": "2021",
+      "period_type": "ANNUAL"
+    },
+    {
+      "available_date": null,
+      "id": "f3425081-7adb-444e-9472-11b9d7064ec2",
+      "instrument_id": "707288f8-190a-4c35-9cba-bae333c1195d",
+      "period_end": "2021-12-31",
+      "period_label": "2021-Q4",
+      "period_type": "QUARTER"
+    },
+    {
+      "available_date": null,
+      "id": "92f0a584-838c-4883-9c6e-0a394bc570d7",
+      "instrument_id": "707288f8-190a-4c35-9cba-bae333c1195d",
+      "period_end": "2022-03-31",
+      "period_label": "2022-Q1",
+      "period_type": "QUARTER"
+    },
+    {
+      "available_date": null,
+      "id": "18873329-3eed-4d4a-b83c-48682c0e9923",
+      "instrument_id": "707288f8-190a-4c35-9cba-bae333c1195d",
+      "period_end": "2022-06-30",
+      "period_label": "2022-Q2",
+      "period_type": "QUARTER"
+    },
+    {
+      "available_date": null,
+      "id": "7b90a2be-836c-4c13-bbf6-3268879933c2",
+      "instrument_id": "707288f8-190a-4c35-9cba-bae333c1195d",
+      "period_end": "2022-09-30",
+      "period_label": "2022-Q3",
+      "period_type": "QUARTER"
+    },
+    {
+      "available_date": null,
+      "id": "b228c4da-372a-4866-b02a-7d94822a50dd",
+      "instrument_id": "707288f8-190a-4c35-9cba-bae333c1195d",
+      "period_end": "2022-12-31",
+      "period_label": "2022",
+      "period_type": "ANNUAL"
+    },
+    {
+      "available_date": null,
+      "id": "90cddc94-7929-4349-a2ba-d0add10f101e",
+      "instrument_id": "707288f8-190a-4c35-9cba-bae333c1195d",
+      "period_end": "2022-12-31",
+      "period_label": "2022-Q4",
+      "period_type": "QUARTER"
+    },
+    {
+      "available_date": null,
+      "id": "27b78dc2-2412-4a96-a3a9-537604941f1d",
+      "instrument_id": "707288f8-190a-4c35-9cba-bae333c1195d",
+      "period_end": "2023-03-31",
+      "period_label": "2023-Q1",
+      "period_type": "QUARTER"
+    },
+    {
+      "available_date": null,
+      "id": "f496745f-61b6-4b7c-8766-1feb5a49113a",
+      "instrument_id": "707288f8-190a-4c35-9cba-bae333c1195d",
+      "period_end": "2023-06-30",
+      "period_label": "2023-Q2",
+      "period_type": "QUARTER"
+    },
+    {
+      "available_date": null,
+      "id": "6e1eb138-7417-402e-8ce3-299309e552f7",
+      "instrument_id": "707288f8-190a-4c35-9cba-bae333c1195d",
+      "period_end": "2023-09-30",
+      "period_label": "2023-Q3",
+      "period_type": "QUARTER"
+    },
+    {
+      "available_date": null,
+      "id": "66123a27-245e-428f-86d9-887fe48fc27c",
+      "instrument_id": "707288f8-190a-4c35-9cba-bae333c1195d",
+      "period_end": "2023-12-31",
+      "period_label": "2023",
+      "period_type": "ANNUAL"
+    },
+    {
+      "available_date": null,
+      "id": "aa10ae4d-6539-4c0d-905d-eff5a2b8e866",
+      "instrument_id": "707288f8-190a-4c35-9cba-bae333c1195d",
+      "period_end": "2023-12-31",
+      "period_label": "2023-Q4",
+      "period_type": "QUARTER"
+    },
+    {
+      "available_date": null,
+      "id": "c9849e92-484b-4c91-bc99-e6ef3883dc10",
+      "instrument_id": "707288f8-190a-4c35-9cba-bae333c1195d",
+      "period_end": "2024-03-31",
+      "period_label": "2024-Q1",
+      "period_type": "QUARTER"
+    },
+    {
+      "available_date": null,
+      "id": "bd9cdec1-4bbf-4c8e-87eb-840e28c8f50a",
+      "instrument_id": "707288f8-190a-4c35-9cba-bae333c1195d",
+      "period_end": "2024-06-30",
+      "period_label": "2024-Q2",
+      "period_type": "QUARTER"
+    },
+    {
+      "available_date": null,
+      "id": "dcd44ec4-89b0-4573-8648-2d40d43acc3c",
+      "instrument_id": "707288f8-190a-4c35-9cba-bae333c1195d",
+      "period_end": "2024-09-30",
+      "period_label": "2024-Q3",
+      "period_type": "QUARTER"
+    },
+    {
+      "available_date": null,
+      "id": "d1d47784-f524-46e3-9dd3-713cecf462dd",
+      "instrument_id": "707288f8-190a-4c35-9cba-bae333c1195d",
+      "period_end": "2024-12-31",
+      "period_label": "2024",
+      "period_type": "ANNUAL"
+    },
+    {
+      "available_date": null,
+      "id": "752e8593-643b-4e0f-b68b-9217c589a3ab",
+      "instrument_id": "707288f8-190a-4c35-9cba-bae333c1195d",
+      "period_end": "2024-12-31",
+      "period_label": "2024-Q4",
+      "period_type": "QUARTER"
+    },
+    {
+      "available_date": null,
+      "id": "d1c6feec-af96-4dba-a136-b6c7f88de33b",
+      "instrument_id": "707288f8-190a-4c35-9cba-bae333c1195d",
+      "period_end": "2025-03-31",
+      "period_label": "2025-Q1",
+      "period_type": "QUARTER"
+    },
+    {
+      "available_date": null,
+      "id": "af91379f-854d-4079-afac-093758c1f192",
+      "instrument_id": "707288f8-190a-4c35-9cba-bae333c1195d",
+      "period_end": "2025-06-30",
+      "period_label": "2025-Q2",
+      "period_type": "QUARTER"
+    },
+    {
+      "available_date": null,
+      "id": "a64da88f-88c2-47fb-b08e-1d629bce5281",
+      "instrument_id": "707288f8-190a-4c35-9cba-bae333c1195d",
+      "period_end": "2025-09-30",
+      "period_label": "2025-Q3",
+      "period_type": "QUARTER"
+    },
+    {
+      "available_date": null,
+      "id": "b534ebc8-e236-42be-aa0f-5f38be5940ef",
+      "instrument_id": "707288f8-190a-4c35-9cba-bae333c1195d",
+      "period_end": "2025-12-31",
+      "period_label": "2025",
+      "period_type": "ANNUAL"
+    },
+    {
+      "available_date": null,
+      "id": "6b3fd2c9-2d8c-4551-bd8d-7ed4a6a656e0",
+      "instrument_id": "707288f8-190a-4c35-9cba-bae333c1195d",
+      "period_end": "2025-12-31",
+      "period_label": "2025-Q4",
+      "period_type": "QUARTER"
+    },
+    {
+      "available_date": null,
+      "id": "0dc076d5-197f-4f6c-9619-34d7ddfbbec9",
+      "instrument_id": "707288f8-190a-4c35-9cba-bae333c1195d",
+      "period_end": "2026-03-31",
+      "period_label": "2026-Q1",
+      "period_type": "QUARTER"
+    }
+  ],
+  "price_count": 0,
+  "prices": [],
+  "sector_name": "Energy",
+  "source": "public.financial_periods + public.prices_daily (canonical, unmodified projection)",
+  "ticker": "DSSA",
+  "unit": {
+    "close_price": "IDR per share",
+    "high_price": "IDR per share",
+    "low_price": "IDR per share"
+  },
+  "zero_high_rows": 0
+}

@@ -2,6 +2,7 @@ import React from "react";
 import { StockDetail } from "@/data/mock-stock-details";
 import { SectionCard } from "@/components/ui/section-card";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { UnavailableBadge } from "@/components/ui/unavailable-badge";
 
 export function FinancialHealthCard({
   health,
@@ -13,8 +14,11 @@ export function FinancialHealthCard({
       icon={<ActivityIcon className="h-4 w-4" />}
       title="Financial Health"
     >
+      {(!health || health.metrics.length === 0) && (
+        <UnavailableBadge label="Not available" />
+      )}
       <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
-        {health.metrics.map((m) => {
+        {(health?.metrics ?? []).map((m) => {
           const tone =
             m.badge === "Healthy"
               ? "healthy"

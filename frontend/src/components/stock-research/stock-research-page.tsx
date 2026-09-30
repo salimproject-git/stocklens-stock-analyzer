@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { mockStockDetails } from "@/data/mock-stock-details";
+import type { StockDetail } from "@/data/mock-stock-details";
 import { Breadcrumb } from "./breadcrumb";
 import { StockHeader } from "./stock-header";
 import { KeyMetricSummary } from "./key-metric-card";
@@ -13,7 +13,7 @@ import { ValuationTabContent } from "./valuation-tab-content";
 import { BacktestTabContent } from "./backtest-tab-content";
 import { DisclaimerFooter } from "./disclaimer-footer";
 
-export function StockResearchPage({ ticker }: { ticker: string }) {
+export function StockResearchPage({ stock }: { stock: StockDetail }) {
   const [activeTab, setActiveTab] = useState<ResearchTabKey>("Overview");
 
   useEffect(() => {
@@ -28,9 +28,6 @@ export function StockResearchPage({ ticker }: { ticker: string }) {
     window.addEventListener("hashchange", syncTabWithHash);
     return () => window.removeEventListener("hashchange", syncTabWithHash);
   }, []);
-
-  // Fallback to AUTO mock data if ticker not found in mock table
-  const stock = mockStockDetails[ticker.toUpperCase()] ?? mockStockDetails.AUTO;
 
   return (
     <>

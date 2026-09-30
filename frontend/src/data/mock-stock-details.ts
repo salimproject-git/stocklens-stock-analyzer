@@ -1,4 +1,5 @@
 import { buildBacktestOutcomeExplanation } from "@/lib/analysis";
+import { VALUATION_METHOD_LABELS } from "@/lib/valuation-methods";
 
 export type ValuationMetric = {
   label: string;
@@ -8,17 +9,13 @@ export type ValuationMetric = {
 
 export type ValuationMethodResult = {
   method: string;
+  /** Stored `method_code`, used for fixed ordering and chart colours. */
+  methodCode?: string;
   intrinsicValue: number;
   potential: string;
   marginOfSafety: string;
   status: "UNDERVALUED" | "OVERVALUED";
   description: string;
-};
-
-export type ValuationExplanation = {
-  title: string;
-  text: string;
-  methods: string[];
 };
 
 export type MarketOverviewStock = {
@@ -36,24 +33,25 @@ export type MarketOverviewStock = {
   evidenceTotal: number;
   updatedAt: string;
 };
+
 export type StockDetail = {
   ticker: string;
   companyName: string;
   logoUrl?: string;
   sector: string;
   stockType: string;
-  price: number;
-  change: number;
-  changePercent: number;
+  price: number | null;
+  change: number | null;
+  changePercent: number | null;
   updatedAt: string;
-  verdict: "Undervalued" | "Fairly Valued" | "Overvalued";
+  verdict: "Undervalued" | "Fairly Valued" | "Overvalued" | "Not available";
   verdictDescription: string;
-  intrinsicValue: number;
-  mos: number;
+  intrinsicValue: number | null;
+  mos: number | null;
   stockCharacter: string;
   stockCharacterDesc: string;
-  evidenceWins: number;
-  evidenceTotal: number;
+  evidenceWins: number | null;
+  evidenceTotal: number | null;
   researchSummary: string;
   methodologyUrl: string;
   companyProfile: {
@@ -67,26 +65,25 @@ export type StockDetail = {
   priceChart: {
     timeframe: string;
     points: { date: string; value: number }[];
-    low52W: number;
-    high52W: number;
-    ytdPercent: number;
+    low52W: number | null;
+    high52W: number | null;
+    ytdPercent: number | null;
     marketCap: string;
-    peTTM: number;
+    peTTM: number | null;
   };
   currentValuation: {
-    verdict: "Undervalued" | "Fairly Valued" | "Overvalued";
-    currentPrice: number;
-    intrinsicValue: number;
-    mos: number;
+    verdict: "Undervalued" | "Fairly Valued" | "Overvalued" | "Not available";
+    currentPrice: number | null;
+    intrinsicValue: number | null;
+    mos: number | null;
     metrics: ValuationMetric[];
     methods: ValuationMethodResult[];
     comparison: {
       takeaway: string;
       readouts: string[];
     };
-    explanations: ValuationExplanation[];
   };
-  financialHealth: {
+  financialHealth?: {
     metrics: {
       label: string;
       value: string;
@@ -108,10 +105,12 @@ export type StockDetail = {
     };
     growthVisuals: {
       periods: string[];
-      revenueNetIncome: { revenue: number[]; netIncome: number[] };
-      operatingCashFlow: number[];
-      eps: number[];
-      growthRate: { revenue: number[]; eps: number[] };
+      // `null` marks a year where the underlying fact is missing, so the chart
+      // can show a gap instead of drawing a fake zero.
+      revenueNetIncome: { revenue: (number | null)[]; netIncome: (number | null)[] };
+      operatingCashFlow: (number | null)[];
+      eps: (number | null)[];
+      growthRate: { revenue: (number | null)[]; eps: (number | null)[] };
       keyInsights: string[];
     };
     profitability: { metrics: { label: string; value: string; context: string; tone: 'positive' | 'neutral' | 'negative' }[] };
@@ -128,7 +127,7 @@ export type StockDetail = {
       subtext: string;
     }[];
   };
-  historicalEvidencePreview: {
+  historicalEvidencePreview?: {
   totalCases: number;
   positiveResults: string;
   medianReturn: number;
@@ -150,6 +149,12 @@ export type StockDetail = {
     winRate: string;
   };
   outcomeExplanation: string;
+  /**
+   * True when the numbers shown are illustrative sample data and are NOT
+   * backed by any database table yet. The UI must label these clearly so
+   * they are never mistaken for stored research results.
+   */
+  isDemoData?: boolean;
 };
 
   backtest?: {
@@ -157,6 +162,11 @@ export type StockDetail = {
     methodology: {
       processSteps: { number: string; title: string; text: string }[];
     };
+    /**
+     * True when the cases shown are illustrative sample data and are NOT
+     * backed by any database table yet.
+     */
+    isDemoData?: boolean;
   };
   thesisValidator: {
     quarters: string[];
@@ -387,9 +397,43 @@ export type BacktestCase = {
   mosMain: number | null;
   mosPeter: number | null;
   mosWeight: number | null;
+  /**
+   * Stored `Peak Month` / `Trough Month`, in months. Authoritative when present.
+   *
+   * These must NOT be recomputed from `pricePath`: the workbook uses
+   * `DATEDIF(T0, date, "m")`, which counts *completed* months, while
+   * `monthsBetween` in `@/lib/analysis/backtest` counts month *boundaries*.
+   * For a month-end analysis date the two disagree — AUTO 2023-Q3 peaks on
+   * 2023-10-02, which is `0` months by DATEDIF but `1` by `monthsBetween`.
+   */
+  peakMonth?: number | null;
+  troughMonth?: number | null;
+  /**
+   * Stored window metrics, in nominal currency. Authoritative when present.
+   *
+   * The UI must read these rather than recompute from `pricePath`: the stored
+   * table keeps only the window extremes, and extremes alone cannot rebuild the
+   * per-horizon windows (a peak in month 6 can lie outside the 6M window once
+   * `DATEDIF` month arithmetic is involved). Recomputing produced 18 wrong cells
+   * across the 18 AUTO cases, so the stored columns are the source of truth.
+   */
+  stored?: {
+    high3m: number | null;
+    low3m: number | null;
+    high6m: number | null;
+    low6m: number | null;
+    high9m: number | null;
+    low9m: number | null;
+    high12m: number | null;
+    low12m: number | null;
+    peakPrice: number | null;
+    troughPrice: number | null;
+    returnPeak: number | null;
+    returnDown: number | null;
+  };
   verdict: BacktestVerdict;
   verdictMos: BacktestVerdict;
-  methods: { method: string; intrinsicValue: number | null }[];
+  methods: { method: string; methodCode?: string; intrinsicValue: number | null }[];
   context: {
     revenueYoY: number | null;
     netIncomeYoY: number | null;
@@ -444,11 +488,11 @@ function makeAutoBacktestCase(seed: AutoBacktestSeed): BacktestCase {
     verdict: seed.verdict,
     verdictMos: seed.verdictMos,
     methods: [
-      { method: "Peter Lynch / Adaptive", intrinsicValue: seed.methods[0] },
-      { method: "Type & Sector Weighted", intrinsicValue: seed.methods[1] },
-      { method: "Mean Reversion PBV", intrinsicValue: seed.methods[2] },
-      { method: "Dividend Discount Model", intrinsicValue: seed.methods[3] },
-      { method: "Discounted Earnings", intrinsicValue: seed.methods[4] },
+      { method: VALUATION_METHOD_LABELS.PETER_LYNCH, methodCode: "PETER_LYNCH", intrinsicValue: seed.methods[0] },
+      { method: VALUATION_METHOD_LABELS.TYPE_SECTOR_WEIGHTED, methodCode: "TYPE_SECTOR_WEIGHTED", intrinsicValue: seed.methods[1] },
+      { method: VALUATION_METHOD_LABELS.MEAN_REVERSION_PBV, methodCode: "MEAN_REVERSION_PBV", intrinsicValue: seed.methods[2] },
+      { method: VALUATION_METHOD_LABELS.DDM, methodCode: "DDM", intrinsicValue: seed.methods[3] },
+      { method: VALUATION_METHOD_LABELS.DISCOUNTED_EARNINGS, methodCode: "DISCOUNTED_EARNINGS", intrinsicValue: seed.methods[4] },
     ],
     context: {
       revenueYoY: seed.revenueYoY,
@@ -530,11 +574,11 @@ export const mockStockDetails: Record<string, StockDetail> = {
         { label: "Dividend Yield", value: "4,83%", note: "Above market avg" },
       ],
       methods: [
-        { method: "Peter Lynch / Adaptive", intrinsicValue: 3567.704684, potential: "+51,82%", marginOfSafety: "34,13%", status: "UNDERVALUED", description: "Asset-based (PEG + growth)" },
-        { method: "Type & Sector Weighted", intrinsicValue: 2536.600367, potential: "+7,94%", marginOfSafety: "7,36%", status: "UNDERVALUED", description: "Blended (sector & type multiple)" },
-        { method: "Mean Reversion PBV", intrinsicValue: 1740.273242, potential: "-25,95%", marginOfSafety: "-35,04%", status: "OVERVALUED", description: "Historical asset valuation (PBV)" },
-        { method: "Dividend Discount Model", intrinsicValue: 1418.193101, potential: "-39,65%", marginOfSafety: "-65,70%", status: "OVERVALUED", description: "Dividend-based (Dividend Discount Model)" },
-        { method: "Discounted Earnings", intrinsicValue: 2304.882793, potential: "-1,92%", marginOfSafety: "-1,96%", status: "OVERVALUED", description: "Earnings-based (DCF)" },
+        { method: VALUATION_METHOD_LABELS.PETER_LYNCH, methodCode: "PETER_LYNCH", intrinsicValue: 3567.704684, potential: "+51,82%", marginOfSafety: "34,13%", status: "UNDERVALUED", description: "Asset-based (PEG + growth)" },
+        { method: VALUATION_METHOD_LABELS.TYPE_SECTOR_WEIGHTED, methodCode: "TYPE_SECTOR_WEIGHTED", intrinsicValue: 2536.600367, potential: "+7,94%", marginOfSafety: "7,36%", status: "UNDERVALUED", description: "Blended (sector & type multiple)" },
+        { method: VALUATION_METHOD_LABELS.MEAN_REVERSION_PBV, methodCode: "MEAN_REVERSION_PBV", intrinsicValue: 1740.273242, potential: "-25,95%", marginOfSafety: "-35,04%", status: "OVERVALUED", description: "Historical asset valuation (PBV)" },
+        { method: VALUATION_METHOD_LABELS.DDM, methodCode: "DDM", intrinsicValue: 1418.193101, potential: "-39,65%", marginOfSafety: "-65,70%", status: "OVERVALUED", description: "Dividend-based (Dividend Discount Model)" },
+        { method: VALUATION_METHOD_LABELS.DISCOUNTED_EARNINGS, methodCode: "DISCOUNTED_EARNINGS", intrinsicValue: 2304.882793, potential: "-1,92%", marginOfSafety: "-1,96%", status: "OVERVALUED", description: "Earnings-based (DCF)" },
       ],
       comparison: {
         takeaway: "Current Price berada di antara Mean Reversion PBV dan Discounted Earnings.",
@@ -544,11 +588,6 @@ export const mockStockDetails: Record<string, StockDetail> = {
           "Lowest intrinsic value: Rp1.418",
         ],
       },
-      explanations: [
-        { title: "Asset-based", text: "Uses book value, assets, or historical multiples such as PBV to estimate value.", methods: ["Mean Reversion PBV"] },
-        { title: "Income-based", text: "Uses future earnings or dividends, such as Dividend Discount Model and discounted earnings. More sensitive to growth and earnings assumptions.", methods: ["Dividend Discount Model", "Discounted Earnings"] },
-        { title: "Blended", text: "Combines multiple valuation lenses, adjusted for sector and company type.", methods: ["Peter Lynch", "Type & Sector Weighted"] },
-      ],
     },
     financialHealth: {
       metrics: [
@@ -659,8 +698,10 @@ export const mockStockDetails: Record<string, StockDetail> = {
         winRate: "100%",
       },
       outcomeExplanation: buildBacktestOutcomeExplanation(),
+      isDemoData: true,
     },
     backtest: {
+      isDemoData: true,
       methodology: {
       processSteps: [
           { number: "01", title: "Identify the Condition", text: "Each historical quarter is classified as Undervalued, Overvalued, or Mixed using the valuation framework available on the analysis date." },
@@ -729,7 +770,7 @@ export const mockStockDetails: Record<string, StockDetail> = {
           trendTone: "yellow",
         },
         {
-          item: "Interest Expense (M Rp)",
+          item: "Interest Expense (Rp Bn)",
           q3: "10,9",
           q4: "9,8",
           q1: "9,1",

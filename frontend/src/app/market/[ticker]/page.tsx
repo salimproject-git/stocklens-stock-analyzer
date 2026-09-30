@@ -1,4 +1,7 @@
+import { notFound } from "next/navigation";
 import { StockResearchPage } from "@/components/stock-research/stock-research-page";
+import { getStockResearchData, getStockBacktestData } from "@/lib/stock-data";
+import { buildStockDetail } from "@/lib/stock-detail-adapter";
 
 export default async function StockPage({
   params,
@@ -6,6 +9,22 @@ export default async function StockPage({
   params: Promise<{ ticker: string }>;
 }) {
   const resolvedParams = await params;
-  return <StockResearchPage ticker={resolvedParams.ticker} />;
+  // Both reads are independent, so they are issued together rather than
+  // serialised. The backtest is optional: a ticker that has never been run
+  // simply gets no backtest section instead of failing the whole page.
+  const [data, backtest] = await Promise.all([
+    getStockResearchData(resolvedParams.ticker),
+    getStockBacktestData(resolvedParams.ticker).catch(() => null),
+  ]);
+
+  // Unknown ticker must render the not-found state instead of another
+  // company's data. Never fall back to a different instrument.
+  if (!data) {
+    notFound();
+  }
+
+  const stock = buildStockDetail(data, backtest);
+
+  return <StockResearchPage stock={stock} />;
 }
 

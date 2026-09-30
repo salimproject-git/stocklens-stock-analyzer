@@ -3,7 +3,9 @@
 import React, { useState } from "react";
 import { StockDetail } from "@/data/mock-stock-details";
 import { SectionCard } from "@/components/ui/section-card";
+import { ChartEmptyState } from "@/components/ui/chart-empty-state";
 import { formatRupiah } from "@/utils/currency";
+import { toMonthIndex } from "@/utils/dates";
 
 const TIMEFRAMES = ["3M", "6M", "9M", "12M"] as const;
 type Timeframe = (typeof TIMEFRAMES)[number];
@@ -15,13 +17,35 @@ export function PriceChartCard({
 }) {
   const [activeTimeframe, setActiveTimeframe] = useState<Timeframe>("12M");
 
-  const points = chartData.points.slice(-Number.parseInt(activeTimeframe, 10));
+  const points = selectTimeframePoints(
+    chartData.points,
+    Number.parseInt(activeTimeframe, 10),
+  );
   const width = 500;
   const height = 180;
   const values = points.map((p) => p.value);
   const max = Math.max(...values);
   const min = Math.min(...values);
   const range = max - min || 1;
+
+  // Without at least two points there is no line to draw. Keep the card and its
+  // key stats visible and label the missing series instead of crashing on an
+  // empty point list.
+  if (points.length < 2) {
+    return (
+      <SectionCard
+        icon={<TrendingUpIcon className="h-4 w-4" />}
+        title="Price Chart"
+      >
+        <ChartEmptyState
+          title="Price History"
+          subtitle={`${activeTimeframe} close prices`}
+          hint="Monthly prices are not stored in the database for this ticker yet, so the price chart cannot be drawn."
+          height={190}
+        />
+      </SectionCard>
+    );
+  }
 
   const svgPoints = points.map((p, idx) => {
     const x = (idx / Math.max(points.length - 1, 1)) * (width - 40) + 20;
@@ -140,7 +164,7 @@ export function PriceChartCard({
         </div>
         <div>
           <div className="text-xs font-semibold text-[#ff5967]">
-            {chartData.ytdPercent.toFixed(1).replace(".", ",")}%
+            {chartData.ytdPercent != null ? `${chartData.ytdPercent.toFixed(1).replace(".", ",")}%` : "Not available"}
           </div>
           <div className="mt-0.5 text-[10px] text-[#7f8c9f]">YTD</div>
         </div>
@@ -152,13 +176,35 @@ export function PriceChartCard({
         </div>
         <div>
           <div className="text-xs font-semibold text-white">
-            {chartData.peTTM.toFixed(1).replace(".", ",")}x
+            {chartData.peTTM != null ? `${chartData.peTTM.toFixed(1).replace(".", ",")}x` : "Not available"}
           </div>
           <div className="mt-0.5 text-[10px] text-[#7f8c9f]">P/E (TTM)</div>
         </div>
       </div>
     </SectionCard>
   );
+}
+
+/**
+ * Keep only the last `months` calendar months of the monthly series.
+ *
+ * The window is measured against the newest point in the series, so "3M" always
+ * means the last 3 calendar months rather than the last 3 array entries. Series
+ * labels come from the adapter as "Sep 2026"; if a label cannot be parsed the
+ * point is kept so the chart never silently drops data.
+ */
+function selectTimeframePoints(
+  points: { date: string; value: number }[],
+  months: number,
+) {
+  const latestIndex = points.length > 0 ? toMonthIndex(points.at(-1)!.date) : null;
+  if (latestIndex == null) return points;
+
+  const firstIndex = latestIndex - (months - 1);
+  return points.filter((point) => {
+    const pointIndex = toMonthIndex(point.date);
+    return pointIndex == null || pointIndex >= firstIndex;
+  });
 }
 
 function getAxisPoints(points: { date: string; value: number }[]) {

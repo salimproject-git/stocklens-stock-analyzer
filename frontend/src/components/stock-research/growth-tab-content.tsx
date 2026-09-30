@@ -3,6 +3,7 @@
 import React, { useLayoutEffect, useRef } from 'react';
 import { StockDetail } from '@/data/mock-stock-details';
 import { SectionCard } from '@/components/ui/section-card';
+import { ChartEmptyState } from '@/components/ui/chart-empty-state';
 import { formatRupiah, parseNumericValue } from '@/utils/currency';
 
 type Tone = 'positive' | 'neutral' | 'negative';
@@ -61,7 +62,7 @@ function QuarterlyGrowthCheck({ stock }: { stock: StockDetail }) {
     const tableScroll = tableScrollRef.current;
     if (tableScroll) tableScroll.scrollLeft = tableScroll.scrollWidth - tableScroll.clientWidth;
   }, []);
-  const rows = validator.rows.filter((row) => ['Revenue YoY (%)', 'Gross Margin (Actual %)', 'Net Income YoY (%)', 'OCF / NI Ratio (x)', 'Interest Expense (M Rp)'].includes(row.item));
+  const rows = validator.rows.filter((row) => ['Revenue YoY (%)', 'Gross Margin (Actual %)', 'Net Income YoY (%)', 'OCF / NI Ratio (x)', 'Interest Expense (Rp Bn)'].includes(row.item));
   const quarterFields = ['q3', 'q4', 'q1', 'q2'] as const;
   const comparisonPeriods = validator.quarters.map((quarter) => {
     const match = quarter.match(/^(Q[1-4]) (\d{4})$/);
@@ -72,7 +73,7 @@ function QuarterlyGrowthCheck({ stock }: { stock: StockDetail }) {
     'Gross Margin (Actual %)': 'Gross Margin',
     'Net Income YoY (%)': 'Net Income YoY',
     'OCF / NI Ratio (x)': 'OCF / NI',
-    'Interest Expense (M Rp)': 'Interest Expense',
+    'Interest Expense (Rp Bn)': 'Interest Expense',
   };
 
   return <HealthSection icon='quarterly' title='Quarterly Growth Check' subtitle='Recent operating performance compared with the same quarter of the previous year.'><div ref={tableScrollRef} className='overflow-x-auto rounded-xl border border-white/8 bg-[#07111c]/60'><table className='w-full min-w-[1080px] text-left text-xs'><thead className='border-b border-white/8 bg-white/4 text-[11px] font-semibold text-[#8e9bb0]'><tr><th className='sticky left-0 z-20 min-w-[190px] border-r border-white/8 bg-[#0b1928] px-4 py-3'>METRIC</th>{comparisonPeriods.map((period) => <th key={period} className='min-w-[175px] whitespace-nowrap px-3 py-3 text-center'>{period}</th>)}<th className='min-w-[220px] px-4 py-3 text-left'>STATUS</th></tr></thead><tbody className='divide-y divide-white/6 text-white'>{rows.map((row) => <tr key={row.item} className='transition hover:bg-white/3'><td className='sticky left-0 z-10 min-w-[190px] border-r border-white/6 bg-[#0b1928] px-4 py-3 font-medium text-[#d4dcec]'>{titles[row.item] ?? row.item}</td>{quarterFields.map((field, index) => <td key={field} className={index === quarterFields.length - 1 ? 'whitespace-nowrap px-3 py-3 text-center font-semibold text-white' : 'whitespace-nowrap px-3 py-3 text-center text-[#9aa9bf]'}>{row[field] ?? '-'}</td>)}<td className={'whitespace-nowrap px-4 py-3 text-left font-semibold ' + validatorToneClass[row.trendTone]}>{row.trend}</td></tr>)}</tbody></table></div></HealthSection>;
@@ -93,6 +94,20 @@ function parseDividendValue(value: string) {
   return parseNumericValue(value.replace(/[^0-9.,-]/g, '')) || 0;
 }
 
+/**
+ * Nullable variant for charts: returns `null` when the cell has no real number,
+ * so a missing year is drawn as a gap instead of a fake zero.
+ */
+function parseDividendValueOrNull(value: string | undefined): number | null {
+  if (value == null) return null;
+  const trimmed = value.trim();
+  if (!trimmed || trimmed === '-' || trimmed === '—') return null;
+  const cleaned = trimmed.replace(/[^0-9.,-]/g, '');
+  if (!cleaned) return null;
+  const parsed = parseNumericValue(cleaned);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
 function getDividendMetricLabel(row: DividendRow) {
   return row.item === 'DPS [Rp]' ? 'DPS (Rp)' : row.item;
 }
@@ -102,24 +117,46 @@ function formatDividendMetricValue(row: DividendRow, period: string) {
   return row.item === 'DPS [Rp]' ? formatRupiah(parseDividendValue(value)).replace(/^Rp/, '') : value;
 }
 
-function DividendTrendChart({ periods, dpsValues, yieldValues }: { periods: string[]; dpsValues: number[]; yieldValues: number[] }) {
+function DividendTrendChart({ periods, dpsValues, yieldValues }: { periods: string[]; dpsValues: NullableSeries; yieldValues: NullableSeries }) {
   const width = 680;
   const height = 250;
   const padding = { top: 24, right: 70, bottom: 36, left: 70 };
   const plotHeight = height - padding.top - padding.bottom;
-  const maxDps = Math.max(...dpsValues, 1);
-  const maxYield = Math.max(...yieldValues, 1);
+  const numericDps = dpsValues.filter((v): v is number => v != null && Number.isFinite(v));
+  const numericYield = yieldValues.filter((v): v is number => v != null && Number.isFinite(v));
+  const maxDps = Math.max(...numericDps, 1);
+  const maxYield = Math.max(...numericYield, 1);
   const x = (index: number) => padding.left + (index / Math.max(periods.length - 1, 1)) * (width - padding.left - padding.right);
   const yDps = (value: number) => padding.top + ((maxDps - value) / maxDps) * plotHeight;
   const yYield = (value: number) => padding.top + ((maxYield - value) / maxYield) * plotHeight;
-  const dpsLine = dpsValues.map((value, index) => `${x(index)},${yDps(value)}`).join(' ');
-  const yieldLine = yieldValues.map((value, index) => `${x(index)},${yYield(value)}`).join(' ');
+  // Only real observations become a line; a year without a dividend breaks the
+  // path so the chart does not imply a 0 payout.
+  const segmentLine = (values: NullableSeries, toY: (value: number) => number) => {
+    const segments: string[][] = [];
+    let current: string[] = [];
+    values.forEach((value, index) => {
+      if (value == null || !Number.isFinite(value)) {
+        if (current.length > 1) segments.push(current);
+        current = [];
+        return;
+      }
+      current.push(`${x(index)},${toY(value)}`);
+    });
+    if (current.length > 1) segments.push(current);
+    return segments.map((segment) => segment.join(' ')).join(' ');
+  };
+  const dpsLine = segmentLine(dpsValues, yDps);
+  const yieldLine = segmentLine(yieldValues, yYield);
 
-  return <div className='flex h-full min-w-0 flex-col rounded-xl border border-white/[0.09] bg-[#081523]/75 p-4'><div className='text-sm font-semibold text-white'>Dividend Trend</div><div className='mt-1 text-[11px] text-[#8e9db3]'>DPS and yield, each on its own scale</div><div className='mt-3 flex flex-wrap gap-x-4 gap-y-2 text-[10px] text-[#b6c5d8]'><span className='flex items-center gap-2'><svg viewBox='0 0 28 8' className='h-2 w-7' aria-hidden='true'><path d='M1 4h26' stroke='#f2bb5c' strokeWidth='2' /><circle cx='14' cy='4' r='2.5' fill='#f2bb5c' /></svg>DPS (Rp) · left axis</span><span className='flex items-center gap-2'><svg viewBox='0 0 28 8' className='h-2 w-7' aria-hidden='true'><path d='M1 4h26' stroke='#2ee6ae' strokeWidth='2' strokeDasharray='3 2' /><rect x='11.5' y='1.5' width='5' height='5' fill='#2ee6ae' /></svg>Yield (%) · right axis</span></div><svg viewBox={`0 0 ${width} ${height}`} preserveAspectRatio='xMidYMid meet' className='mt-2 block h-auto min-w-0 w-full' role='img' aria-label='Dividend per share and dividend yield trend'>
+  if (!hasPlottableData([dpsValues, yieldValues])) {
+    return <ChartEmptyState title='Dividend Trend' subtitle='DPS and yield, each on its own scale' hint='Dividend history is not stored in the database yet, so the DPS and yield trend cannot be drawn.' height={250} />;
+  }
+
+  return <div className='flex h-full min-w-0 flex-col rounded-xl border border-white/[0.09] bg-[#081523]/75 p-4'><div className='text-sm font-semibold text-white'>Dividend Trend</div><div className='mt-1 text-[11px] text-[#8e9db3]'>DPS and yield, each on its own scale</div><div className='mt-3 flex flex-wrap gap-x-4 gap-y-2 text-[10px] text-[#b6c5d8]'><span className='flex items-center gap-2'><svg viewBox='0 0 28 8' className='h-2 w-7' aria-hidden='true'><path d='M1 4h26' stroke='#f2bb5c' strokeWidth='2' /><circle cx='14' cy='4' r='2.5' fill='#f2bb5c' /></svg>DPS (Rp) Â· left axis</span><span className='flex items-center gap-2'><svg viewBox='0 0 28 8' className='h-2 w-7' aria-hidden='true'><path d='M1 4h26' stroke='#2ee6ae' strokeWidth='2' strokeDasharray='3 2' /><rect x='11.5' y='1.5' width='5' height='5' fill='#2ee6ae' /></svg>Yield (%) Â· right axis</span></div><svg viewBox={`0 0 ${width} ${height}`} preserveAspectRatio='xMidYMid meet' className='mt-2 block h-auto min-w-0 w-full' role='img' aria-label='Dividend per share and dividend yield trend'>
     {[0, 1, 2, 3].map((level) => { const dpsValue = maxDps * (1 - level / 3); const yieldValue = maxYield * (1 - level / 3); const y = padding.top + (plotHeight * level) / 3; return <g key={level}><line x1={padding.left} x2={width - padding.right} y1={y} y2={y} stroke='rgba(255,255,255,0.08)' /><text x={padding.left - 8} y={y + 4} textAnchor='end' fill='#8e9db3' fontSize='10'>{formatRupiah(dpsValue).replace(/^Rp/, '')}</text><text x={width - padding.right + 8} y={y + 4} textAnchor='start' fill='#8e9db3' fontSize='10'>{yieldValue.toFixed(0)}%</text></g>; })}
     <polyline points={dpsLine} fill='none' stroke='#f2bb5c' strokeWidth='2.5' strokeLinejoin='round' />
     <polyline points={yieldLine} fill='none' stroke='#2ee6ae' strokeWidth='2.5' strokeDasharray='6 4' strokeLinejoin='round' />
-    {periods.map((period, index) => <g key={period}><circle cx={x(index)} cy={yDps(dpsValues[index])} r='4' fill='#f2bb5c' stroke='#081523' strokeWidth='2' /><rect x={x(index) - 3.5} y={yYield(yieldValues[index]) - 3.5} width='7' height='7' fill='#2ee6ae' stroke='#081523' strokeWidth='1.5' /><text x={x(index)} y={height - 10} textAnchor='middle' fill='#8e9db3' fontSize='10'>{period}</text></g>)}
+    {periods.map((period, index) => <g key={period}>{dpsValues[index] != null && <circle cx={x(index)} cy={yDps(dpsValues[index] as number)} r='4' fill='#f2bb5c' stroke='#081523' strokeWidth='2' />}{yieldValues[index] != null && <rect x={x(index) - 3.5} y={yYield(yieldValues[index] as number) - 3.5} width='7' height='7' fill='#2ee6ae' stroke='#081523' strokeWidth='1.5' />}<text x={x(index)} y={height - 10} textAnchor='middle' fill='#8e9db3' fontSize='10'>{period}</text></g>)}
     <text x='14' y='125' transform='rotate(-90 14 125)' textAnchor='middle' fill='#f2bb5c' fontSize='13' fontWeight='700'>DPS (Rp)</text>
     <text x='666' y='125' transform='rotate(90 666 125)' textAnchor='middle' fill='#2ee6ae' fontSize='13' fontWeight='700'>Yield (%)</text>
   </svg></div>;
@@ -131,7 +168,7 @@ function DividendGrowthSection({ dividend }: { dividend: DividendData }) {
   const yieldRow = dividend.rows.find((row) => row.item === 'Yield [%]');
   const chartSourcePeriods = ['2022', '2023', '2024', '2025', '2026 (Proyeksi)'];
   const chartPeriods = chartSourcePeriods.map((period) => period.replace(' (Proyeksi)', 'P'));
-  const getValues = (row: DividendRow | undefined) => chartSourcePeriods.map((period) => parseDividendValue(row?.[dividendPeriodKeys[period]] ?? '0'));
+  const getValues = (row: DividendRow | undefined) => chartSourcePeriods.map((period) => parseDividendValueOrNull(row?.[dividendPeriodKeys[period]] as string | undefined));
   const tablePeriods = ['2022', '2023', '2024', '2025'];
   const dividendMetrics = [
     { label: 'DPS', row: dps },
@@ -154,7 +191,7 @@ function DividendGrowthSection({ dividend }: { dividend: DividendData }) {
         <div className='flex min-w-0 flex-col gap-3'>
           <div className='grid grid-cols-1 gap-3 sm:grid-cols-2'>
             {dividendProfileSections.map((section) => <div key={section.period} className='overflow-hidden rounded-lg border border-white/[0.09] bg-[#081523]/70'>
-              <div className='border-b border-white/[0.08] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-[#8fa0b8]'>{section.period === 'Avg (4Y)' ? <>Historical Performance · Avg (4Y)</> : '2026 Projection'}</div>
+              <div className='border-b border-white/[0.08] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-[#8fa0b8]'>{section.period === 'Avg (4Y)' ? <>Historical Performance Â· Avg (4Y)</> : '2026 Projection'}</div>
               <div className='grid grid-cols-1 sm:grid-cols-3'>
                 {dividendMetrics.map((metric) => <GrowthMetric key={metric.label} label={metric.label} value={metric.row ? (metric.row.item === 'DPS [Rp]' ? formatRupiah(parseDividendValue(metric.row[dividendPeriodKeys[section.period]] ?? '0')) : formatDividendMetricValue(metric.row, section.period)) : '-'} className='px-2' valueClass='whitespace-nowrap text-[14px]' />)}
               </div>
@@ -182,33 +219,66 @@ function DividendGrowthSection({ dividend }: { dividend: DividendData }) {
     </HealthSection>
   );
 }
-function GroupedBarChart({ title, subtitle, revenue, netIncome, periods }: { title: string; subtitle: string; revenue: number[]; netIncome: number[]; periods: string[] }) {
+type NullableSeries = (number | null)[];
+
+/** True when at least one point in any series can actually be plotted. */
+function hasPlottableData(series: NullableSeries[]) {
+  return series.some((values) => values.some((value) => value != null && Number.isFinite(value)));
+}
+
+function GroupedBarChart({ title, subtitle, revenue, netIncome, periods }: { title: string; subtitle: string; revenue: NullableSeries; netIncome: NullableSeries; periods: string[] }) {
   const width = 720;
   const height = 220;
   const padding = { top: 24, right: 18, bottom: 34, left: 48 };
   const plotWidth = width - padding.left - padding.right;
   const plotHeight = height - padding.top - padding.bottom;
-  const max = Math.max(...revenue, ...netIncome, 1);
+  const numeric = [...revenue, ...netIncome].filter((value): value is number => value != null && Number.isFinite(value));
+  const max = Math.max(...numeric, 1);
   const y = (value: number) => padding.top + ((max - value) / max) * plotHeight;
   const groupWidth = plotWidth / Math.max(periods.length, 1);
   const barWidth = Math.min(22, groupWidth * 0.28);
   const baseline = y(0);
 
-  return <div className='rounded-lg border border-white/[0.09] bg-[#081523]/75 p-4'><div className='text-sm font-semibold text-white'>{title}</div><div className='mt-1 text-[11px] text-[#8e9db3]'>{subtitle}</div><div className='mt-3 flex items-center gap-4 text-[10px] text-[#9aa9bf]'><span className='flex items-center gap-1.5'><span className='h-2 w-2 rounded-full bg-[#2388ff]' />Revenue</span><span className='flex items-center gap-1.5'><span className='h-2 w-2 rounded-full bg-[#2ee6ae]' />Net Income</span></div><svg viewBox={`0 0 ${width} ${height}`} className='mt-2 h-[220px] w-full' role='img' aria-label={title}>{[0, 1, 2, 3].map((level) => { const value = max - (max * level) / 3; return <g key={level}><line x1={padding.left} x2={width - padding.right} y1={y(value)} y2={y(value)} stroke='rgba(255,255,255,0.08)' /><text x={padding.left - 8} y={y(value) + 4} textAnchor='end' fill='#7f8fa6' fontSize='10'>{Math.round(value)}</text></g>; })}{periods.map((period, index) => { const center = padding.left + groupWidth * index + groupWidth / 2; const revenueHeight = Math.max(0, baseline - y(revenue[index] ?? 0)); const incomeHeight = Math.max(0, baseline - y(netIncome[index] ?? 0)); return <g key={period}><rect x={center - barWidth - 2} y={baseline - revenueHeight} width={barWidth} height={revenueHeight} rx='2' fill='#2388ff' /><rect x={center + 2} y={baseline - incomeHeight} width={barWidth} height={incomeHeight} rx='2' fill='#2ee6ae' /><text x={center} y={height - 10} textAnchor='middle' fill='#7f8fa6' fontSize='10'>{period}</text></g>; })}</svg></div>;
+  if (!hasPlottableData([revenue, netIncome])) {
+    return <ChartEmptyState title={title} subtitle={subtitle} height={220} />;
+  }
+
+  return <div className='rounded-lg border border-white/[0.09] bg-[#081523]/75 p-4'><div className='text-sm font-semibold text-white'>{title}</div><div className='mt-1 text-[11px] text-[#8e9db3]'>{subtitle}</div><div className='mt-3 flex items-center gap-4 text-[10px] text-[#9aa9bf]'><span className='flex items-center gap-1.5'><span className='h-2 w-2 rounded-full bg-[#2388ff]' />Revenue</span><span className='flex items-center gap-1.5'><span className='h-2 w-2 rounded-full bg-[#2ee6ae]' />Net Income</span></div><svg viewBox={`0 0 ${width} ${height}`} className='mt-2 h-[220px] w-full' role='img' aria-label={title}>{[0, 1, 2, 3].map((level) => { const value = max - (max * level) / 3; return <g key={level}><line x1={padding.left} x2={width - padding.right} y1={y(value)} y2={y(value)} stroke='rgba(255,255,255,0.08)' /><text x={padding.left - 8} y={y(value) + 4} textAnchor='end' fill='#7f8fa6' fontSize='10'>{Math.round(value)}</text></g>; })}{periods.map((period, index) => { const center = padding.left + groupWidth * index + groupWidth / 2; const revenueValue = revenue[index]; const incomeValue = netIncome[index]; const revenueHeight = revenueValue == null ? 0 : Math.max(0, baseline - y(revenueValue)); const incomeHeight = incomeValue == null ? 0 : Math.max(0, baseline - y(incomeValue)); return <g key={period}>{revenueValue != null && <rect x={center - barWidth - 2} y={baseline - revenueHeight} width={barWidth} height={revenueHeight} rx='2' fill='#2388ff' />}{incomeValue != null && <rect x={center + 2} y={baseline - incomeHeight} width={barWidth} height={incomeHeight} rx='2' fill='#2ee6ae' />}<text x={center} y={height - 10} textAnchor='middle' fill='#7f8fa6' fontSize='10'>{period}</text></g>; })}</svg></div>;
 }
 
-function DotLineChart({ title, subtitle, primary, secondary, primaryColor, secondaryColor, primaryLabel, secondaryLabel, periods }: { title: string; subtitle: string; primary: number[]; secondary?: number[]; primaryColor: string; secondaryColor?: string; primaryLabel: string; secondaryLabel?: string; periods: string[] }) {
+
+function DotLineChart({ title, subtitle, primary, secondary, primaryColor, secondaryColor, primaryLabel, secondaryLabel, periods }: { title: string; subtitle: string; primary: NullableSeries; secondary?: NullableSeries; primaryColor: string; secondaryColor?: string; primaryLabel: string; secondaryLabel?: string; periods: string[] }) {
   const width = 720;
   const height = 220;
   const padding = { top: 24, right: 18, bottom: 34, left: 48 };
-  const values = [...primary, ...(secondary ?? [])];
-  const min = Math.min(...values, 0);
-  const max = Math.max(...values, 1);
+  const numeric = [...primary, ...(secondary ?? [])].filter((value): value is number => value != null && Number.isFinite(value));
+  const min = Math.min(...numeric, 0);
+  const max = Math.max(...numeric, 1);
   const range = max - min || 1;
   const x = (index: number) => padding.left + (index / Math.max(periods.length - 1, 1)) * (width - padding.left - padding.right);
   const y = (value: number) => padding.top + ((max - value) / range) * (height - padding.top - padding.bottom);
-  const line = (series: number[]) => series.map((value, index) => `${x(index)},${y(value)}`).join(' ');
-  const renderSeries = (series: number[], color: string) => <>{series.map((value, index) => <circle key={`${index}-${value}`} cx={x(index)} cy={y(value)} r='3.5' fill={color} stroke='#081523' strokeWidth='1.5' />)}</>;
+  // Only contiguous runs of real points become a line; a missing year breaks the
+  // path so the chart shows a gap instead of interpolating through absent data.
+  const line = (series: NullableSeries) => {
+    const segments: string[][] = [];
+    let current: string[] = [];
+    series.forEach((value, index) => {
+      if (value == null || !Number.isFinite(value)) {
+        if (current.length > 1) segments.push(current);
+        current = [];
+        return;
+      }
+      current.push(`${x(index)},${y(value)}`);
+    });
+    if (current.length > 1) segments.push(current);
+    return segments.map((segment) => segment.join(' ')).join(' ');
+  };
+  const renderSeries = (series: NullableSeries, color: string) => <>{series.map((value, index) => value == null || !Number.isFinite(value) ? null : <circle key={`${index}-${value}`} cx={x(index)} cy={y(value)} r='3.5' fill={color} stroke='#081523' strokeWidth='1.5' />)}</>;
+
+  if (!hasPlottableData([primary, secondary ?? []])) {
+    return <ChartEmptyState title={title} subtitle={subtitle} height={220} />;
+  }
+
 
   return <div className='rounded-lg border border-white/[0.09] bg-[#081523]/75 p-4'><div className='text-sm font-semibold text-white'>{title}</div><div className='mt-1 text-[11px] text-[#8e9db3]'>{subtitle}</div><div className='mt-3 flex items-center gap-4 text-[10px] text-[#9aa9bf]'><span className='flex items-center gap-1.5'><span className='h-2 w-2 rounded-full' style={{ backgroundColor: primaryColor }} />{primaryLabel}</span>{secondary && secondaryLabel && <span className='flex items-center gap-1.5'><span className='h-2 w-2 rounded-full' style={{ backgroundColor: secondaryColor }} />{secondaryLabel}</span>}</div><svg viewBox={`0 0 ${width} ${height}`} className='mt-2 h-[220px] w-full' role='img' aria-label={title}>{[0, 1, 2, 3].map((level) => { const value = max - (range * level) / 3; return <g key={level}><line x1={padding.left} x2={width - padding.right} y1={y(value)} y2={y(value)} stroke='rgba(255,255,255,0.08)' /><text x={padding.left - 8} y={y(value) + 4} textAnchor='end' fill='#7f8fa6' fontSize='10'>{Math.round(value)}</text></g>; })}<polyline points={line(primary)} fill='none' stroke={primaryColor} strokeWidth='2.5' />{renderSeries(primary, primaryColor)}{secondary && <><polyline points={line(secondary)} fill='none' stroke={secondaryColor} strokeWidth='2.5' />{renderSeries(secondary, secondaryColor ?? '#2ee6ae')}</>}{periods.map((period, index) => <text key={period} x={x(index)} y={height - 10} textAnchor='middle' fill='#7f8fa6' fontSize='10'>{period}</text>)}</svg></div>;
 }
@@ -221,8 +291,9 @@ function GrowthSection({ data, visuals }: { data: HealthGrowth['growth']; visual
   const chartEps = visuals.eps;
   const chartRevenueGrowth = visuals.growthRate.revenue;
   const chartEpsGrowth = visuals.growthRate.eps;
+  const incomeStatementUnit = 'Rp Billion';
 
-  return <HealthSection icon='growth' title='Growth' subtitle='Historical performance, current momentum, growth quality, and quarterly confirmation.'><div className='grid grid-cols-1 gap-4 xl:grid-cols-[1.4fr_1fr]'><div className='overflow-hidden rounded-lg border border-white/[0.09] bg-[#081523]/70'><div className='border-b border-white/[0.08] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-[#8fa0b8]'>Revenue Performance</div><div className='grid grid-cols-1 sm:grid-cols-4'><GrowthMetric label='Revenue CAGR (Historical)' value={data.revenueHistorical.value} period={data.revenueHistorical.period} arrow /><GrowthMetric label='Revenue CAGR (5Y)' value={data.revenueFiveYear.value} period={data.revenueFiveYear.period} arrow /><GrowthMetric label='Revenue Growth (YoY)' value={data.revenueYoY.value} period={data.revenueYoY.period} arrow /><div className='px-4 py-3'><div className='text-[11px] text-[#aebbd0]'>Revenue Momentum</div><div className='mt-2'><Momentum value={data.revenueMomentum.value} tone={data.revenueMomentum.tone} /></div><div className='mt-1 text-[11px] text-[#8090a7]'>{data.revenueMomentum.period}</div></div></div></div><div className='overflow-hidden rounded-lg border border-white/[0.09] bg-[#081523]/70'><div className='border-b border-white/[0.08] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-[#8fa0b8]'>Earnings Power</div><div className='grid grid-cols-1 sm:grid-cols-3'><GrowthMetric label='EPS Growth (Historical)' value={data.epsHistorical.value} period={data.epsHistorical.period} arrow /><GrowthMetric label='EPS Growth (5Y)' value={data.epsFiveYear.value} period={data.epsFiveYear.period} arrow /><div className='px-4 py-3'><div className='text-[11px] text-[#aebbd0]'>EPS Momentum</div><div className='mt-2'><Momentum value={data.epsMomentum.value} tone={data.epsMomentum.tone} /></div><div className='mt-1 text-[11px] text-[#8090a7]'>{data.epsMomentum.period}</div></div></div></div></div><div className='mt-4 grid grid-cols-1 gap-4 xl:grid-cols-2'><GroupedBarChart title='Revenue & Net Income' subtitle='Rp Million' revenue={chartRevenue} netIncome={chartNetIncome} periods={chartPeriods} /><DotLineChart title='EPS (Earning Per Share)' subtitle='Rp per share' primary={chartEps} primaryColor='#f0b85b' primaryLabel='EPS' periods={chartPeriods} /><DotLineChart title='Historical Growth Rate' subtitle='Year-over-year growth' primary={chartRevenueGrowth} secondary={chartEpsGrowth} primaryColor='#42a5ff' secondaryColor='#2ee6ae' primaryLabel='Revenue Growth (YoY)' secondaryLabel='EPS Growth (YoY)' periods={chartPeriods} /><DotLineChart title='Operating Cash Flow & Net Income' subtitle='Rp Million' primary={visuals.operatingCashFlow} secondary={chartNetIncome} primaryColor='#b17cff' secondaryColor='#2ee6ae' primaryLabel='Operating Cash Flow' secondaryLabel='Net Income' periods={chartPeriods} /></div></HealthSection>;
+  return <HealthSection icon='growth' title='Growth' subtitle='Historical performance, current momentum, growth quality, and quarterly confirmation.'><div className='grid grid-cols-1 gap-4 xl:grid-cols-[1.4fr_1fr]'><div className='overflow-hidden rounded-lg border border-white/[0.09] bg-[#081523]/70'><div className='border-b border-white/[0.08] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-[#8fa0b8]'>Revenue Performance</div><div className='grid grid-cols-1 sm:grid-cols-4'><GrowthMetric label='Revenue CAGR (Historical)' value={data.revenueHistorical.value} period={data.revenueHistorical.period} arrow /><GrowthMetric label='Revenue CAGR (5Y)' value={data.revenueFiveYear.value} period={data.revenueFiveYear.period} arrow /><GrowthMetric label='Revenue Growth (YoY)' value={data.revenueYoY.value} period={data.revenueYoY.period} arrow /><div className='px-4 py-3'><div className='text-[11px] text-[#aebbd0]'>Revenue Momentum</div><div className='mt-2'><Momentum value={data.revenueMomentum.value} tone={data.revenueMomentum.tone} /></div><div className='mt-1 text-[11px] text-[#8090a7]'>{data.revenueMomentum.period}</div></div></div></div><div className='overflow-hidden rounded-lg border border-white/[0.09] bg-[#081523]/70'><div className='border-b border-white/[0.08] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-[#8fa0b8]'>Earnings Power</div><div className='grid grid-cols-1 sm:grid-cols-3'><GrowthMetric label='EPS Growth (Historical)' value={data.epsHistorical.value} period={data.epsHistorical.period} arrow /><GrowthMetric label='EPS Growth (5Y)' value={data.epsFiveYear.value} period={data.epsFiveYear.period} arrow /><div className='px-4 py-3'><div className='text-[11px] text-[#aebbd0]'>EPS Momentum</div><div className='mt-2'><Momentum value={data.epsMomentum.value} tone={data.epsMomentum.tone} /></div><div className='mt-1 text-[11px] text-[#8090a7]'>{data.epsMomentum.period}</div></div></div></div></div><div className='mt-4 grid grid-cols-1 gap-4 xl:grid-cols-2'><GroupedBarChart title='Revenue & Net Income' subtitle={incomeStatementUnit} revenue={chartRevenue} netIncome={chartNetIncome} periods={chartPeriods} /><DotLineChart title='EPS (Earning Per Share)' subtitle='Rp per share' primary={chartEps} primaryColor='#f0b85b' primaryLabel='EPS' periods={chartPeriods} /><DotLineChart title='Historical Growth Rate' subtitle='Year-over-year growth (%)' primary={chartRevenueGrowth} secondary={chartEpsGrowth} primaryColor='#42a5ff' secondaryColor='#2ee6ae' primaryLabel='Revenue Growth (YoY)' secondaryLabel='EPS Growth (YoY)' periods={chartPeriods} /><DotLineChart title='Operating Cash Flow & Net Income' subtitle={incomeStatementUnit} primary={visuals.operatingCashFlow} secondary={chartNetIncome} primaryColor='#b17cff' secondaryColor='#2ee6ae' primaryLabel='Operating Cash Flow' secondaryLabel='Net Income' periods={chartPeriods} /></div></HealthSection>;
 }
 
 export function GrowthTabContent({ stock }: { stock: StockDetail }) {

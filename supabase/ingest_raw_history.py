@@ -888,6 +888,8 @@ def reconcile_target(
     source_id: str,
     counters: Counters,
     apply_changes: bool,
+    *,
+    local_only: bool = False,
 ) -> None:
     object_info = storage.object_info(BUCKET, target.storage_path)
     history = db.history_for_path(target.storage_path)
@@ -915,6 +917,19 @@ def reconcile_target(
             return
 
         repair_from_storage(target, symbol, db, storage, source_id, counters)
+        return
+
+    # Local-only artifacts (the collector manifest) are produced by the collector
+    # and have no API endpoint. Registering history from Storage is the only
+    # legitimate action; falling through to CASE C would call `GET None` and
+    # record a spurious 404 failure. On a brand-new ticker nothing is in Storage
+    # yet, so this is a skip rather than an error.
+    if local_only:
+        if not apply_changes:
+            print('    RESULT: LOCAL_ONLY_AWAITING_COLLECTOR (dry run)')
+        else:
+            print('    RESULT: SKIPPED_LOCAL_ONLY_NOT_IN_STORAGE')
+        counters.skip += 1
         return
 
     # CASE D ---------------------------------------------------------------
@@ -1010,8 +1025,17 @@ def daily_window_names(
     symbol: str,
     raw_root: Path,
     storage: StorageClient,
+    *,
+    include_default_range: bool = False,
 ) -> list[str]:
-    """Windows the collector produced (local set) plus any already in Storage."""
+    """Windows the collector produced (local set) plus any already in Storage.
+
+    For a brand-new ticker there are no local windows and nothing in Storage, so
+    the list is empty and no price history would ever be fetched. The collector
+    solves this by walking backwards from today to ``DEFAULT_MIN_DATE`` on a
+    first run; ``include_default_range`` reproduces that same 90-day tiling here
+    so the raw step can obtain history without a separate collector run.
+    """
     local_dir = raw_root / symbol.upper() / 'daily'
 
     names: set[str] = set()
@@ -1021,7 +1045,26 @@ def daily_window_names(
 
     names.update(storage_names_for(storage, symbol, 'daily'))
 
+    if not names and include_default_range:
+        names.update(_default_daily_windows())
+
     return sorted(names)
+
+
+def _default_daily_windows() -> list[str]:
+    """90-day windows from ``DEFAULT_MIN_DATE`` to today, matching the collector."""
+    start = date.fromisoformat(DEFAULT_MIN_DATE)
+    end = date.today()
+    if start > end:
+        return []
+
+    windows: list[str] = []
+    current = start
+    while current <= end:
+        window_end = min(current + timedelta(days=MAX_WINDOW_DAYS - 1), end)
+        windows.append(f'{current.isoformat()}_{window_end.isoformat()}.json')
+        current = window_end + timedelta(days=1)
+    return windows
 
 
 def main() -> None:
@@ -1079,6 +1122,13 @@ def main() -> None:
     # ------------------------------------------------------------------
     # PLAN TARGETS
     # ------------------------------------------------------------------
+    # Families are planned and reconciled one at a time, in order, rather than
+    # planning everything up front. `quarterly` derives its targets from the
+    # `quarterly-dates` artifact, which on a brand-new ticker is fetched during
+    # this same run; planning all families first meant the dates file did not
+    # exist yet and every ticker was planned with zero quarterly targets. The
+    # same applies to `daily`, whose window list grows from Storage.
+    # ------------------------------------------------------------------
 
     families = (
         [
@@ -1094,15 +1144,13 @@ def main() -> None:
         else [args.request_name]
     )
 
-    plan: list[tuple[str, list[Target]]] = []
-
-    for name in families:
+    def plan_family(name: str) -> list[Target]:
         definition = REQUEST_DEFINITIONS[name]
 
         if definition['kind'] == 'single':
-            targets = plan_single(symbol, name, definition, raw_root)
+            return plan_single(symbol, name, definition, raw_root)
 
-        elif definition['kind'] == 'per-date':
+        if definition['kind'] == 'per-date':
             dates = load_report_dates(
                 symbol,
                 raw_root,
@@ -1110,19 +1158,18 @@ def main() -> None:
                 storage,
             )
             print(f'  quarterly report dates from API artifact: {len(dates)}')
-            targets = plan_quarterly(symbol, definition, raw_root, storage, dates)
+            return plan_quarterly(symbol, definition, raw_root, storage, dates)
 
-        else:
-            windows = daily_window_names(symbol, raw_root, storage)
-            print(f'  daily windows from collector set + Storage: {len(windows)}')
-            targets = plan_daily(symbol, definition, raw_root, windows)
-
-        plan.append((name, targets))
-
-    print()
-    print('PLAN')
-    for name, targets in plan:
-        print(f'  {name:<18} {len(targets)} target file(s)')
+        windows = daily_window_names(
+            symbol,
+            raw_root,
+            storage,
+            # First run for a ticker: nothing is known yet, so fall back to the
+            # collector's own default range instead of fetching nothing.
+            include_default_range=True,
+        )
+        print(f'  daily windows from collector set + Storage: {len(windows)}')
+        return plan_daily(symbol, definition, raw_root, windows)
 
     # ------------------------------------------------------------------
     # RECONCILE
@@ -1134,14 +1181,20 @@ def main() -> None:
     if args.apply:
         source_id = db.source_id(SOURCE_CODE)
 
-    for name, targets in plan:
-        if not targets:
-            continue
+    for name in families:
+        targets = plan_family(name)
 
         print()
         print('-' * 78)
         print(f'FAMILY: {name}  ({len(targets)} file(s))')
         print('-' * 78)
+
+        if not targets:
+            continue
+
+        # The collector manifest has no API endpoint; pass that through so a
+        # missing manifest is reported as a skip instead of a failed fetch.
+        local_only = bool(REQUEST_DEFINITIONS[name].get('local_only'))
 
         for target in targets:
             reconcile_target(
@@ -1153,6 +1206,7 @@ def main() -> None:
                 source_id or '',
                 counters,
                 args.apply,
+                local_only=local_only,
             )
 
     # ------------------------------------------------------------------

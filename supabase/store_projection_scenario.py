@@ -27,6 +27,7 @@ from calculation_v1_common import CalculationError, SupabaseRest  # noqa: E402
 SCENARIOS_TABLE = 'projection_scenarios'
 VALUES_TABLE = 'projection_values'
 BILLION_IDR = Decimal('1000000000')
+SUPPORTED_HISTORICAL_QUARTERS = ('Q1', 'Q2', 'Q3', 'Q4')
 
 
 def _canonical_json(value: Any) -> str:
@@ -67,7 +68,10 @@ def validate_historical_values(
 
     comparisons: dict[str, Any] = {}
     for quarter_label, metrics in expected.items():
-        if quarter_label not in ('Q1', 'Q2') or not isinstance(metrics, Mapping):
+        # Q1-Q4 are supported so an as-of-Q3/Q4 scenario can still validate the
+        # historical quarters it was derived from. The original Q1/Q2-only guard
+        # reflected the single AUTO Q2 workbook that existed at the time.
+        if quarter_label not in SUPPORTED_HISTORICAL_QUARTERS or not isinstance(metrics, Mapping):
             raise CalculationError(f'UNSUPPORTED_HISTORICAL_QUARTER: {quarter_label}')
         actual_period_label = f"{scenario['projection_year']}-{quarter_label}"
         actual_metrics = actuals.get(actual_period_label)
@@ -332,26 +336,34 @@ def _persist_scenario(
     return scenario_id, False
 
 
-def main(argv: Sequence[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument(
-        '--scenario', type=Path,
-        default=SUPABASE_DIR / 'projection_auto_2026_q2.json',
-        help='JSON input scenario (default: AUTO Q2 2026).',
-    )
-    parser.add_argument('--apply', action='store_true', help='Persist to Supabase.')
-    args = parser.parse_args(argv)
-    scenario = json.loads(args.scenario.read_text(encoding='utf-8'))
+def persist_scenario(
+    scenario: Mapping[str, Any],
+    *,
+    apply: bool,
+    db: SupabaseRest | None = None,
+) -> int:
+    """Validate ``scenario`` against canonical actuals and optionally persist it.
+
+    Split out of :func:`main` so a caller that already holds the scenario as a
+    dict (``derive_projection_scenario``) can persist it directly. That removes
+    the write-then-read round trip through a JSON file, which existed only
+    because the original workflow was "a human fills in a workbook-derived
+    scenario by hand". The derived path is DB -> Python -> DB and needs no file.
+
+    ``db`` is injected so the caller can reuse one client; when omitted it is
+    built from the environment as the CLI path does.
+    """
     input_hash = scenario_hash(scenario)
     expected_count = len(scenario.get('projections', []))
     if not expected_count:
         raise CalculationError('PROJECTION_VALUES_EMPTY')
 
-    load_env_file(REPO_ROOT / '.env')
-    db = SupabaseRest(
-        os.getenv('SUPABASE_URL', ''),
-        os.getenv('SUPABASE_SERVICE_ROLE_KEY', ''),
-    )
+    if db is None:
+        load_env_file(REPO_ROOT / '.env')
+        db = SupabaseRest(
+            os.getenv('SUPABASE_URL', ''),
+            os.getenv('SUPABASE_SERVICE_ROLE_KEY', ''),
+        )
     instrument, actuals, base_period = _live_preflight(db, scenario)
     validation = validate_historical_values(
         scenario,
@@ -372,7 +384,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     )
     print('Historical actuals are referenced and validated; they will not be copied.')
     print(f"Input hash: {input_hash}")
-    if not args.apply:
+    if not apply:
         print('DRY RUN: no rows were written.')
         return 0
 
@@ -392,6 +404,19 @@ def main(argv: Sequence[str] | None = None) -> int:
             f'projection_values={expected_count}, status=ACTIVE.'
         )
     return 0
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        '--scenario', type=Path,
+        default=SUPABASE_DIR / 'projection_auto_2026_q2.json',
+        help='JSON input scenario (default: AUTO Q2 2026).',
+    )
+    parser.add_argument('--apply', action='store_true', help='Persist to Supabase.')
+    args = parser.parse_args(argv)
+    scenario = json.loads(args.scenario.read_text(encoding='utf-8'))
+    return persist_scenario(scenario, apply=args.apply)
 
 
 if __name__ == '__main__':

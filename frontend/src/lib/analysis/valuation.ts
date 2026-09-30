@@ -1,8 +1,12 @@
+import { VALUATION_METHOD_LABELS } from "@/lib/valuation-methods";
+
 export function getMainValuationMethod(stockType: string) {
   const normalizedStockType = stockType.trim().toLowerCase();
+  // Mirrors `SUMMARY!B69`: stalwart / fast grower use the blended rule, every
+  // other stock type uses the adaptive Peter Lynch rule.
   return normalizedStockType === "stalwart" || normalizedStockType === "fast grower"
-    ? "Type & Sector Weighted"
-    : "Peter Lynch / Adaptive";
+    ? VALUATION_METHOD_LABELS.TYPE_SECTOR_WEIGHTED
+    : VALUATION_METHOD_LABELS.PETER_LYNCH;
 }
 
 export type FinancialMetricStatus = "EXPANDING" | "CONTRACTING" | "STABLE_MARGIN" | "IMPROVING" | "DECLINING" | "STRONG_CASH_CONVERSION" | "MODERATE_CASH_CONVERSION" | "WEAK_CASH_CONVERSION" | "ABOVE_AVERAGE" | "BELOW_AVERAGE" | "IN_LINE_WITH_AVERAGE";

@@ -18,6 +18,10 @@ DEFAULT_RAW_ROOT = Path(__file__).resolve().parent.parent / 'Data' / 'Raw'
 BUCKET = 'stocklens_raw'
 ANNUAL_FILE = 'company_report_annual.json'
 ANNUAL_CATEGORY = 'annual'
+#: Years the source must cover for the annual loader to accept it. The source may
+#: return *more* years than this (GOLD and WIFI start at 2018), which is useful
+#: history rather than a defect, so the check is "covers this range" and not
+#: "equals this range". Extra years are loaded as well.
 EXPECTED_YEARS = tuple(range(2019, 2026))
 PERIOD_TYPE = 'ANNUAL'
 STATEMENT_SCOPE = 'UNKNOWN'
@@ -117,10 +121,8 @@ def validate_source(payload: dict[str, Any], ticker: str) -> tuple[list[dict[str
     if not isinstance(financials, dict):
         raise LoaderError('ANNUAL_SOURCE_INVALID_SHAPE: financials must be an object')
     rows = financials.get('historical_financials')
-    if not isinstance(rows, list):
-        raise LoaderError('ANNUAL_SOURCE_INVALID_SHAPE: historical_financials must be an array')
-    if len(rows) != len(EXPECTED_YEARS):
-        raise LoaderError(f'ANNUAL_SOURCE_ROW_COUNT: expected {len(EXPECTED_YEARS)}, got {len(rows)}')
+    if not isinstance(rows, list) or not rows:
+        raise LoaderError('ANNUAL_SOURCE_INVALID_SHAPE: historical_financials must be a non-empty array')
     years: list[int] = []
     for index, row in enumerate(rows, start=1):
         if not isinstance(row, dict):
@@ -132,13 +134,28 @@ def validate_source(payload: dict[str, Any], ticker: str) -> tuple[list[dict[str
         for field in RAW_MONETARY_FIELDS + (SHARES_FIELD,):
             if field not in row:
                 raise LoaderError(f'ANNUAL_SOURCE_MISSING_FIELD: row {index} missing {field}')
-        for field, value in row.items():
-            if field == 'year' or value is None:
+        # Only the fields this loader actually consumes are validated. The source
+        # also carries descriptive fields such as `industry_breakdown`, which
+        # ITMG 2025 populates with an object (coal reserves) rather than a
+        # number. Rejecting the whole file over a field no canonical metric maps
+        # from would be stricter than the contract requires.
+        for field in ANNUAL_FIELDS + (SHARES_FIELD,):
+            value = row[field]
+            if value is None:
                 continue
             if not is_number(value):
-                raise LoaderError(f'ANNUAL_SOURCE_INVALID_VALUE: row {index} field {field} must be numeric or null')
-    if len(set(years)) != len(years) or tuple(sorted(years)) != EXPECTED_YEARS:
-        raise LoaderError(f'ANNUAL_SOURCE_YEAR_RANGE: expected {EXPECTED_YEARS[0]}..{EXPECTED_YEARS[-1]}, got {sorted(years)}')
+                raise LoaderError(
+                    f'ANNUAL_SOURCE_INVALID_VALUE: row {index} field {field} '
+                    'must be numeric or null'
+                )
+    if len(set(years)) != len(years):
+        raise LoaderError(f'ANNUAL_SOURCE_DUPLICATE_YEAR: {sorted(years)}')
+    missing = [year for year in EXPECTED_YEARS if year not in set(years)]
+    if missing:
+        raise LoaderError(
+            f'ANNUAL_SOURCE_YEAR_RANGE: missing {missing}; '
+            f'expected at least {EXPECTED_YEARS[0]}..{EXPECTED_YEARS[-1]}, got {sorted(years)}'
+        )
     return rows, financials
 
 
