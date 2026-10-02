@@ -519,6 +519,73 @@ Frontend files changed: `frontend/src/lib/stock-detail-adapter.ts` only
 
 ---
 
+## Addendum — 2026-10-02: Financial History table restored to the workbook rows
+
+Potential-regression 10 recorded that the annual Financial History table had
+shrunk "11 → 5" rows, losing `EPS`, `BVPS`, `ROE`, `Gross Margin`, `Net Margin`
+and `Operating Profit`. The table is now back to the workbook's shape, with one
+deliberate exception.
+
+The table is built from the annual balance sheet and income statement the RPC
+already ships, so no new data was needed:
+
+| Row | Source | Note |
+| --- | --- | --- |
+| Revenue (Rp T) | `REVENUE` | direct fact |
+| Gross Profit (Rp T) | `GROSS_PROFIT` | direct fact |
+| Net Income (Rp T) | `EARNINGS` | direct fact |
+| EPS (Rp) | `EARNINGS / OUTSTANDING_SHARES` | derived |
+| Total Liabilities (Rp T) | `TOTAL_LIABILITIES` | direct fact |
+| Total Equity (Rp T) | `TOTAL_EQUITY` | direct fact |
+| Return on Equity (ROE) | `EARNINGS / TOTAL_EQUITY` | derived |
+| Gross Margin | `GROSS_PROFIT / REVENUE` | derived |
+| Net Margin | `EARNINGS / REVENUE` | derived |
+| Book Value per Share (BVPS) (Rp) | `TOTAL_EQUITY / OUTSTANDING_SHARES` | derived |
+
+**`Operating Profit` is deliberately absent**, and **`Total Assets` is not
+shown**. Neither exists in the canonical fact set: the provider's raw JSON
+carries `operating_pnl` and `total_assets`, but `ANNUAL_FIELDS` in
+`supabase/load_annual_financials_to_supabase.py` maps only ten fields into
+`financial_facts`, and a loader test pins that list. Only 12 metric codes exist
+at all (`REVENUE`, `COST_OF_REVENUE`, `INTEREST_EXPENSE_NON_OPERATING`,
+`EARNINGS`, `OPERATING_CASH_FLOW`, `GROSS_PROFIT`, `CURRENT_ASSETS`/
+`TOTAL_CURRENT_ASSET`, `CURRENT_LIABILITIES`, `TOTAL_LIABILITIES`,
+`TOTAL_EQUITY`, `OUTSTANDING_SHARES`).
+
+`Total Assets` *could* be derived — the identity
+`total_assets = total_liabilities + total_equity` holds for all 142 canonical
+annual rows (verified, 0 exceptions) — but it would be a reconstruction rather
+than a reported figure, so `Total Liabilities` is shown instead. The workbook
+template itself has no Operating Profit or Total Assets row either.
+
+Two additional defects were fixed while rewiring the table:
+
+1. **The right-hand column was mislabelled.** It read `YoY Change` but computed
+   the *total* change between the first and last year. For ERAA revenue
+   2019 → 2025 that printed `+132,53%`; the year-over-year figure is different.
+   It is now a real CAGR and is labelled `CAGR (6Y)` for a seven-year window.
+2. **The trend cards' CAGR label was off by one.** `cagrLabel` printed
+   `CAGR (7Y)` for a window spanning six year-over-year steps, so every rate it
+   described was overstated in its own label. The label and the divisor now come
+   from the same `yearsSpanned = length - 1`.
+
+Ratio rows (`ROE`, `Gross Margin`, `Net Margin`) show `-` in the CAGR column
+because a ratio is a level rather than a stock; the workbook leaves them blank
+too. A CAGR is reported as `Not available` when either endpoint is
+non-positive, so ARII and GOLD — whose windows begin in a loss — show an honest
+gap instead of the imaginary root of a negative number.
+
+Rows and columns are rendered from `table.periods` / `row.values`, so a ticker
+with a different history (GOLD and WIFI carry eight annual periods, not seven)
+simply gets a wider table; no per-ticker logic is involved.
+
+Frontend files changed: `frontend/src/lib/stock-detail-adapter.ts`
+(`buildFinancialHistory`) and `frontend/src/data/mock-stock-details.ts` (mock
+table and summary rows realigned to the same row set).
+
+
+---
+
 ## Appendix A — File-level diff summary (`2480f2b` → `80c3c1d`, `frontend/` only)
 
 39 files, 3760 insertions, 321 deletions. 17 added, 22 modified.

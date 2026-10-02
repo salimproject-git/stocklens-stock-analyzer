@@ -47,8 +47,7 @@ function getMetricContext(
   }
 
   const units: Record<string, string> = {
-    "Operating Profit": "Rp Trillion",
-    "Total Assets": "Rp Trillion",
+    "Revenue": "Rp Trillion",
     "Total Equity": "Rp Trillion",
     "Total Liabilities": "Rp Trillion",
     "Interest Expense": "Rp Billion",

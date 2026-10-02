@@ -236,32 +236,82 @@ function buildFinancialHistory(periods: FinancialPeriod[]): StockDetail["financi
       .map((point) => ({ year: point.year, value: toRpTrillion(point.value) }));
 
   const latestAnnual = annualPeriods.at(-1)!;
-  const cagr = (metricCode: string): string => {
-    const first = factValue(annualPeriods[0], metricCode);
-    const last = factValue(latestAnnual, metricCode);
-    const years = annualPeriods.length - 1;
-    if (first == null || last == null || first <= 0 || years <= 0) return UNAVAILABLE;
-    const rate = Math.pow(last / first, 1 / years) - 1;
-    return formatCagr(rate);
+
+  // The displayed window spans `length - 1` year-over-year steps, which is what
+  // a CAGR must divide by. The label used to print `length` ("CAGR (7Y)" for six
+  // steps), overstating every rate it described.
+  const yearsSpanned = Math.max(annualPeriods.length - 1, 0);
+
+  // Shares are carried forward from the most recent year that reported them,
+  // mirroring `buildValuationMetrics` below and the backend's
+  // `annual_share_count`. The provider leaves `OUTSTANDING_SHARES` null for some
+  // tickers' latest year (BIRD 2025), and treating that as "no EPS/BVPS at all"
+  // blanked a trend card and two table columns.
+  const sharesForIndex = (index: number): number | null => {
+    for (let i = index; i >= 0; i -= 1) {
+      const shares = factValue(annualPeriods[i], "OUTSTANDING_SHARES");
+      if (shares != null && shares > 0) return shares;
+    }
+    return null;
   };
+
+  const perYear = (fn: (period: FinancialPeriod, index: number) => number | null) =>
+    annualPeriods.map((period, index) => fn(period, index));
+
+  /** A raw fact per year, e.g. revenue or total equity. */
+  const factSeries = (metricCode: string) =>
+    perYear((period) => factValue(period, metricCode));
+
+  /** A ratio per year, refused when either side is absent or the divisor is 0. */
+  const ratioSeries = (numeratorCode: string, denominatorCode: string) =>
+    perYear((period) => {
+      const numerator = factValue(period, numeratorCode);
+      const denominator = factValue(period, denominatorCode);
+      if (numerator == null || denominator == null || denominator === 0) return null;
+      return numerator / denominator;
+    });
+
+  /** A per-share value per year, e.g. EPS = earnings / shares. */
+  const perShareSeries = (metricCode: string) =>
+    perYear((period, index) => {
+      const value = factValue(period, metricCode);
+      const shares = sharesForIndex(index);
+      if (value == null || shares == null || shares <= 0) return null;
+      return value / shares;
+    });
+
+  /**
+   * CAGR across the displayed window. Both endpoints must be positive, so a
+   * series that starts or ends in a loss reports "Not available" rather than an
+   * imaginary root of a negative number.
+   */
+  const windowCagr = (series: (number | null)[]): string => {
+    const first = series[0];
+    const last = series[series.length - 1];
+    if (
+      first == null || last == null || first <= 0 || last <= 0 || yearsSpanned <= 0
+    ) {
+      return UNAVAILABLE;
+    }
+    return formatCagr(Math.pow(last / first, 1 / yearsSpanned) - 1);
+  };
+
+  const money = (value: number | null) =>
+    value == null ? UNAVAILABLE : toRpTrillion(value).toFixed(2);
+  const amount = (value: number | null) =>
+    value == null ? UNAVAILABLE : value.toFixed(2);
+  const percent1 = (value: number | null) =>
+    value == null ? UNAVAILABLE : `${(value * 100).toFixed(1).replace(".", ",")}%`;
 
   // EPS is derived per year (earnings / outstanding shares). A year missing
   // either input is skipped, so the series can never claim a value it lacks.
-  const epsValues = annualPeriods.map((p) => {
-    const earnings = factValue(p, "EARNINGS");
-    const shares = factValue(p, "OUTSTANDING_SHARES");
-    if (earnings == null || shares == null || shares <= 0) return null;
-    return earnings / shares;
-  });
+  const epsValues = perShareSeries("EARNINGS");
   const epsSeries = annualPeriods
     .map((p, index) => ({ year: yearLabel(p), value: epsValues[index] }))
     .filter((point): point is { year: string; value: number } => point.value != null);
-  const validEps = epsValues.filter((value): value is number => value != null && value > 0);
   const latestEps = epsValues.at(-1) ?? null;
-  const epsCagr =
-    validEps.length >= 2 && validEps[0] > 0
-      ? Math.pow(validEps.at(-1)! / validEps[0], 1 / (validEps.length - 1)) - 1
-      : null;
+
+  const cagrLabel = yearsSpanned > 0 ? `CAGR (${yearsSpanned}Y)` : "CAGR";
 
   const annualTrendCards: NonNullable<StockDetail["financialHistory"]>["annualTrendCards"] = [
     {
@@ -269,8 +319,8 @@ function buildFinancialHistory(periods: FinancialPeriod[]): StockDetail["financi
       title: "Revenue",
       unit: "Rp Trillion",
       latestValue: toRpTrillion(factValue(latestAnnual, "REVENUE")).toFixed(2),
-      cagrLabel: `CAGR (${annualPeriods.length}Y)`,
-      cagrValue: cagr("REVENUE"),
+      cagrLabel,
+      cagrValue: windowCagr(factSeries("REVENUE")),
       subtext: "Annual revenue trend",
       series: buildSeries("REVENUE", annualPeriods),
     },
@@ -279,8 +329,8 @@ function buildFinancialHistory(periods: FinancialPeriod[]): StockDetail["financi
       title: "Net Income",
       unit: "Rp Trillion",
       latestValue: toRpTrillion(factValue(latestAnnual, "EARNINGS")).toFixed(2),
-      cagrLabel: `CAGR (${annualPeriods.length}Y)`,
-      cagrValue: cagr("EARNINGS"),
+      cagrLabel,
+      cagrValue: windowCagr(factSeries("EARNINGS")),
       subtext: "Annual net income trend",
       series: buildSeries("EARNINGS", annualPeriods),
     },
@@ -289,31 +339,53 @@ function buildFinancialHistory(periods: FinancialPeriod[]): StockDetail["financi
       title: "Earnings per Share (EPS)",
       unit: "Rp per share",
       latestValue: latestEps == null ? UNAVAILABLE : latestEps.toFixed(2),
-      cagrLabel: `CAGR (${annualPeriods.length}Y)`,
-      cagrValue: formatPercentSigned(epsCagr),
+      cagrLabel,
+      cagrValue: windowCagr(epsValues),
       subtext: "Earnings / outstanding shares",
       series: epsSeries,
     },
   ];
 
+  // --- Annual table ---------------------------------------------------------
+  // Rows follow the workbook template (income statement + balance sheet in
+  // `DataInput`) instead of only the five raw facts the table used to show, so
+  // the ratios the workbook reports - EPS, BVPS, ROE and the two margins - are
+  // visible again.
+  //
+  // The right-hand column is a real CAGR over the displayed window. It used to
+  // read "YoY Change" while actually computing the *total* change between the
+  // first and last year: for ERAA revenue 2019 -> 2025 that printed +132,53%
+  // under a year-over-year label, which is a different number.
+  const seriesRow = (
+    metric: string,
+    series: (number | null)[],
+    format: (value: number | null) => string,
+    // A ratio is a level, not a stock, so the workbook leaves its CAGR blank.
+    withCagr = true,
+  ) => ({
+    metric,
+    values: series.map(format),
+    change: withCagr ? windowCagr(series) : "-",
+  });
+
   const annualTable: NonNullable<StockDetail["financialHistory"]>["annualTable"] = {
     periods: annualPeriods.map(yearLabel),
-    changeLabel: "YoY Change",
-    rows: (["REVENUE", "EARNINGS", "GROSS_PROFIT", "TOTAL_EQUITY", "TOTAL_LIABILITIES"] as const).map(
-      (code) => {
-        const values = annualPeriods.map((p) => {
-          const v = factValue(p, code);
-          return v == null ? UNAVAILABLE : toRpTrillion(v).toFixed(2);
-        });
-        const firstV = factValue(annualPeriods[0], code);
-        const lastV = factValue(latestAnnual, code);
-        const change =
-          firstV != null && lastV != null && annualPeriods.length > 1
-            ? formatPercentSigned(((lastV - firstV) / Math.abs(firstV)) * 100)
-            : UNAVAILABLE;
-        return { metric: METRIC_LABELS[code] ?? code, values, change };
-      },
-    ),
+    changeLabel: yearsSpanned > 0 ? `CAGR (${yearsSpanned}Y)` : "CAGR",
+    rows: [
+      seriesRow("Revenue (Rp T)", factSeries("REVENUE"), money),
+      seriesRow("Gross Profit (Rp T)", factSeries("GROSS_PROFIT"), money),
+      seriesRow("Net Income (Rp T)", factSeries("EARNINGS"), money),
+      seriesRow("EPS (Rp)", perShareSeries("EARNINGS"), amount),
+      // Total assets is not stored as a fact; the balance sheet identity
+      // `assets = liabilities + equity` holds for every canonical annual row,
+      // so liabilities is shown instead of inventing a derived total.
+      seriesRow("Total Liabilities (Rp T)", factSeries("TOTAL_LIABILITIES"), money),
+      seriesRow("Total Equity (Rp T)", factSeries("TOTAL_EQUITY"), money),
+      seriesRow("Return on Equity (ROE)", ratioSeries("EARNINGS", "TOTAL_EQUITY"), percent1, false),
+      seriesRow("Gross Margin", ratioSeries("GROSS_PROFIT", "REVENUE"), percent1, false),
+      seriesRow("Net Margin", ratioSeries("EARNINGS", "REVENUE"), percent1, false),
+      seriesRow("Book Value per Share (BVPS) (Rp)", perShareSeries("TOTAL_EQUITY"), amount),
+    ],
   };
 
   const quarterlyTable: NonNullable<StockDetail["financialHistory"]>["quarterlyTable"] =

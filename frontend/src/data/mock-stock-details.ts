@@ -975,16 +975,16 @@ export const mockStockDetails: Record<string, StockDetail> = {
           value: "7,2%",
         },
         {
-          label: "Operating Profit",
-          value: "2,5",
-        },
-        {
-          label: "Total Assets",
-          value: "22,0",
+          label: "Revenue",
+          value: "19,4",
         },
         {
           label: "Total Equity",
           value: "10,2",
+        },
+        {
+          label: "Total Liabilities",
+          value: "6,0",
         },
       ],
       quarterlyMetrics: [
@@ -1028,11 +1028,6 @@ export const mockStockDetails: Record<string, StockDetail> = {
             change: "11,3%",
           },
           {
-            metric: "Operating Profit (Rp T)",
-            values: ["1,3", "1,5", "1,8", "2,0", "2,2", "2,5"],
-            change: "14,0%",
-          },
-          {
             metric: "Net Income (Rp T)",
             values: ["0,9", "1,1", "1,3", "1,5", "1,7", "1,82"],
             change: "15,2%",
@@ -1043,9 +1038,9 @@ export const mockStockDetails: Record<string, StockDetail> = {
             change: "10,8%",
           },
           {
-            metric: "Total Assets (Rp T)",
-            values: ["14,2", "15,6", "17,8", "19,1", "20,5", "22,0"],
-            change: "9,2%",
+            metric: "Total Liabilities (Rp T)",
+            values: ["3,4", "3,9", "4,4", "5,0", "5,6", "6,0"],
+            change: "12,0%",
           },
           {
             metric: "Total Equity (Rp T)",
@@ -1068,7 +1063,7 @@ export const mockStockDetails: Record<string, StockDetail> = {
             change: "-",
           },
           {
-            metric: "Book Value per Share (BVPS)",
+            metric: "Book Value per Share (BVPS) (Rp)",
             values: ["1.265", "1.410", "1.576", "1.763", "1.950", "2.116"],
             change: "10,8%",
           },
