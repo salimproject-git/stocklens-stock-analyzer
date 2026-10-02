@@ -12,6 +12,11 @@ export function CurrentValuationCard({
   valuation: StockDetail["currentValuation"];
 }) {
   const hasValuation = valuation.mos != null && valuation.intrinsicValue != null;
+  // A ticker can have stored methods yet no usable margin of safety, because the
+  // ratio divides by the intrinsic value. Those two states need different text:
+  // saying "no stored valuation result" would be wrong for a company that has
+  // five stored methods and one undefined ratio.
+  const hasMethods = valuation.methods.length > 0;
   const hasComparison =
     valuation.currentPrice != null && valuation.intrinsicValue != null && valuation.intrinsicValue !== 0;
 
@@ -23,18 +28,22 @@ export function CurrentValuationCard({
   const formattedMos =
     valuation.mos != null ? valuation.mos.toFixed(1).replace(".", ",") : null;
 
-  const verdictText = !hasValuation
+  const verdictText = !hasMethods
     ? "No stored valuation result in the database for this ticker."
-    : valuation.verdict.toLowerCase() === "undervalued"
-      ? "Most valuation methods indicate the stock is trading below its estimated value"
-      : "Most valuation methods indicate the stock is trading above its estimated value";
+    : !hasValuation
+      ? "Margin of safety is not available because the main method's intrinsic value is zero or negative."
+      : valuation.verdict.toLowerCase() === "undervalued"
+        ? "Most valuation methods indicate the stock is trading below its estimated value"
+        : "Most valuation methods indicate the stock is trading above its estimated value";
 
   const mosUndervalued =
     valuation.mos != null && classifyCurrentValuationMos(valuation.mos) === "UNDERVALUED";
 
   const mosText =
     formattedMos == null
-      ? "Margin of safety is not available because no valuation result is stored in the database yet."
+      ? hasMethods
+        ? "Margin of safety is not available because the main method's intrinsic value is zero or negative."
+        : "Margin of safety is not available because no valuation result is stored in the database yet."
       : mosUndervalued
         ? `Margin of safety is ${formattedMos}%, indicating undervalued with discount to intrinsic value.`
         : `Margin of safety is ${formattedMos}%, indicating overvalued with limited valuation cushion.`;

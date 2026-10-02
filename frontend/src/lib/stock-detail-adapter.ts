@@ -1,10 +1,17 @@
 import "server-only";
 
 import type { BacktestData, StockResearchData, FinancialPeriod, ValuationMethod, StockPrice } from "@/lib/stock-data";
-import { mockStockDetails, type StockDetail } from "@/data/mock-stock-details";
+import { mockStockDetails, type BacktestCase, type EvidenceOutcomeBreakdown, type StockDetail } from "@/data/mock-stock-details";
 import { toMonthIndex, toMonthLabel } from "@/utils/dates";
-import { sortValuationMethods, valuationMethodLabel } from "@/lib/valuation-methods";
+import { sortValuationMethods, valuationMethodLabel, type ValuationMethodCode } from "@/lib/valuation-methods";
 import { buildBacktestCase } from "@/lib/backtest-adapter";
+import {
+  buildHistoricalEvidencePreview,
+  EVIDENCE_RATE_UNAVAILABLE,
+  evidenceWinRatePercent,
+  formatEvidencePercent,
+  preferredMainMethodCode,
+} from "@/lib/analysis";
 
 const UNAVAILABLE = "Not available";
 
@@ -21,31 +28,113 @@ function mapVerdict(dbVerdict: string | undefined): StockDetail["verdict"] {
   }
 }
 
-function pickPrimaryMethod(methods: ValuationMethod[]): ValuationMethod | null {
-  if (methods.length === 0) return null;
-  const stockType = (methods[0].stockType ?? "").toUpperCase();
-  const preferredCode =
-    stockType === "STALWART" || stockType === "FAST GROWER" ? "TYPE_SECTOR_WEIGHTED" : "PETER_LYNCH";
-  return (
-    methods.find((m) => m.methodCode === preferredCode && m.calculationStatus === "VALID") ??
-    methods.find((m) => m.calculationStatus === "VALID") ??
-    null
-  );
+/**
+ * Pick the row that carries the "Main" badge and supplies the headline IV / MoS.
+ *
+ * The workbook's main rule for the stock type wins when it has a usable value.
+ * When it does not (`IV <= 0`), the **other** main-rule candidate takes over
+ * instead of leaving the headline empty: the two candidates are the same pair
+ * the workbook offers for `SUMMARY!B69`, so the fallback stays inside the
+ * documented rule set rather than inventing a new one.
+ *
+ * GEMA is the case that motivated this: it is a `TURN AROUND`, so Peter Lynch is
+ * its main rule, but Peter Lynch values it at `−22`. Its headline therefore comes
+ * from Weighted IV (`32.74`), and the badge moves with it — otherwise the table
+ * would show "Main" on a row whose number nothing else uses.
+ *
+ * A stock with no usable value from either candidate keeps `null`, so the screen
+ * reports "not available" instead of picking a method at random.
+ */
+function pickMainMethod(
+  methods: ValuationMethod[],
+  stockType: string,
+): ValuationMethod | null {
+  const preferredCode = preferredMainMethodCode(stockType);
+  const alternativeCode: ValuationMethodCode =
+    preferredCode === "PETER_LYNCH" ? "TYPE_SECTOR_WEIGHTED" : "PETER_LYNCH";
+
+  const usable = (method: ValuationMethod | undefined) =>
+    method != null && method.intrinsicValue != null && method.intrinsicValue > 0;
+
+  const byCode = (code: ValuationMethodCode) =>
+    methods.find((method) => method.methodCode === code);
+
+  if (usable(byCode(preferredCode))) return byCode(preferredCode) ?? null;
+  if (usable(byCode(alternativeCode))) return byCode(alternativeCode) ?? null;
+
+  // Neither main-rule candidate produced a value. Falling back to any other
+  // method would change what "main" means, so the headline stays unavailable.
+  return null;
 }
 
+/**
+ * Margin of safety for one method: `(IV − price) / IV`, as a percentage.
+ *
+ * The divisor is the intrinsic value, not the price (workbook `SUMMARY`, D6), so
+ * the ratio is only defined for a **positive** IV:
+ *
+ *   * `IV = 0` — undefined; the workbook writes `⚪ N/A (Skip)` and the backend
+ *     flags `MOS_DENOMINATOR_ZERO`.
+ *   * `IV < 0` — the divisor's sign flips the whole ratio. GEMA's Peter Lynch IV
+ *     of `−22.03` against a price of `93` would produce `+522%`, which reads as a
+ *     huge discount when the model actually values the company far *below* its
+ *     price. The backend marks `IV <= 0` as `NOT_APPLICABLE` for the same reason.
+ *
+ * Returning `null` here is what makes the row render "Not available" instead of
+ * a sign-flipped number. The backtest keeps negative IVs in its own consensus
+ * (decision D5) through a separate code path, so this guard does not touch it.
+ */
 function computeMos(intrinsicValue: number | null, currentPrice: number | null): number | null {
-  if (intrinsicValue == null || currentPrice == null || intrinsicValue === 0) return null;
+  if (intrinsicValue == null || currentPrice == null) return null;
+  if (intrinsicValue <= 0) return null;
   return ((intrinsicValue - currentPrice) / intrinsicValue) * 100;
-}
-
-/** Gap against the current price — the template's "Potential (Gain/Loss)". */
-function computeGap(intrinsicValue: number | null, currentPrice: number | null): number | null {
-  if (intrinsicValue == null || currentPrice == null || currentPrice === 0) return null;
-  return ((intrinsicValue - currentPrice) / currentPrice) * 100;
 }
 
 function methodDisplayName(methodCode: string): string {
   return valuationMethodLabel(methodCode);
+}
+
+/**
+ * Status shown for one valuation-method row.
+ *
+ * The two non-positive cases are treated **differently on purpose**, mirroring
+ * the backtest engine (decision D5 in `docs/BACKTEST_ARCHITECTURE.md`):
+ *
+ *   * `IV = 0` — the model produced nothing (DDM for a company that has never
+ *     paid a dividend), so it is `SKIPPED` and kept out of the comparison. The
+ *     backtest drops these rows from its consensus denominator for the same
+ *     reason: a stock without dividends yields `3|4`, not `3|5`.
+ *   * `IV < 0` — the model *did* produce a value, and a negative one is a real
+ *     statement (the company is worth less than nothing by that model), so it
+ *     stays `OVERVALUED`. The backtest keeps these rows valid and counts them
+ *     the same way.
+ *
+ * Only the margin of safety is withheld for `IV < 0`, because `(IV − price)/IV`
+ * flips sign when the divisor is negative. The status is not withheld.
+ */
+function methodStatus(
+  intrinsicValue: number,
+  storedVerdict: string,
+): import("@/data/mock-stock-details").ValuationMethodStatus {
+  if (intrinsicValue === 0) return "SKIPPED";
+  if (intrinsicValue < 0) return "OVERVALUED";
+  if (storedVerdict === "NOT_APPLICABLE") return "SKIPPED";
+  return storedVerdict === "UNDERVALUED" ? "UNDERVALUED" : "OVERVALUED";
+}
+
+/**
+ * Display form of a Historical Evidence headline. `null` (no Undervalued case,
+ * or no backtest at all) becomes `EVIDENCE_RATE_UNAVAILABLE` rather than `0%`,
+ * which would read as "the thesis failed every time".
+ */
+function formatEvidenceWinRate(
+  breakdown: EvidenceOutcomeBreakdown | undefined,
+): string {
+  if (!breakdown) return EVIDENCE_RATE_UNAVAILABLE;
+  const percent = evidenceWinRatePercent(breakdown);
+  return percent == null
+    ? EVIDENCE_RATE_UNAVAILABLE
+    : formatEvidencePercent(percent);
 }
 
 function formatPercentSigned(value: number | null): string {
@@ -520,43 +609,141 @@ function buildThesisValidator(data: StockResearchData): StockDetail["thesisValid
 }
 
 function buildDividendConsistency(data: StockResearchData): StockDetail["dividendConsistency"] {
-  const sorted = [...data.dividends].sort((a, b) => (b.periodYear ?? 0) - (a.periodYear ?? 0));
-  const latest5 = sorted.slice(0, 5);
-  const years = latest5.map((d) => (d.periodYear != null ? String(d.periodYear) : UNAVAILABLE));
+  const percent = (value: number | null): string =>
+    value == null ? UNAVAILABLE : `${(value * 100).toFixed(1).replace(".", ",")}%`;
 
-  const dpsValues: Record<string, string> = {};
-  latest5.forEach((d, idx) => {
-    const key = (["p2026", "y2025", "y2024", "y2023", "y2022"] as const)[idx];
-    if (key) dpsValues[key] = d.amountPerShare != null ? d.amountPerShare.toFixed(2) : UNAVAILABLE;
-  });
+  // The workbook's "Avg (4Y)" cell is the mean of the five displayed columns
+  // (projection + four fiscal years), verified against the sample workbooks:
+  // BIRD DPS (85.988+120+91+72+60)/5 = 85.7977. Columns with no value are
+  // excluded, and a row with no value at all stays "Not available".
+  const average = (values: (number | null)[]): number | null => {
+    const present = values.filter((value): value is number => value != null);
+    if (present.length === 0) return null;
+    return present.reduce((sum, value) => sum + value, 0) / present.length;
+  };
 
-  const validYields = data.dividends.filter((d) => d.yieldRatio != null);
-  const avgYield =
-    validYields.length > 0
-      ? `${((validYields.reduce((sum, d) => sum + (d.yieldRatio ?? 0), 0) / validYields.length) * 100)
-          .toFixed(2)
-          .replace(".", ",")}%`
-      : UNAVAILABLE;
+  // DPS is indexed by fiscal year, never by position: a company that skipped a
+  // year (GEMA paid nothing in 2021-2023 and 2026) would otherwise shift its
+  // 2025 dividend into the 2026 column.
+  const dpsByYear: Record<string, number | null> = {};
+  for (const fact of data.dividends) {
+    if (fact.periodYear == null) continue;
+    dpsByYear[String(fact.periodYear)] = fact.amountPerShare;
+  }
+
+  // DPR and Dividend Yield are stored annual results (`DIVIDEND_PAYOUT_RATIO` /
+  // `DIVIDEND_YIELD`, workbook DataInput!B28/B29). One snapshot per year carries
+  // that year's own row, so index them by period label. They are read from the
+  // database rather than recomputed here: the yield denominator is a
+  // point-in-time year-end close the browser cannot reconstruct, because the
+  // price payload only carries the trailing window.
+  const ratioByYear = (metricCode: string): Record<string, number | null> => {
+    const map: Record<string, number | null> = {};
+    for (const row of data.annualGrowth) {
+      if (row.metricCode === metricCode) map[row.periodLabel] = row.value;
+    }
+    return map;
+  };
+  const dprByYear = ratioByYear("DIVIDEND_PAYOUT_RATIO");
+  const yieldByYear = ratioByYear("DIVIDEND_YIELD");
+
+  // The projection column is the active scenario, not a stored annual snapshot:
+  // `POTENTIAL_DPS` is the workbook's `Proj_DPS` (`B26 = IF(Proj_DPS="",0,...)`)
+  // and `average_dpr_ratio` is `Proj_Dividend_Payout_Ratio` (`B28`). Projected
+  // yield (`B29 = B26/B25`) divides by `Metric_Price_Current`, the latest close -
+  // deliberately a different basis from the historical year-end column.
+  const projection = data.projection;
+  const projectedDps = projection
+    ? projection.values.find((value) => value.metricCode === "POTENTIAL_DPS")?.value ?? null
+    : null;
+  const projectedDpr = projection?.averageDprRatio ?? null;
+  const latestPrice = data.prices.at(-1)?.closePrice ?? null;
+  const projectedYield =
+    projectedDps == null || latestPrice == null || latestPrice === 0
+      ? null
+      : projectedDps / latestPrice;
+
+  // Columns run from the projection year backwards, mirroring the workbook's
+  // `RIGHT(Years_Base_Selected,4)-1` ... `-4` headers.
+  const projectionYear = projection?.projectionYear ?? 2026;
+  const columnYears = [0, 1, 2, 3, 4].map((offset) => projectionYear - offset);
+  const PERIOD_KEYS = ["p2026", "y2025", "y2024", "y2023", "y2022"] as const;
+
+  const row = (
+    item: string,
+    values: (number | null)[],
+    formatter: (value: number | null) => string,
+  ): StockDetail["dividendConsistency"]["rows"][number] => {
+    const cells = PERIOD_KEYS.map((_, index) => values[index] ?? null);
+    return {
+      item,
+      p2026: formatter(cells[0]),
+      y2025: formatter(cells[1]),
+      y2024: formatter(cells[2]),
+      y2023: formatter(cells[3]),
+      y2022: formatter(cells[4]),
+      avg4Y: formatter(average(cells)),
+    };
+  };
+
+  const amount = (value: number | null): string =>
+    value == null ? UNAVAILABLE : value.toFixed(2);
+
+  const dpsValues = columnYears.map((year, index) =>
+    index === 0 ? projectedDps : dpsByYear[String(year)] ?? null,
+  );
+  const dprValues = columnYears.map((year, index) =>
+    index === 0 ? projectedDpr : dprByYear[String(year)] ?? null,
+  );
+  const yieldValues = columnYears.map((year, index) =>
+    index === 0 ? projectedYield : yieldByYear[String(year)] ?? null,
+  );
+
+  const dpsRow = row("DPS [Rp]", dpsValues, amount);
+  const dprRow = row("DPR [%]", dprValues, percent);
+  const yieldRow = row("Yield [%]", yieldValues, percent);
 
   return {
-    averageYield: avgYield,
-    years: years.length > 0 ? years : [UNAVAILABLE],
-    rows: [
-      {
-        item: "DPS [Rp]",
-        p2026: dpsValues.p2026 ?? UNAVAILABLE,
-        y2025: dpsValues.y2025 ?? UNAVAILABLE,
-        y2024: dpsValues.y2024 ?? UNAVAILABLE,
-        y2023: dpsValues.y2023 ?? UNAVAILABLE,
-        y2022: dpsValues.y2022 ?? UNAVAILABLE,
-        avg4Y: UNAVAILABLE,
-      },
+    // The card's headline yield is the same "Avg (4Y)" the table shows, so the
+    // two can never disagree.
+    averageYield: yieldRow.avg4Y,
+    years: [
+      ...columnYears.map((year, index) =>
+        index === 0 ? `${year} (Proyeksi)` : String(year),
+      ),
+      "Avg (4Y)",
     ],
-    callout:
-      data.dividends.length > 0
-        ? "Historical dividend per share is taken directly from the database. Projected DPR and yield are not available yet."
-        : "No historical dividend data for this ticker.",
+    rows: [dpsRow, dprRow, yieldRow],
+    callout: buildDividendCallout({
+      hasDividends: data.dividends.length > 0,
+      hasDpr: dprValues.some((value) => value != null),
+      hasYield: yieldValues.some((value) => value != null),
+    }),
   };
+}
+
+/**
+ * The dividend card's callout. It only claims what the database actually holds,
+ * so a ticker whose dividend ratios could not be computed (missing DPS or no
+ * year-end price) says so instead of showing a silent gap.
+ */
+function buildDividendCallout({
+  hasDividends,
+  hasDpr,
+  hasYield,
+}: {
+  hasDividends: boolean;
+  hasDpr: boolean;
+  hasYield: boolean;
+}): string {
+  if (!hasDividends) return "No historical dividend data for this ticker.";
+  if (hasDpr && hasYield) {
+    return "DPS, DPR and dividend yield are stored calculation results. Yield uses the point-in-time year-end close, not the latest price.";
+  }
+  if (hasDpr || hasYield) {
+    return "DPS is stored directly; only one of DPR or dividend yield could be computed for this ticker because an input is missing.";
+  }
+  return "DPS is stored directly. DPR and dividend yield need a recorded dividend and a year-end price, which are not available for this ticker yet.";
 }
 
 function buildGrowthSummary(data: StockResearchData): StockDetail["growthSummary"] {
@@ -653,6 +840,21 @@ function buildBacktest(data: BacktestData | null | undefined): StockDetail["back
 }
 
 /**
+ * Build the sample-data version of the Historical Evidence preview.
+ *
+ * The sample backtest cases stay the single source of truth for the demo
+ * ticker, so the preview is computed from them with the same aggregation the
+ * stored path uses instead of being a second set of hand-written numbers that
+ * could drift from the tab next to it.
+ */
+function buildDemoEvidencePreview(
+  cases: BacktestCase[],
+): StockDetail["historicalEvidencePreview"] {
+  const preview = buildHistoricalEvidencePreview(cases);
+  return preview ? { ...preview, isDemoData: true } : undefined;
+}
+
+/**
  * Backtest history and the "Historical Evidence" preview have no backing
  * database table yet. To keep the existing UI demo-able without pretending the
  * numbers are real, we expose the sample dataset for the single ticker that
@@ -669,7 +871,7 @@ function pickDemoBacktestData(
   const demo = mockStockDetails.AUTO;
   return {
     backtest: demo.backtest,
-    historicalEvidencePreview: demo.historicalEvidencePreview,
+    historicalEvidencePreview: buildDemoEvidencePreview(demo.backtest?.cases ?? []),
   };
 }
 
@@ -814,7 +1016,22 @@ export function buildStockDetail(data: StockResearchData, backtest?: BacktestDat
     ? { backtest: undefined, historicalEvidencePreview: undefined }
     : pickDemoBacktestData(data.instrument.ticker);
   const backtestSection = storedBacktest ?? demoBacktest.backtest;
-  const primaryMethod = pickPrimaryMethod(data.valuationMethods);
+  // The Overview preview reads the same cases the Backtest tab does, so both
+  // screens report one set of numbers.
+  const evidencePreview =
+    buildHistoricalEvidencePreview(backtestSection?.cases ?? []) ??
+    demoBacktest.historicalEvidencePreview;
+  // The Key Metric headline figures are the win rates of both rules, read from
+  // the same preview the Overview panel renders so the top row and the panel
+  // cannot drift apart.
+  const evidenceWinRates = {
+    method: formatEvidenceWinRate(evidencePreview?.verdictMethod),
+    mos: formatEvidenceWinRate(evidencePreview?.verdictMos),
+  };
+  // Stock type comes from the stored rows, not from the chosen main method, so
+  // the fallback below cannot change what type the ticker is.
+  const stockType = data.valuationMethods[0]?.stockType ?? UNAVAILABLE;
+  const mainMethod = pickMainMethod(data.valuationMethods, stockType);
   const latestPrice = data.prices.at(-1);
   const previousPrice = data.prices.at(-2);
 
@@ -824,11 +1041,10 @@ export function buildStockDetail(data: StockResearchData, backtest?: BacktestDat
   const changePercent =
     change != null && previousPrice?.closePrice ? (change / previousPrice.closePrice) * 100 : null;
 
-  const intrinsicValue = primaryMethod?.intrinsicValue ?? null;
-  const currentPrice = primaryMethod?.currentPrice ?? price;
+  const intrinsicValue = mainMethod?.intrinsicValue ?? null;
+  const currentPrice = mainMethod?.currentPrice ?? price;
   const mos = computeMos(intrinsicValue, currentPrice);
-  const verdict = mapVerdict(primaryMethod?.verdict);
-  const stockType = primaryMethod?.stockType ?? UNAVAILABLE;
+  const verdict = mapVerdict(mainMethod?.verdict);
 
   const prices52w = data.prices.filter((p) => p.closePrice != null).map((p) => p.closePrice as number);
   const low52W = prices52w.length > 0 ? Math.min(...prices52w) : null;
@@ -847,19 +1063,16 @@ export function buildStockDetail(data: StockResearchData, backtest?: BacktestDat
           (m.calculationStatus === "VALID" || m.calculationStatus === "APPROXIMATED"),
       ),
   ).map((m) => {
-    // "Potential" and "Margin of Safety" are different figures in the template
-    // (`SUMMARY`): Potential measures the gap against the *current price*, while
-    // MoS measures the same gap against the *intrinsic value*. Both are shown as
-    // percentages, so they must not reuse the same number.
-    const potential = m.gapRatio != null ? m.gapRatio * 100 : computeGap(m.intrinsicValue, m.currentPrice);
     const marginOfSafety = computeMos(m.intrinsicValue, m.currentPrice);
     return {
       method: methodDisplayName(m.methodCode),
       methodCode: m.methodCode,
       intrinsicValue: m.intrinsicValue as number,
-      potential: formatPercentSigned(potential),
       marginOfSafety: formatPercentSigned(marginOfSafety),
-      status: m.verdict === "UNDERVALUED" ? ("UNDERVALUED" as const) : ("OVERVALUED" as const),
+      // The stored verdict already says NOT_APPLICABLE for every `IV <= 0` row,
+      // so it is read rather than re-derived. Forcing the leftover values to
+      // OVERVALUED is what used to label a skipped DDM as "overvalued".
+      status: methodStatus(m.intrinsicValue as number, m.verdict),
       description: methodDisplayName(m.methodCode),
     };
   });
@@ -874,15 +1087,14 @@ export function buildStockDetail(data: StockResearchData, backtest?: BacktestDat
     changePercent,
     updatedAt: latestPrice?.tradingDate ?? UNAVAILABLE,
     verdict,
-    verdictDescription: primaryMethod ? "Based on the database valuation model" : "No stored valuation result yet",
+    verdictDescription: mainMethod ? "Based on the database valuation model" : "No stored valuation result yet",
     intrinsicValue,
     mos,
     stockCharacter: stockType,
     stockCharacterDesc: stockType !== UNAVAILABLE ? "Stock type classification from the database" : UNAVAILABLE,
-    evidenceWins: null,
-    evidenceTotal: null,
-    researchSummary: primaryMethod
-      ? `${data.instrument.ticker} was evaluated using the ${methodDisplayName(primaryMethod.methodCode)} valuation model based on the latest database data.`
+    evidenceWinRates,
+    researchSummary: mainMethod
+      ? `${data.instrument.ticker} was evaluated using the ${methodDisplayName(mainMethod.methodCode)} valuation model based on the latest database data.`
       : `No stored valuation result for ${data.instrument.ticker} in the database.`,
     methodologyUrl: "#",
     companyProfile: {
@@ -910,8 +1122,9 @@ export function buildStockDetail(data: StockResearchData, backtest?: BacktestDat
       mos,
       metrics: buildValuationMetrics(data, currentPrice),
       methods,
+      mainMethodCode: mainMethod ? (mainMethod.methodCode as ValuationMethodCode) : null,
       comparison: {
-        takeaway: primaryMethod
+        takeaway: mainMethod
           ? "Comparison of the current price against the intrinsic value estimates from the valuation methods stored in the database."
           : "No stored valuation result for this ticker.",
         readouts: [],
@@ -961,7 +1174,7 @@ export function buildStockDetail(data: StockResearchData, backtest?: BacktestDat
       overall: { score: UNAVAILABLE, rating: UNAVAILABLE, clearance: UNAVAILABLE, context: UNAVAILABLE },
     },
     growthSummary: buildGrowthSummary(data),
-    historicalEvidencePreview: demoBacktest.historicalEvidencePreview,
+    historicalEvidencePreview: evidencePreview,
     backtest: backtestSection,
     thesisValidator: buildThesisValidator(data),
     dividendConsistency: buildDividendConsistency(data),

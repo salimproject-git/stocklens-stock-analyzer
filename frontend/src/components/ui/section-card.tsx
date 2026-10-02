@@ -7,6 +7,7 @@ export function SectionCard({
   actionSlot,
   children,
   className = "",
+  paddingClassName = "p-6",
 }: {
   icon?: React.ReactNode;
   title?: React.ReactNode;
@@ -14,11 +15,18 @@ export function SectionCard({
   actionSlot?: React.ReactNode;
   children: React.ReactNode;
   className?: string;
+  /**
+   * Padding is a separate prop rather than part of `className` because Tailwind
+   * resolves `p-5` vs `p-6` by stylesheet order, not by the order the classes
+   * appear in the attribute. Passing both would leave the winner undefined.
+   */
+  paddingClassName?: string;
 }) {
   return (
     <article
       className={[
-        "flex flex-col justify-between rounded-[20px] border border-white/10 bg-[linear-gradient(180deg,_rgba(11,23,37,0.92),_rgba(7,16,28,0.94))] p-6 shadow-[0_24px_48px_rgba(0,0,0,0.28)]",
+        "flex flex-col justify-between rounded-[20px] border border-white/10 bg-[linear-gradient(180deg,_rgba(11,23,37,0.92),_rgba(7,16,28,0.94))] shadow-[0_24px_48px_rgba(0,0,0,0.28)]",
+        paddingClassName,
         className,
       ].join(" ")}
     >

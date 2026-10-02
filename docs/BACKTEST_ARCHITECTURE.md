@@ -274,10 +274,94 @@ dan mencatat statusnya di `flags`, tanpa mengklaim sudah resolved.
 35% (`mos_entry_threshold_workbook`) dipakai untuk status entry di SUMMARY — dua angka berbeda
 untuk dua keperluan berbeda, jangan disatukan.
 
-### D7. Tipe saham per kasus
+### D7. Tipe saham per kasus — **SUDAH DIPUTUSKAN DAN DIKERJAKAN**
 
 Workbook menghitung ulang `MetricsClassification` tiap kasus, jadi tipe saham kasus bisa berbeda
-dari tipe hari ini. Kita menyimpan classifier sebagai snapshot terbaru saja.
+dari tipe hari ini. Versi pertama backtest hanya menyimpan classifier sebagai snapshot terbaru
+dan menyalinnya ke semua kasus, dengan flag `STOCK_TYPE_LATEST_SNAPSHOT` sebagai penanda
+kejujuran. Itu **salah secara material**, bukan kosmetik: `valuation_engine.py` memetakan tipe ke
+bobot referensi (TURN AROUND → LIQUIDATION_VALUE, CYCLICAL → CYCLICAL_PBV, dst.), sehingga tipe
+yang salah menggeser Peter Lynch IV, lalu konsensus, MoS Main, `mos_method_code`, verdict, dan
+kedua Win Rate di UI.
+
+**KEPUTUSAN: tipe dihitung ulang pada tanggal kasus, dengan resep point-in-time yang sama dengan
+valuasi kasus itu.** `run_backtest.stock_type_for_case` menjalankan ulang classifier
+(`classify_metrics_classification`) di atas potongan kasus:
+
+1. `financial_periods` dipotong pada `period_end <= analysis_date`;
+2. `prices_daily` dipotong pada `trading_date <= analysis_date`;
+3. `years_available` dari kuartal dasar (D2), sama seperti valuasi;
+4. baris Class-B (pertumbuhan/kualitas) **dihitung ulang** dengan
+   `calculate_annual_growth_outputs` untuk jendela kasus. Ini wajib:
+   `calc_annual_growth_quality` hanya punya satu run per instrumen (dipatok ke snapshot hari ini),
+   jadi `GROWTH_REVENUE_CAGR_LONG`, `GROWTH_REVENUE_COV`, `QUALITY_REVENUE_MOMENTUM`, dan
+   `GROWTH_EPS_CAGR_LONG` tidak boleh dibaca dari run tersimpan;
+5. skenario proyeksi memakai skenario kasus sendiri, dan
+   `scenario['projected_shares_outstanding']` **wajib** diteruskan ke `derive_classifier_inputs`.
+   Bila dibiarkan `None`, `projected_pbv` menjadi `None` dan ASSET PLAY salah menyala;
+6. hasilnya dinormalkan lewat `normalise_classifier_type(raw, asset_play_matched)`.
+
+Karena tipe kini per kasus, bobot/ambang tipe juga harus per kasus: `fetch_reference_inputs`
+membaca seluruh baris `valuation_type_weights` / `valuation_type_thresholds` sekali, lalu
+`_reference_for_type` memilih baris tipe kasus itu. Potongan point-in-time dibentuk **sekali** di
+`_case_cut` dan dipakai bersama oleh classifier dan valuasi, sehingga tipe dan valuasi tidak
+mungkin memakai kuartal dasar atau `years_available` yang berbeda.
+
+Flag `STOCK_TYPE_LATEST_SNAPSHOT` **dihapus**: tidak ada lagi provenance yang perlu ditandai.
+Baris lama tetap memuat flag itu di `flags`-nya sendiri, dan versi metodologi lamanya tetap hidup
+supaya bisa direproduksi.
+
+**Bukti numerik (diverifikasi read-only sebelum implementasi).** Ground truth: sheet
+`Backtest_Historical (New)` kolom `Jenis Saham`, 15 ticker, 277 kasus. Hasil perbandingan:
+
+| | kasus | cocok dengan workbook |
+|---|---|---|
+| DB dengan snapshot terbaru (sebelum D7) | 277 | 180 (65,0%) |
+| DB dengan tipe per kasus (sesudah D7) | 277 | 201 (72,6%) |
+| classifier dijalankan per kasus (batas atas) | 277 | 215 (77,6%) |
+
+Perbaikan +21 kasus. Sisa 62 mismatch adalah **batas metodologi classifier, bukan bug
+implementasi**: 19 kasus GOLD (sektor `Infrastructures` tidak ada di `classifier_cyclical_sectors`,
+workbook bilang CYCLICAL), 11 WIFI (CYCLICAL vs FAST GROWER), 7 INDF (ASSET PLAY vs STALWART), dan
+`BASE_QUARTER_FACT_MISSING` pada 6 kasus. Keputusan atas tiga ticker itu (tambah sektor / override
+manual) adalah keputusan metodologi owner, bukan perubahan kode backtest.
+
+**Konsekuensi yang terlihat di UI.** Tipe bergerak untuk GOLD, WIFI, GEMA, INDF, JSMR, SIDO, INDS,
+UNTR, INKP. GOLD dan JSMR adalah kasus khusus: classifier-nya `UNCLASSIFIED` tanpa aturan yang
+cocok, sehingga `normalise_classifier_type` gagal dan valuasi kasus itu `UNAVAILABLE` (metrik
+harga tetap tersimpan). GOLD 2025-Q2/2026-Q1 `UNCLASSIFIED` dengan `asset_play=1` (score-10
+fall-through) sehingga dipetakan ke `ASSET PLAY` - perubahan tipe, bukan kegagalan.
+
+#### Cache tipe per kasus
+
+Classifier per kasus dijalankan untuk setiap kasus pada setiap run. Untuk menghindari menghitung
+ulang kasus yang inputnya tidak berubah, `run_backtest._stock_type_cache` membaca hasil run
+SUCCEEDED terbaru dan memakainya ulang **hanya bila sidik inputnya sama**.
+
+- **Kunci cache:** `(instrument_id, case_quarter)`.
+- **Sidik:** `_stock_type_fingerprint` = SHA-256 dari versi skema sidik, identitas kasus,
+  `analysis_date`, `years_available`, kuartal dasar, **parameter classifier** (ambang, tangga skor,
+  override Energy, daftar sektor), daftar periode terpotong, **seluruh fakta terpotong termasuk
+  `revision_key` dan nilainya**, harga terpotong, dan dividen. Urutan baris dinormalkan, sehingga
+  urutan respons PostgREST tidak mengubah sidik.
+- **Disimpan** di `calc_backtest_cases.details.stock_type_fingerprint` (dan
+  `details.stock_type_source` = `RECOMPUTED` / `CACHE` / `GIVEN`), jadi bisa diaudit per baris.
+
+Bila input berubah, sidiknya berubah dan tipe dihitung ulang:
+
+| Perubahan | Efek |
+|---|---|
+| Revisi laporan (nilai fakta atau `revision_key` berubah pada periode yang sama) | sidik berubah -> dihitung ulang |
+| Ambang/tangga skor/daftar sektor classifier di registry berubah | sidik berubah -> dihitung ulang |
+| Harga atau dividen baru yang jatuh pada/sebelum tanggal kasus | sidik berubah -> dihitung ulang |
+| Kuartal dasar atau `years_available` bergeser | sidik berubah -> dihitung ulang |
+| Kasus baru (kuartal belum ada di run sebelumnya) | tidak ada entri cache -> selalu dihitung |
+| Run lama tanpa `details.stock_type_fingerprint` (versi sebelum D7) | cache kosong -> seluruh tipe dihitung ulang |
+
+Sidiknya **selalu** dihitung, jadi cache hanya menghemat perhitungan, bukan melewatkan verifikasi.
+`input_snapshot` run juga memuat `stock_type_rule`, `classifier_parameters`, dan
+`stock_type_fingerprint_version`, sehingga perubahan aturan tipe menghasilkan kunci idempotensi
+baru alih-alih memakai ulang run lama.
 
 ---
 
@@ -365,7 +449,7 @@ create table public.calc_backtest_cases (
   analysis_date date not null,         -- period_end (lihat D1)
   analysis_price numeric,
   analysis_price_source text not null check (analysis_price_source in ('CLOSE_PIT','MANUAL')),
-  stock_type text not null,            -- tipe saat run (lihat D7)
+  stock_type text,                     -- tipe pada tanggal kasus (lihat D7); NULL bila classifier tidak punya aturan
   sector_name text,
 
   -- Konteks valuasi kasus
@@ -507,14 +591,21 @@ sama. Yang berubah hanya sumber datanya:
 
 ### 5.3 Batas kejujuran yang harus terlihat
 
-Backtest ini **bukan** point-in-time penuh. Tiga hal yang harus tampil sebagai peringatan,
+Backtest ini **bukan** point-in-time penuh. Dua hal yang harus tampil sebagai peringatan,
 bukan disembunyikan:
 
 1. `available_date` NULL → tanggal analisis memakai akhir periode, bukan tanggal publikasi
    (`POINT_IN_TIME_UNAVAILABLE_DATE`).
-2. Tipe saham memakai snapshot terbaru, bukan tipe pada tanggal kasus
-   (`STOCK_TYPE_LATEST_SNAPSHOT`).
-3. `years_available` dipotong ke riwayat yang tersedia (`YEARS_AVAILABLE_TRUNCATED`).
+2. `years_available` dipotong ke riwayat yang tersedia (`YEARS_AVAILABLE_TRUNCATED`).
+
+Tipe saham **tidak lagi** termasuk daftar ini: sejak D7 ditutup, tipe dihitung ulang pada tanggal
+kasus, jadi flag `STOCK_TYPE_LATEST_SNAPSHOT` sudah dihapus. Baris lama tetap memuat flag itu di
+`flags`-nya sendiri, jadi riwayatnya tidak hilang.
+
+Satu batas tambahan yang tidak lagi berupa flag, melainkan hasil: bila classifier tidak menemukan
+aturan yang cocok pada tanggal kasus (`UNCLASSIFIED` tanpa `asset_play`), `stock_type` NULL dan
+valuasinya `UNAVAILABLE` + `STOCK_TYPE_UNRESOLVED` di `details.methods[].details.reason`. Metrik
+harga tetap tersimpan. Ini yang terjadi pada GOLD dan JSMR.
 
 Karena itu setiap baris menyimpan `flags jsonb`, dan UI menampilkan badge "bukan point-in-time"
 selama salah satu flag di atas ada. Ini pola yang sama dengan `POINT_IN_TIME_UNVERIFIED` yang
@@ -593,9 +684,14 @@ Empat sifat yang harus dipatuhi implementasi Python:
 
 - **Market mood** (`market_adj_price`, `quality_adj_target`, `mos_final`) — tidak ada sumber
   data; tetap di luar cakupan seperti sekarang.
-- **Classifier per kasus** — lihat D7.
 - **Backfill `available_date`** — pekerjaan data tersendiri (D1b), bukan bagian backtest.
 - **Mengubah `calc_valuation_*`** — backtest punya tabelnya sendiri (4.3).
+- **Mengubah aturan classifier** — D7 menjalankan aturan yang sudah ada apa adanya. Tiga
+  pertanyaan metodologi tetap terbuka dan **tidak** dijawab di sini: (a) GOLD sektor
+  `Infrastructures` tidak ada di `classifier_cyclical_sectors` padahal workbook bilang CYCLICAL;
+  (b) WIFI bolak-balik CYCLICAL ↔ FAST GROWER; (c) INDF `UNCLASSIFIED` sehingga valuasinya
+  kosong. Menjawabnya berarti menambah sektor atau override manual - keputusan owner, bukan
+  perubahan kode backtest.
 
 ---
 
@@ -609,7 +705,7 @@ Empat sifat yang harus dipatuhi implementasi Python:
 | D4 | Cabang verdict | **DIPUTUSKAN: rumus workbook, 3 dari 8 cabang berbeda dari frontend** |
 | D5 | Denominator konsensus | ikuti workbook (`5 − N/A − error`) |
 | D6 | MoS | `(IV−price)/IV`; main = B69; verdict 30%, entry 35% |
-| D7 | Tipe saham kasus | snapshot terbaru + flag di fase 1 |
+| D7 | Tipe saham kasus | **DIPUTUSKAN: classifier dihitung ulang per kasus** (bukan snapshot + flag) |
 
 Urutan kerja: **fase 1 → uji terhadap 18 baris workbook → fase 2 → fase 3 → RPC/UI**. Fase 1
 tidak menulis ke tabel valuasi mana pun, jadi aman dijalankan lebih dulu.

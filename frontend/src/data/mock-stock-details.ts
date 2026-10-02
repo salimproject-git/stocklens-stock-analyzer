@@ -1,5 +1,4 @@
-import { buildBacktestOutcomeExplanation } from "@/lib/analysis";
-import { VALUATION_METHOD_LABELS } from "@/lib/valuation-methods";
+import { VALUATION_METHOD_LABELS, type ValuationMethodCode, type ValuationMethodStatus } from "@/lib/valuation-methods";
 
 export type ValuationMetric = {
   label: string;
@@ -7,14 +6,19 @@ export type ValuationMetric = {
   note: string;
 };
 
+/**
+ * Display status for one valuation-method row. Re-exported from the method
+ * registry so the table, the badge and the adapter share one definition.
+ */
+export type { ValuationMethodStatus };
+
 export type ValuationMethodResult = {
   method: string;
   /** Stored `method_code`, used for fixed ordering and chart colours. */
   methodCode?: string;
   intrinsicValue: number;
-  potential: string;
   marginOfSafety: string;
-  status: "UNDERVALUED" | "OVERVALUED";
+  status: ValuationMethodStatus;
   description: string;
 };
 
@@ -34,6 +38,45 @@ export type MarketOverviewStock = {
   updatedAt: string;
 };
 
+/**
+ * Outcome mix for one Undervalued classification rule, as shown by the
+ * Historical Evidence preview.
+ *
+ * `winRate` counts `RECOVERED` as a success on purpose: a case that dipped
+ * first but still reached the upside target eventually proved the thesis, so
+ * the Overview reports "WIN + RECOVERED / Undervalued". `RISK` is the only
+ * failure — the downside was touched and the upside never was — which is why
+ * `riskRate` is its own figure instead of being folded into a single number.
+ *
+ * `winRate`, `riskRate` and `flatRate` partition the same denominator, so they
+ * always add up to 100%: each case the rule flagged as Undervalued ended up
+ * WIN, RECOVERED, RISK, or FLAT. All three use `undervalued` as the
+ * denominator (the cases the rule actually flagged), not `totalCases`.
+ */
+export type EvidenceOutcomeBreakdown = {
+  /** Cases this rule classified as Undervalued. */
+  undervalued: number;
+  /** Cases this rule classified as Overvalued (or Mixed). */
+  overvalued: number;
+  /**
+   * Raw counts behind the three rates. `wins` is already `WIN + RECOVERED`,
+   * the numerator of `winRate`. Not rendered on their own — the card shows the
+   * rates and the `Undervalued` / `Overvalued` totals.
+   */
+  wins: number;
+  recovered: number;
+  risk: number;
+  flat: number;
+  /** `(wins + recovered) / undervalued`, already formatted as `87.5%`. */
+  winRate: string;
+  /** `risk / undervalued`, already formatted as `12.5%`. */
+  riskRate: string;
+  /** `flat / undervalued`, already formatted as `0.0%`. */
+  flatRate: string;
+  /** Non-empty only when there were no Undervalued cases at all. */
+  flatSuffix: string;
+};
+
 export type StockDetail = {
   ticker: string;
   companyName: string;
@@ -50,8 +93,23 @@ export type StockDetail = {
   mos: number | null;
   stockCharacter: string;
   stockCharacterDesc: string;
-  evidenceWins: number | null;
-  evidenceTotal: number | null;
+  /**
+   * Historical Evidence headline figures for the Key Metric row: the win rate
+   * of each classification rule, already formatted for display (`75%`, `100%`),
+   * or `"Not available"` when that rule flagged no Undervalued case or the
+   * ticker has no backtest.
+   *
+   * Both rules are shown because they disagree by design — the five-method
+   * consensus and the `MoS Main >= 30%` rule flag different cases, so one
+   * figure would hide the other. Display-ready on purpose so the card cannot
+   * format the same figure differently from the Historical Evidence panel.
+   */
+  evidenceWinRates: {
+    /** `(WIN + RECOVERED) / Undervalued` for the five-method consensus rule. */
+    method: string;
+    /** `(WIN + RECOVERED) / Undervalued` for the `MoS Main >= 30%` rule. */
+    mos: string;
+  };
   researchSummary: string;
   methodologyUrl: string;
   companyProfile: {
@@ -78,6 +136,19 @@ export type StockDetail = {
     mos: number | null;
     metrics: ValuationMetric[];
     methods: ValuationMethodResult[];
+    /**
+     * Which row carries the "Main" badge and supplies the headline IV / MoS.
+     *
+     * Usually the workbook's main rule for the stock type, but it **falls back to
+     * the other main-rule candidate** when that rule produced no usable value
+     * (IV <= 0). A company whose main rule values it at or below zero still needs
+     * a headline figure, and the other rule is the next-best candidate by design:
+     * GEMA's Peter Lynch IV is `−22`, so its headline comes from Weighted IV.
+     *
+     * The backtest keeps its own `mos_method_code` without this fallback (decision
+     * D5); this field only governs the valuation screen.
+     */
+    mainMethodCode: ValuationMethodCode | null;
     comparison: {
       takeaway: string;
       readouts: string[];
@@ -127,35 +198,29 @@ export type StockDetail = {
       subtext: string;
     }[];
   };
-  historicalEvidencePreview?: {
-  totalCases: number;
-  positiveResults: string;
-  medianReturn: number;
-  worstResult: number;
-  bestResult: number;
-  cases: { caseName: string; returnPercent: number }[];
-
-  verdictMethod: {
-    undervalued: number;
-    overvalued: number;
-    wins: number;
-    winRate: string;
-  };
-
-  verdictMos: {
-    undervalued: number;
-    overvalued: number;
-    wins: number;
-    winRate: string;
-  };
-  outcomeExplanation: string;
   /**
-   * True when the numbers shown are illustrative sample data and are NOT
-   * backed by any database table yet. The UI must label these clearly so
-   * they are never mistaken for stored research results.
+   * Historical Evidence preview for the Overview tab.
+   *
+   * Every number here is derived from the stored backtest cases
+   * (`buildHistoricalEvidencePreview`), never hand-written: the two breakdowns
+   * are the same aggregation the Backtest tab renders, so the two screens
+   * cannot disagree. There are deliberately no return statistics (median /
+   * best / worst) because nothing stores them yet — inventing them would put
+   * numbers on screen that no run produced.
    */
-  isDemoData?: boolean;
-};
+  historicalEvidencePreview?: {
+    /** Every case in the backtest, both classifications. */
+    totalCases: number;
+    /** Outcomes restricted to the cases this rule called Undervalued. */
+    verdictMethod: EvidenceOutcomeBreakdown;
+    verdictMos: EvidenceOutcomeBreakdown;
+    /**
+     * True when the numbers shown are illustrative sample data and are NOT
+     * backed by any database table yet. The UI must label these clearly so
+     * they are never mistaken for stored research results.
+     */
+    isDemoData?: boolean;
+  };
 
   backtest?: {
     cases: BacktestCase[];
@@ -523,8 +588,7 @@ export const mockStockDetails: Record<string, StockDetail> = {
     mos: 29.9,
     stockCharacter: "Cyclical",
     stockCharacterDesc: "Tends to follow economic cycles",
-    evidenceWins: 4,
-    evidenceTotal: 4,
+    evidenceWinRates: { method: "100%", mos: "100%" },
     researchSummary:
       "AUTO is currently below the estimated intrinsic value used by the analysis engine. Historical backtests show how similar valuation conditions have performed in previous periods.",
     methodologyUrl: "#",
@@ -574,12 +638,13 @@ export const mockStockDetails: Record<string, StockDetail> = {
         { label: "Dividend Yield", value: "4,83%", note: "Above market avg" },
       ],
       methods: [
-        { method: VALUATION_METHOD_LABELS.PETER_LYNCH, methodCode: "PETER_LYNCH", intrinsicValue: 3567.704684, potential: "+51,82%", marginOfSafety: "34,13%", status: "UNDERVALUED", description: "Asset-based (PEG + growth)" },
-        { method: VALUATION_METHOD_LABELS.TYPE_SECTOR_WEIGHTED, methodCode: "TYPE_SECTOR_WEIGHTED", intrinsicValue: 2536.600367, potential: "+7,94%", marginOfSafety: "7,36%", status: "UNDERVALUED", description: "Blended (sector & type multiple)" },
-        { method: VALUATION_METHOD_LABELS.MEAN_REVERSION_PBV, methodCode: "MEAN_REVERSION_PBV", intrinsicValue: 1740.273242, potential: "-25,95%", marginOfSafety: "-35,04%", status: "OVERVALUED", description: "Historical asset valuation (PBV)" },
-        { method: VALUATION_METHOD_LABELS.DDM, methodCode: "DDM", intrinsicValue: 1418.193101, potential: "-39,65%", marginOfSafety: "-65,70%", status: "OVERVALUED", description: "Dividend-based (Dividend Discount Model)" },
-        { method: VALUATION_METHOD_LABELS.DISCOUNTED_EARNINGS, methodCode: "DISCOUNTED_EARNINGS", intrinsicValue: 2304.882793, potential: "-1,92%", marginOfSafety: "-1,96%", status: "OVERVALUED", description: "Earnings-based (DCF)" },
+        { method: VALUATION_METHOD_LABELS.PETER_LYNCH, methodCode: "PETER_LYNCH", intrinsicValue: 3567.704684, marginOfSafety: "34,13%", status: "UNDERVALUED", description: "Asset-based (PEG + growth)" },
+        { method: VALUATION_METHOD_LABELS.TYPE_SECTOR_WEIGHTED, methodCode: "TYPE_SECTOR_WEIGHTED", intrinsicValue: 2536.600367, marginOfSafety: "7,36%", status: "UNDERVALUED", description: "Blended (sector & type multiple)" },
+        { method: VALUATION_METHOD_LABELS.MEAN_REVERSION_PBV, methodCode: "MEAN_REVERSION_PBV", intrinsicValue: 1740.273242, marginOfSafety: "-35,04%", status: "OVERVALUED", description: "Historical asset valuation (PBV)" },
+        { method: VALUATION_METHOD_LABELS.DDM, methodCode: "DDM", intrinsicValue: 1418.193101, marginOfSafety: "-65,70%", status: "OVERVALUED", description: "Dividend-based (Dividend Discount Model)" },
+        { method: VALUATION_METHOD_LABELS.DISCOUNTED_EARNINGS, methodCode: "DISCOUNTED_EARNINGS", intrinsicValue: 2304.882793, marginOfSafety: "-1,96%", status: "OVERVALUED", description: "Earnings-based (DCF)" },
       ],
+      mainMethodCode: "PETER_LYNCH",
       comparison: {
         takeaway: "Current Price berada di antara Mean Reversion PBV dan Discounted Earnings.",
         readouts: [
@@ -671,35 +736,9 @@ export const mockStockDetails: Record<string, StockDetail> = {
         },
       ],
     },
-    historicalEvidencePreview: {
-      totalCases: 18,
-      positiveResults: "4 (100%)",
-      medianReturn: 24.6,
-      worstResult: 8.2,
-      bestResult: 41.3,
-      cases: [
-        { caseName: "Case 1", returnPercent: 18.5 },
-        { caseName: "Case 2", returnPercent: 24.6 },
-        { caseName: "Case 3", returnPercent: 41.3 },
-        { caseName: "Case 4", returnPercent: 8.2 },
-      ],
-
-      verdictMethod: {
-        undervalued: 4,
-        overvalued: 14,
-        wins: 4,
-        winRate: "100%",
-      },
-
-      verdictMos: {
-        undervalued: 10,
-        overvalued: 8,
-        wins: 10,
-        winRate: "100%",
-      },
-      outcomeExplanation: buildBacktestOutcomeExplanation(),
-      isDemoData: true,
-    },
+    // The Historical Evidence preview is not stored here on purpose: it is
+    // derived from the sample cases below by `buildHistoricalEvidencePreview`,
+    // so it can never disagree with the Backtest tab.
     backtest: {
       isDemoData: true,
       methodology: {

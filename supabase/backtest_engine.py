@@ -94,7 +94,6 @@ __all__ = [
     'FLAG_NEGATIVE_INTRINSIC_VALUE_VALID',
     'FLAG_NO_PRICE_HISTORY',
     'FLAG_POINT_IN_TIME_UNAVAILABLE_DATE',
-    'FLAG_STOCK_TYPE_LATEST_SNAPSHOT',
     'FLAG_WINDOW_EMPTY',
     'FLAG_WINDOW_PARTIAL',
     'FLAG_VERDICT_MOS_UNDEFINED',
@@ -161,7 +160,11 @@ __all__ = [
 DECIMAL_PRECISION = 34
 
 #: Versi kode yang menghasilkan baris backtest. Dipakai di `calculation_runs`.
-CODE_VERSION = 'stocklens-backtest-v1'
+#:
+#: Dinaikkan ke `v2` ketika tipe saham dihitung per kasus (D7): run `v1` yang
+#: sudah ada tetap menyimpan tipe snapshot-terbaru, sehingga keduanya tidak boleh
+#: bertabrakan di `idempotency_key` yang sama.
+CODE_VERSION = 'stocklens-backtest-v2'
 
 METHOD_CODE = 'BACKTEST_HISTORICAL'
 
@@ -172,7 +175,12 @@ METHOD_CODE = 'BACKTEST_HISTORICAL'
 #: menolak memakai baris lama bila hash-nya berbeda
 #: (`BACKTEST_METHODOLOGY_REGISTRY_DRIFT`), jadi versi baru adalah satu-satunya
 #: cara yang tidak menimpa sejarah.
-METHOD_VERSION = '1.3.0'
+#:
+#: `1.4.0` menambahkan **aturan tipe saham per kasus** (D7): tipe dihitung
+#: ulang pada tanggal kasus, bukan disalin dari snapshot terbaru. Versi lama
+#: tetap hidup supaya baris dengan flag `STOCK_TYPE_LATEST_SNAPSHOT` masih bisa
+#: direproduksi.
+METHOD_VERSION = '1.4.0'
 
 #: Batas window harga relatif terhadap tanggal analisis, dalam bulan.
 WINDOW_HORIZONS_MONTHS = (3, 6, 9, 12)
@@ -205,12 +213,16 @@ CALCULATION_STATUSES = (
     STATUS_UNAVAILABLE,
 )
 
-#: Flag kejujuran (D1/D7). Ini **bukan** caveat perhitungan: nilainya tetap
+#: Flag kejujuran (D1). Ini **bukan** caveat perhitungan: nilainya tetap
 #: dihitung penuh, hanya provenance-nya belum point-in-time. Karena itu flag ini
 #: tidak menurunkan status ke `APPROXIMATED` - pola yang sama dengan
 #: `valuation_engine._status_for`, yang mengecualikan `POINT_IN_TIME_UNVERIFIED`.
+#:
+#: `STOCK_TYPE_LATEST_SNAPSHOT` dihapus ketika D7 ditutup: tipe saham sekarang
+#: dihitung ulang pada tanggal kasus, jadi tidak ada lagi provenance yang perlu
+#: ditandai. Baris lama tetap memuat flag itu di `flags`-nya sendiri; konstanta
+#: ini sengaja tidak dipertahankan supaya kode tidak bisa menuliskannya lagi.
 FLAG_POINT_IN_TIME_UNAVAILABLE_DATE = 'POINT_IN_TIME_UNAVAILABLE_DATE'
-FLAG_STOCK_TYPE_LATEST_SNAPSHOT = 'STOCK_TYPE_LATEST_SNAPSHOT'
 
 #: Flag caveat harga. Salah satu saja sudah menurunkan status ke `APPROXIMATED`.
 FLAG_WINDOW_PARTIAL = 'WINDOW_PARTIAL'
@@ -624,19 +636,17 @@ def analysis_date_for(case: BacktestCase) -> date:
 
 
 def case_provenance_flags(case: BacktestCase) -> list[str]:
-    """Flag kejujuran untuk satu kasus (D1 dan D7).
+    """Flag kejujuran untuk satu kasus (D1).
 
-    Dua batas yang harus terlihat di UI, bukan disembunyikan:
+    Batas yang harus terlihat di UI, bukan disembunyikan:
 
-    1. `available_date` NULL -> tanggal analisis memakai akhir periode.
-    2. Tipe saham memakai snapshot terklasifikasi terbaru, bukan tipe pada
-       tanggal kasus. Fase 1 tidak menghitung tipe sendiri, jadi flag ini selalu
-       menyala selama fase 2 belum memotong classifier per kasus.
+    `available_date` NULL -> tanggal analisis memakai akhir periode. Itu
+    satu-satunya batas provenance yang tersisa: sejak D7 ditutup, tipe saham
+    dihitung pada tanggal kasus, jadi tidak ada flag tipe lagi.
     """
     flags: list[str] = []
     if case.available_date is None:
         flags.append(FLAG_POINT_IN_TIME_UNAVAILABLE_DATE)
-    flags.append(FLAG_STOCK_TYPE_LATEST_SNAPSHOT)
     return flags
 
 
@@ -1659,7 +1669,12 @@ def backtest_methodology_seed() -> dict[str, Any]:
         'Overvalued: neither touched -> FLAT, up only -> REPRICE, down only -> '
         'CONFIRMED, down first -> CONFIRMED, otherwise (including the same day) -> '
         'REPRICE. Any other classification yields FLAT, and Verdict MoS uses '
-        'K = MoS Main >= 0.3.'
+        'K = MoS Main >= 0.3. '
+        'Stock type per case (D7): the MetricsClassification rules are re-evaluated '
+        'on each case analysis date over the point-in-time cut of periods, facts and '
+        'prices, with the growth window recomputed for that case and the case own '
+        'projection scenario; the resulting type selects the reference type weights '
+        'and thresholds for that case only.'
     )
     parameter_spec: dict[str, Any] = {
         'horizons_months': ['3', '6', '9', '12'],
@@ -1706,6 +1721,14 @@ def backtest_methodology_seed() -> dict[str, Any]:
         'verdict_mos_threshold': '0.3',
         'consensus_undervalued_classes': ['3|3', '3|4', '4|4', '3|5', '4|5', '5|5'],
         'analysis_date_source': 'period_end_with_available_date_override',
+        # --- D7: tipe saham per kasus ---
+        # Tipe dihitung ulang pada tanggal kasus, bukan snapshot hari ini.
+        'stock_type_rule': 'metrics_classification_recomputed_per_case',
+        'stock_type_cutoff': 'period_end_lte_analysis_date',
+        'stock_type_price_cutoff': 'trading_date_lte_analysis_date',
+        'stock_type_growth_window': 'annual_growth_recomputed_for_the_case_window',
+        'stock_type_scenario': 'case_own_projection_scenario_with_projected_shares',
+        'stock_type_reference_selection': 'type_weights_and_thresholds_of_the_case_type',
     }
     formula_hash = sha256_text(formula_text)
     parameter_hash = sha256_json(parameter_spec)

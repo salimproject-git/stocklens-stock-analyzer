@@ -24,7 +24,6 @@ from backtest_engine import (  # noqa: E402
     FLAG_NEGATIVE_INTRINSIC_VALUE_VALID,
     FLAG_NO_PRICE_HISTORY,
     FLAG_POINT_IN_TIME_UNAVAILABLE_DATE,
-    FLAG_STOCK_TYPE_LATEST_SNAPSHOT,
     FLAG_VALUATION_UNAVAILABLE,
     FLAG_VERDICT_MOS_UNDEFINED,
     FLAG_VERDICT_NO_CONSENSUS,
@@ -352,7 +351,12 @@ class AutoParityTests(unittest.TestCase):
         self.assertLess(self.windows.return_down, Decimal(0))
 
     def test_full_window_case_is_valid_with_only_provenance_flags(self) -> None:
-        """Window lengkap dan tidak ada High/Low nol -> VALID, bukan APPROXIMATED."""
+        """Window lengkap dan tidak ada High/Low nol -> VALID, bukan APPROXIMATED.
+
+        Sejak D7 ditutup, satu-satunya flag provenance yang tersisa adalah
+        `POINT_IN_TIME_UNAVAILABLE_DATE`; tipe saham dihitung pada tanggal kasus,
+        jadi tidak ada lagi flag snapshot tipe.
+        """
         row = price_metrics(
             self.fixture['prices'],
             analysis_date_for(self.case),
@@ -361,7 +365,7 @@ class AutoParityTests(unittest.TestCase):
         self.assertEqual(row['calculation_status'], 'VALID')
         self.assertEqual(
             row['flags'],
-            [FLAG_POINT_IN_TIME_UNAVAILABLE_DATE, FLAG_STOCK_TYPE_LATEST_SNAPSHOT],
+            [FLAG_POINT_IN_TIME_UNAVAILABLE_DATE],
         )
 
     def test_auto_has_no_zero_high_rows_so_this_fixture_cannot_catch_that_bug(self) -> None:
@@ -1170,6 +1174,26 @@ class EngineBoundaryTests(unittest.TestCase):
             list(spec['consensus_undervalued_classes']), list(CONSENSUS_UNDERVALUED_CLASSES)
         )
 
+    def test_backtest_methodology_declares_the_stock_type_rule(self) -> None:
+        """Aturan tipe per kasus (D7) harus terbaca dari registry, bukan hanya kode."""
+        spec = backtest_methodology_seed()['parameter_spec']
+        self.assertEqual(
+            spec['stock_type_rule'], 'metrics_classification_recomputed_per_case'
+        )
+        self.assertEqual(spec['stock_type_cutoff'], 'period_end_lte_analysis_date')
+        self.assertEqual(
+            spec['stock_type_price_cutoff'], 'trading_date_lte_analysis_date'
+        )
+        self.assertEqual(
+            spec['stock_type_growth_window'],
+            'annual_growth_recomputed_for_the_case_window',
+        )
+        self.assertEqual(
+            spec['stock_type_reference_selection'],
+            'type_weights_and_thresholds_of_the_case_type',
+        )
+        self.assertIn('Stock type per case (D7)', backtest_methodology_seed()['formula_text'])
+
     def test_phase_1_rows_carry_no_valuation_columns(self) -> None:
         """Fase 1 hanya harga: tidak ada MoS, konsensus, atau verdict."""
         row = price_metrics(
@@ -1348,6 +1372,193 @@ class OrchestratorCaseTests(unittest.TestCase):
         ):
             self.assertIn(column, row)
             self.assertIsNone(row[column])
+
+
+class PerCaseStockTypeTests(unittest.TestCase):
+    """D7: tipe saham dihitung pada tanggal kasus, bukan snapshot terbaru.
+
+    Yang dikunci di sini adalah **bentuk** mekanismenya (sidik input, pemilihan
+    bobot tipe per kasus, cache), bukan angka IV - angka itu bergantung pada
+    registry dan data hidup dan diperiksa lewat `Testing/stock_type_pit_check.py`.
+    """
+
+    PERIODS = [
+        {'id': 'a-2019', 'instrument_id': 'i', 'period_type': 'ANNUAL', 'period_end': '2019-12-31'},
+        {'id': 'a-2020', 'instrument_id': 'i', 'period_type': 'ANNUAL', 'period_end': '2020-12-31'},
+        {'id': 'a-2021', 'instrument_id': 'i', 'period_type': 'ANNUAL', 'period_end': '2021-12-31'},
+        {'id': 'a-2022', 'instrument_id': 'i', 'period_type': 'ANNUAL', 'period_end': '2022-12-31'},
+        {'id': 'a-2023', 'instrument_id': 'i', 'period_type': 'ANNUAL', 'period_end': '2023-12-31'},
+        {'id': 'q-2024-1', 'instrument_id': 'i', 'period_type': 'QUARTER',
+         'period_label': '2024-Q1', 'period_end': '2024-03-31'},
+    ]
+
+    PRICES = [
+        {'trading_date': '2024-03-28', 'close_price': '100', 'high_price': '105', 'low_price': '95'},
+    ]
+
+    FACTS = [
+        {'financial_period_id': 'q-2024-1', 'metric_code': 'REVENUE',
+         'value_numeric': '1000', 'revision_key': 'CURRENT'},
+    ]
+
+    def fingerprint(self, **overrides):
+        import run_backtest
+
+        arguments = {
+            'instrument_id': 'i',
+            'case_quarter': '2024-Q1',
+            'analysis_date': '2024-03-31',
+            'years_available': 4,
+            'base_quarter': '2024-Q1',
+            'classifier_parameters': {'classifier_thresholds': {'x': '1'}},
+            'annual_periods': self.PERIODS[:5],
+            'quarter_periods': self.PERIODS[5:],
+            'facts': self.FACTS,
+            'prices': self.PRICES,
+            'dividend_rows': [],
+        }
+        arguments.update(overrides)
+        return run_backtest._stock_type_fingerprint(**arguments)
+
+    def test_fingerprint_is_stable_for_the_same_input(self) -> None:
+        """Input yang sama selalu menghasilkan sidik yang sama."""
+        self.assertEqual(self.fingerprint(), self.fingerprint())
+
+    def test_fingerprint_changes_when_a_fact_is_revised(self) -> None:
+        """Revisi laporan menggugurkan cache walau daftar periodenya tetap.
+
+        Ini inti janji cache: `revision_key` dan nilai fakta ikut di-hash, jadi
+        laporan yang direvisi pada periode yang sama tidak akan memakai tipe lama.
+        """
+        revised = [{**self.FACTS[0], 'value_numeric': '1200'}]
+        self.assertNotEqual(self.fingerprint(), self.fingerprint(facts=revised))
+
+        rekeyed = [{**self.FACTS[0], 'revision_key': 'RESTATED'}]
+        self.assertNotEqual(self.fingerprint(), self.fingerprint(facts=rekeyed))
+
+    def test_fingerprint_changes_when_classifier_thresholds_change(self) -> None:
+        """Perubahan ambang classifier harus memaksa tipe dihitung ulang."""
+        changed = {'classifier_thresholds': {'x': '2'}}
+        self.assertNotEqual(
+            self.fingerprint(), self.fingerprint(classifier_parameters=changed)
+        )
+
+    def test_fingerprint_changes_when_a_price_lands_on_the_case(self) -> None:
+        """Harga baru pada atau sebelum tanggal kasus mengubah sidik."""
+        extra = [
+            *self.PRICES,
+            {'trading_date': '2024-03-29', 'close_price': '101',
+             'high_price': '106', 'low_price': '96'},
+        ]
+        self.assertNotEqual(self.fingerprint(), self.fingerprint(prices=extra))
+
+    def test_fingerprint_ignores_row_order(self) -> None:
+        """Urutan baris dari PostgREST tidak boleh mengubah sidik."""
+        self.assertEqual(
+            self.fingerprint(),
+            self.fingerprint(
+                annual_periods=list(reversed(self.PERIODS[:5])),
+                facts=list(reversed(self.FACTS)),
+            ),
+        )
+
+    def test_reference_selection_uses_the_case_type(self) -> None:
+        """Bobot/ambang dipilih per tipe kasus, bukan per tipe snapshot."""
+        import run_backtest
+
+        reference = {
+            'sector_weights': {'sector_name': 'S'},
+            'type_weights_by_type': {
+                'Cyclical': {'stock_type': 'Cyclical', 'w_pe': '0'},
+                'Fast Grower': {'stock_type': 'Fast Grower', 'w_pe': '3'},
+            },
+            'type_thresholds_by_type': {
+                'Cyclical': {'stock_type': 'Cyclical', 'max_der': '1'},
+            },
+        }
+        cyclical = run_backtest._reference_for_type(reference, 'CYCLICAL')
+        self.assertEqual(cyclical['type_weights']['stock_type'], 'Cyclical')
+        self.assertEqual(cyclical['type_thresholds']['stock_type'], 'Cyclical')
+        fast = run_backtest._reference_for_type(reference, 'FAST GROWER')
+        self.assertEqual(fast['type_weights']['stock_type'], 'Fast Grower')
+        # Ambang tipe yang tidak ada tetap `None`, bukan ditebak dari tipe lain.
+        self.assertIsNone(fast['type_thresholds'])
+
+    def test_reference_selection_returns_none_without_a_type(self) -> None:
+        """Tipe yang tidak bisa dipertanggungjawabkan tidak memakai bobot tipe."""
+        import run_backtest
+
+        reference = {'type_weights_by_type': {'Cyclical': {'stock_type': 'Cyclical'}}}
+        selected = run_backtest._reference_for_type(reference, None)
+        self.assertIsNone(selected['type_weights'])
+        self.assertIsNone(selected['type_thresholds'])
+
+    def test_case_rows_record_the_stock_type_provenance(self) -> None:
+        """Tanpa valuasi, `details` hanya memuat provenance harga kasus."""
+        import run_backtest
+
+        results = run_backtest.calculate_cases(self.PERIODS, self.PRICES)
+        row = run_backtest._case_rows(
+            results,
+            methodology_id='m',
+            instrument_id='i',
+            sector_name='Sector',
+        )[0]
+        self.assertIsNone(row['stock_type'])
+        self.assertNotIn('stock_type_fingerprint', row['details'])
+        self.assertIn('window_end', row['details'])
+
+    def test_cache_skips_unresolved_cases_instead_of_storing_empty_text(self) -> None:
+        """Regresi: cache tidak boleh mengubah `stock_type` NULL menjadi `''`.
+
+        Bug nyata: baris yang tipenya tidak bisa dipertanggungjawabkan
+        (`stock_type` NULL) ikut di-cache sebagai string kosong, sehingga run
+        berikutnya melewati jalur `STOCK_TYPE_UNRESOLVED` dan menulis `''` ke
+        kolom `stock_type`. Itu tampak seperti tipe yang sah padahal bukan.
+        """
+        import run_backtest
+
+        class StubDb:
+            def get_all(self, table, params):
+                if table == 'calculation_runs':
+                    return [{'id': 'run-1', 'completed_at': 'x', 'created_at': 'x'}]
+                return [
+                    {
+                        'case_quarter': '2021-Q1',
+                        'stock_type': None,
+                        'details': {'stock_type_fingerprint': 'fp-a'},
+                    },
+                    {
+                        'case_quarter': '2021-Q2',
+                        'stock_type': '',
+                        'details': {'stock_type_fingerprint': 'fp-b'},
+                    },
+                    {
+                        'case_quarter': '2021-Q3',
+                        'stock_type': 'CYCLICAL',
+                        'details': {'stock_type_fingerprint': 'fp-c', 'stock_type_raw': 'CYCLICAL'},
+                    },
+                    {
+                        'case_quarter': '2021-Q4',
+                        'stock_type': 'CYCLICAL',
+                        'details': {},
+                    },
+                ]
+
+        cache = run_backtest._stock_type_cache(StubDb(), 'instrument-1')
+        self.assertEqual(set(cache), {'2021-Q3'})
+        self.assertEqual(cache['2021-Q3']['fingerprint'], 'fp-c')
+        self.assertEqual(cache['2021-Q3']['stock_type'], 'CYCLICAL')
+
+    def test_cache_is_empty_without_a_succeeded_run(self) -> None:
+        """Belum ada run -> tidak ada yang bisa dipakai ulang."""
+        import run_backtest
+
+        class StubDb:
+            def get_all(self, table, params):
+                return []
+
+        self.assertEqual(run_backtest._stock_type_cache(StubDb(), 'instrument-1'), {})
 
 
 class VerdictTests(unittest.TestCase):

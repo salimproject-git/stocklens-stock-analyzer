@@ -376,7 +376,6 @@ class ActiveProjectionRpcMigrationTests(unittest.TestCase):
 
 class MarketOverviewPageSizeMigrationTests(unittest.TestCase):
     """Contract checks for the 0027 selectable page-size migration."""
-
     @classmethod
     def setUpClass(cls) -> None:
         cls.path = ROOT / "supabase" / "migrations" / "0027_market_overview_page_size.sql"
@@ -418,6 +417,71 @@ class MarketOverviewPageSizeMigrationTests(unittest.TestCase):
         )
         self.assertIn("stocklens_market_rpc_grants_missing", self.lower)
         self.assertLess(self.lower.index("do $verify$"), self.lower.rindex("commit;"))
+
+
+class LatestGrowthRunRpcMigrationTests(unittest.TestCase):
+    """Contract checks for the 0028 growth/quality run-pin migration.
+
+    The regression this guards: the growth layer legitimately creates a second
+    run when a new input is added to its snapshot, and the previous RPC joined
+    `calc_annual_growth_quality` on `instrument_id` alone, so every annual
+    metric would appear once per run.
+    """
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.path = ROOT / "supabase" / "migrations" / "0028_stock_research_latest_growth_run.sql"
+        cls.sql = cls.path.read_text(encoding="utf-8")
+        cls.lower = cls.sql.lower()
+
+    def test_migration_is_transactional_and_read_only(self) -> None:
+        self.assertRegex(self.lower, r"(?m)^begin;")
+        self.assertRegex(self.lower, r"(?m)^commit;")
+        self.assertNotRegex(
+            self.lower,
+            r"\b(insert\s+into|update\s+public\.|delete\s+from|truncate|drop\s+table)\b",
+        )
+
+    def test_both_growth_tables_are_pinned_to_the_newest_run(self) -> None:
+        self.assertIn("latest_growth_run as (", self.lower)
+        self.assertIn("r.calculation_type = 'quarterly_growth_quality'", self.lower)
+        self.assertIn("r.status = 'succeeded'", self.lower)
+        # Each table must join on the pinned run, not on instrument_id alone.
+        self.assertEqual(
+            self.lower.count("g.calculation_run_id = run.id"), 1
+        )
+        self.assertEqual(
+            self.lower.count("q.calculation_run_id = run.id"), 1
+        )
+        self.assertNotIn(
+            "join public.calc_annual_growth_quality as g on g.instrument_id = i.id\n",
+            self.lower,
+        )
+
+    def test_verify_block_guards_the_pin_and_keeps_tables_private(self) -> None:
+        self.assertIn("stocklens_growth_run_pin_missing", self.lower)
+        self.assertIn("stocklens_raw_table_grants_must_remain_private", self.lower)
+        self.assertLess(self.lower.index("do $verify$"), self.lower.rindex("commit;"))
+
+    def test_earlier_rpc_guarantees_are_preserved(self) -> None:
+        # 0018 / 0021 / 0022 / 0023 features must survive the rewrite.
+        self.assertIn("'outstanding_shares'", self.lower)
+        self.assertIn("'stock_type', v.stock_type", self.lower)
+        self.assertIn("select distinct on (v.method_code)", self.lower)
+        self.assertIn("'interest_expense_non_operating'", self.lower)
+        self.assertIn("'current_assets'", self.lower)
+        self.assertIn("s.status = 'active'", self.lower)
+        self.assertIn("limit 260", self.lower)
+        self.assertIn("limit 40", self.lower)
+        self.assertNotIn("select *", self.lower)
+
+    def test_rpc_stays_definer_and_selectively_executable(self) -> None:
+        self.assertIn("security definer", self.lower)
+        self.assertIn("set search_path = ''", self.lower)
+        self.assertIn(
+            "grant execute on function public.get_stock_research_data(text) to anon, authenticated",
+            self.lower,
+        )
 
     def test_superseded_migration_targets_the_new_signature(self) -> None:
         # 0019 hardens the RPC owner by exact signature; if it still named the

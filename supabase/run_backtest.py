@@ -83,8 +83,18 @@ from backtest_engine import (  # noqa: E402
     valuation_case_metrics,
     verdict_case_metrics,
 )
-from calculation_registry import INPUT_VOCABULARY_VERSION  # noqa: E402
-from calculation_v1_common import CalculationError, SupabaseRest, calculation_contract  # noqa: E402
+from calculation_registry import INPUT_VOCABULARY_VERSION, sha256_json  # noqa: E402
+from calculation_v1_common import (  # noqa: E402
+    CalculationError,
+    SupabaseRest,
+    calculation_contract,
+    resolved_parameter,
+)
+from calculate_quarterly_growth_quality import (  # noqa: E402
+    calculate_annual_growth_outputs,
+    classify_metrics_classification,
+)
+from derive_classifier_inputs import derive_classifier_inputs  # noqa: E402
 from derive_projection_scenario import (  # noqa: E402
     build_scenario,
     index_facts,
@@ -104,6 +114,24 @@ PAGE_SIZE = 1000
 #: `Years_Avail` registry constant yang dipakai workbook untuk setiap kasus.
 #: Dipotong per kasus oleh `resolve_case_years_available` (keputusan D2).
 REGISTRY_YEARS_AVAILABLE = 7
+
+#: Kode metrik yang membawa jawaban akhir classifier.
+CLASSIFICATION_FINAL_TYPE_CODE = 'CLASSIFICATION_FINAL_TYPE'
+CLASSIFICATION_ASSET_PLAY_CODE = 'CLASSIFICATION_ASSET_PLAY'
+
+#: Versi skema sidik input tipe saham. Dinaikkan bila isi sidik berubah, supaya
+#: cache lama tidak dianggap cocok oleh sidik dengan arti yang berbeda.
+STOCK_TYPE_FINGERPRINT_VERSION = 'stock-type-input-v1'
+
+#: Parameter classifier yang dibaca dari registry dan ikut masuk sidik input.
+#: Kalau salah satu ambang berubah, sidiknya berubah dan tipenya dihitung ulang.
+CLASSIFIER_PARAMETER_CODES = (
+    'classifier_thresholds',
+    'classifier_score_ladder',
+    'classifier_energy_override',
+    'classifier_cyclical_sectors',
+    'classifier_consumer_defensive_sectors',
+)
 
 
 def load_env_file(path: Path) -> None:
@@ -240,7 +268,7 @@ def _persist_methods(db: SupabaseRest, rows: list[dict[str, Any]]) -> None:
         )
 
 
-def fetch_reference_inputs(db: SupabaseRest, sector_name: str | None, stock_type: str | None) -> dict[str, Any]:
+def fetch_reference_inputs(db: SupabaseRest, sector_name: str | None) -> dict[str, Any]:
     """Ambil tabel referensi yang dibutuhkan lima metode valuasi.
 
     Sama seperti `calculate_valuation.calculate_live`: bobot sektor/tipe dan
@@ -248,27 +276,20 @@ def fetch_reference_inputs(db: SupabaseRest, sector_name: str | None, stock_type
     yang tidak ada tetap `None` supaya engine mengangkat flag
     `SECTOR_WEIGHT_UNCLASSIFIED` / `TYPE_WEIGHT_UNCLASSIFIED`, bukan menebak.
 
-    ``stock_type=None`` (tipe belum bisa ditentukan) menghasilkan bobot tipe
-    `None` tanpa query. Ini menjaga jalur "tipe belum diketahui" tetap bisa
-    menyelesaikan metrik harga, alih-alih gagal sebelum apa pun dihitung.
+    Sejak D7 tipe saham **berbeda per kasus**, jadi bobot/ambang tipe tidak bisa
+    lagi diambil untuk satu tipe saja. Seluruh baris tipe dibaca sekali (enam
+    baris) lalu :func:`_reference_for_type` memilih yang cocok untuk tiap kasus.
+    Satu query untuk semua tipe lebih murah daripada satu query per kasus, dan
+    hasilnya identik.
     """
-    from calculate_valuation import _reference_type_name
-
-    if stock_type:
-        reference_type = _reference_type_name(stock_type)
-        type_weights = db.get_all('valuation_type_weights', {
-            'reference_version': 'eq.' + REFERENCE_VERSION,
-            'stock_type': 'eq.' + reference_type,
-            'select': 'stock_type,w_pe,w_pbv,w_ddm,w_graham,w_peg',
-        })
-        type_thresholds = db.get_all('valuation_type_thresholds', {
-            'reference_version': 'eq.' + REFERENCE_VERSION,
-            'stock_type': 'eq.' + reference_type,
-            'select': 'stock_type,max_der,min_cr,min_icr',
-        })
-    else:
-        type_weights = []
-        type_thresholds = []
+    type_weights = db.get_all('valuation_type_weights', {
+        'reference_version': 'eq.' + REFERENCE_VERSION,
+        'select': 'stock_type,w_pe,w_pbv,w_ddm,w_graham,w_peg',
+    })
+    type_thresholds = db.get_all('valuation_type_thresholds', {
+        'reference_version': 'eq.' + REFERENCE_VERSION,
+        'select': 'stock_type,max_der,min_cr,min_icr',
+    })
 
     sector_weights = db.get_all('valuation_sector_weights', {
         'reference_version': 'eq.' + REFERENCE_VERSION,
@@ -277,8 +298,32 @@ def fetch_reference_inputs(db: SupabaseRest, sector_name: str | None, stock_type
     })
     return {
         'sector_weights': sector_weights[0] if sector_weights else None,
-        'type_weights': type_weights[0] if type_weights else None,
-        'type_thresholds': type_thresholds[0] if type_thresholds else None,
+        'type_weights_by_type': {
+            str(row.get('stock_type') or '').strip(): row for row in type_weights
+        },
+        'type_thresholds_by_type': {
+            str(row.get('stock_type') or '').strip(): row for row in type_thresholds
+        },
+    }
+
+
+def _reference_for_type(reference: Mapping[str, Any], stock_type: str | None) -> dict[str, Any]:
+    """Pilih baris referensi tipe untuk satu kasus (D7).
+
+    ``stock_type=None`` (tipe belum bisa dipertanggungjawabkan) menghasilkan
+    `None` tanpa menebak, sehingga engine mengangkat
+    `TYPE_WEIGHT_UNCLASSIFIED` alih-alih memakai bobot tipe lain.
+    """
+    if not stock_type:
+        return {'type_weights': None, 'type_thresholds': None}
+    from calculate_valuation import _reference_type_name
+
+    reference_type = _reference_type_name(stock_type)
+    by_weight = reference.get('type_weights_by_type') or {}
+    by_threshold = reference.get('type_thresholds_by_type') or {}
+    return {
+        'type_weights': by_weight.get(reference_type),
+        'type_thresholds': by_threshold.get(reference_type),
     }
 
 
@@ -356,35 +401,122 @@ def _scenario_for_case(
     return scenario
 
 
-def valuation_for_case(
+def classifier_parameter_snapshot() -> dict[str, Any]:
+    """Parameter classifier yang menentukan tipe, dibaca dari registry.
+
+    Dipakai dua kali: sebagai bagian sidik input cache (kalau ambangnya berubah,
+    sidiknya berubah dan tipe dihitung ulang) dan untuk membuktikan bahwa
+    perhitungan per kasus memakai definisi yang sama dengan run klasifikasi
+    harian. Nilainya dibaca lewat :func:`resolved_parameter`, jadi parameter yang
+    belum `RESOLVED` menggagalkan run alih-alih dipakai diam-diam.
+    """
+    return {code: resolved_parameter(code) for code in CLASSIFIER_PARAMETER_CODES}
+
+
+def _stock_type_fingerprint(
+    *,
+    instrument_id: str,
+    case_quarter: str,
+    analysis_date: str,
+    years_available: int,
+    base_quarter: str,
+    classifier_parameters: Mapping[str, Any],
+    annual_periods: Sequence[Mapping[str, Any]],
+    quarter_periods: Sequence[Mapping[str, Any]],
+    facts: Sequence[Mapping[str, Any]],
+    prices: Sequence[Mapping[str, Any]],
+    dividend_rows: Sequence[Mapping[str, Any]],
+) -> str:
+    """Sidik SHA-256 dari seluruh input yang menentukan tipe satu kasus.
+
+    Ini **bukan** sidik hasil, melainkan sidik **input**. Cache dipakai ulang
+    hanya bila sidiknya sama persis, sehingga setiap perubahan yang bisa
+    menggeser tipe ikut terdeteksi:
+
+    * **parameter classifier** (ambang, tangga skor, override Energy, daftar
+      sektor) - perubahan satu ambang saja sudah mengubah tipe;
+    * **periode** yang dipotong pada tanggal kasus (`id`, `period_end`);
+    * **fakta** yang dipotong, **termasuk `revision_key` dan nilainya** - inilah
+      yang membuat revisi laporan (mis. restatement laba) menggugurkan cache,
+      karena laporan yang direvisi mengubah fakta pada periode yang sama tanpa
+      mengubah daftar periode;
+    * **harga** yang dipotong (`trading_date`, `close_price`) - dipakai untuk
+      PBV percentile dan year-end price;
+    * **dividen** (`period_year`, `amount_per_share`) - dipakai payout ratio dan
+      dividend yield;
+    * **`years_available`** dan **kuartal dasar** - keduanya memotong jendela
+      annual yang dibaca classifier.
+
+    Urutan barisnya dinormalkan (di-sort) supaya urutan pembacaan dari PostgREST
+    tidak mengubah sidik tanpa perubahan data. Versi skema sidik ikut disertakan
+    supaya mengubah definisi sidik tidak membuat cache lama tampak cocok.
+    """
+    payload = {
+        'fingerprint_version': STOCK_TYPE_FINGERPRINT_VERSION,
+        'instrument_id': instrument_id,
+        'case_quarter': case_quarter,
+        'analysis_date': analysis_date,
+        'years_available': int(years_available),
+        'base_quarter': base_quarter,
+        'classifier_parameters': _json_value(dict(classifier_parameters)),
+        'periods': sorted(
+            [
+                str(row.get('id') or ''),
+                str(row.get('period_type') or ''),
+                str(row.get('period_end') or ''),
+            ]
+            for row in [*annual_periods, *quarter_periods]
+        ),
+        'facts': sorted(
+            [
+                str(row.get('financial_period_id') or ''),
+                str(row.get('metric_code') or ''),
+                str(row.get('revision_key') or ''),
+                None if row.get('value_numeric') is None else str(row.get('value_numeric')),
+            ]
+            for row in facts
+        ),
+        'prices': sorted(
+            [
+                str(row.get('trading_date') or ''),
+                None if row.get('close_price') is None else str(row.get('close_price')),
+            ]
+            for row in prices
+        ),
+        'dividends': sorted(
+            [
+                str(row.get('fact_type') or ''),
+                None if row.get('period_year') is None else str(row.get('period_year')),
+                None if row.get('amount_per_share') is None
+                else str(row.get('amount_per_share')),
+            ]
+            for row in dividend_rows
+        ),
+    }
+    return sha256_json(payload)
+
+
+def _case_cut(
     *,
     ticker: str,
     instrument: Mapping[str, Any],
-    stock_type: str,
     analysis_date: date,
     periods: Sequence[Mapping[str, Any]],
     facts: Sequence[Mapping[str, Any]],
     prices: Sequence[Mapping[str, Any]],
     dividend_rows: Sequence[Mapping[str, Any]],
-    reference: Mapping[str, Any],
-    risk_free_rate: str | None,
-    risk_free_source: str | None,
-    valuation_parameters: Mapping[str, Any],
+    registry_years_available: int,
 ) -> dict[str, Any]:
-    """Hitung snapshot valuasi untuk satu kasus, seluruhnya point-in-time.
+    """Potong seluruh input pada tanggal satu kasus, sekali, untuk kedua jalur.
 
-    Yang dipotong dan mengapa:
+    Fungsi ini adalah **satu-satunya** tempat potongan point-in-time dibentuk,
+    dan itu disengaja: tipe saham per kasus (D7) dan valuasi kasus harus melihat
+    input yang identik. Kalau masing-masing memotong sendiri, tipe dan valuasi
+    bisa memakai kuartal dasar atau `years_available` yang berbeda, dan
+    perbedaannya tidak akan terlihat di angka mana pun.
 
-    * **periode** `period_end <= analysis_date` - tanpa ini, kasus 2022 Q1 akan
-      melihat laporan 2026 dan valuasinya tidak lagi historis.
-    * **harga** `trading_date <= analysis_date` - engine memilih close terakhir
-      pada atau sebelum `valuation_date`, jadi pemotongan ini hanya memperjelas
-      batas; tanpa itu pun tidak ada harga masa depan yang terpakai.
-
-    `years_available` dihitung di dalam sini (keputusan D2) karena ia bergantung
-    pada kuartal dasar, yang baru diketahui setelah periode dipotong. Kegagalan
-    pembentukan skenario **tidak** ditelan: pemanggil yang memutuskan cara
-    mencatatnya, karena hanya pemanggil yang tahu cara menulis baris gagal.
+    Mengembalikan periode terpotong, fakta, harga, indeks fakta, kuartal dasar,
+    `years_available` beserta flag pemotongannya, dan skenario proyeksi kasus.
     """
     cutoff = analysis_date.isoformat()
     annual = [
@@ -401,9 +533,9 @@ def valuation_for_case(
         row for row in prices if str(row.get('trading_date') or '') <= cutoff
     ]
 
-    # Kuartal dasar ditentukan di sini, sebelum `years_available`, karena engine
-    # valuasi memotong periode annual pada `period_end` kuartal dasar - bukan
-    # pada `analysis_date`. Keduanya bisa berbeda: AUTO 2023-Q4 tidak punya
+    # Kuartal dasar ditentukan sebelum `years_available`, karena engine valuasi
+    # memotong periode annual pada `period_end` kuartal dasar - bukan pada
+    # `analysis_date`. Keduanya bisa berbeda: AUTO 2023-Q4 tidak punya
     # `cost_of_revenue`, sehingga kuartal dasarnya jatuh ke 2023-Q3 dan satu
     # tahun annual (2023) dibuang engine. Menghitung `years_available` dari
     # `analysis_date` saja akan meloloskan tahun itu dan engine menolak dengan
@@ -411,7 +543,7 @@ def valuation_for_case(
     index = index_facts(cut_facts)
     base_period = resolve_base_quarter(quarterly, index)
     years_available, year_flags = resolve_case_years_available(
-        int(reference.get('registry_years_available') or REGISTRY_YEARS_AVAILABLE),
+        int(registry_years_available),
         annual,
         analysis_date,
         cutoff_date=str(base_period.get('period_end') or cutoff),
@@ -426,6 +558,190 @@ def valuation_for_case(
         dividend_rows=dividend_rows,
         years_available=years_available,
     )
+    return {
+        'analysis_date': cutoff,
+        'annual': annual,
+        'quarterly': quarterly,
+        'facts': cut_facts,
+        'prices': cut_prices,
+        'years_available': years_available,
+        'years_available_flags': year_flags,
+        'base_quarter': str(base_period.get('period_label') or ''),
+        'scenario': scenario,
+    }
+
+
+def stock_type_for_case(
+    *,
+    instrument: Mapping[str, Any],
+    instrument_id: str,
+    stock_type: str | None,
+    stock_type_error: str | None,
+    cut: Mapping[str, Any],
+    dividend_rows: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    """Tipe saham yang classifier hasilkan **pada tanggal kasus** (D7).
+
+    Workbook menghitung ulang `MetricsClassification` tiap kasus, jadi tipe
+    sebuah kasus bisa berbeda dari tipe hari ini. Fungsi ini menjalankan ulang
+    classifier itu di atas potongan point-in-time yang **sama** dengan yang
+    dipakai :func:`valuation_for_case` (`cut`, dari :func:`_case_cut`):
+
+    * periode dan harga sudah dipotong pada `analysis_date`;
+    * `years_available` sudah dipotong ke riwayat yang ada pada kasus itu (D2);
+    * baris Class-B (pertumbuhan/kualitas) **dihitung ulang** untuk jendela
+      kasus, bukan dibaca dari run tersimpan - run tersimpan hanya satu per
+      instrumen dan dipatok ke snapshot hari ini;
+    * skenario proyeksi memakai skenario kasus sendiri, dan
+      `projected_shares_outstanding`-nya diteruskan. Bila dibiarkan `None`,
+      `projected_pbv` menjadi `None` dan ASSET PLAY salah menyala.
+
+    Mengembalikan `stock_type` (sudah dinormalkan ke kosakata engine) atau
+    `stock_type_error` bila tipenya tidak bisa dipertanggungjawabkan. Kegagalan
+    di sini **tidak** menggagalkan kasusnya: pemanggil tetap menulis metrik
+    harga dengan valuasi `VALUATION_UNAVAILABLE`, sama seperti perilaku lama.
+
+    ``stock_type``/``stock_type_error`` yang diberikan adalah tipe snapshot
+    terbaru; keduanya hanya dipakai sebagai fallback bila classifier per kasus
+    tidak bisa dijalankan, supaya satu kasus bermasalah tidak menghapus tipe
+    yang sudah terbukti benar untuk kasus itu.
+    """
+    annual = cut['annual']
+    cut_facts = cut['facts']
+    cut_prices = cut['prices']
+    years_available = int(cut['years_available'])
+    scenario = cut['scenario']
+
+    window = annual[-years_available:] if years_available > 0 else annual
+    growth_rows = calculate_annual_growth_outputs(
+        window,
+        cut_facts,
+        instrument_id,
+        'backtest-per-case',
+        years_available=None,
+        # The classifier only reads the four growth codes, but the dividend
+        # ratios are passed too so this call produces the same row set as the
+        # stored run. A missing dividend or price input must not change what the
+        # classifier sees, and it does not: it only adds two rows.
+        dividend_rows=dividend_rows,
+        prices=cut_prices,
+    )
+
+    inputs = derive_classifier_inputs(
+        annual_periods=annual,
+        facts=cut_facts,
+        prices=cut_prices,
+        dividend_rows=dividend_rows,
+        scenario_values=scenario['values'],
+        projected_shares_outstanding=scenario.get('projected_shares_outstanding'),
+        growth_rows=growth_rows,
+        years_available=years_available,
+    )
+
+    rows = classify_metrics_classification(
+        growth_rows=growth_rows,
+        instrument_id=instrument_id,
+        run_id='backtest-per-case',
+        sector=instrument.get('sector_name'),
+        projected_net_income=inputs['projected_net_income'],
+        payout_ratio=inputs['payout_ratio'],
+        historical_roe_average=inputs['historical_roe_average'],
+        projected_pbv=inputs['projected_pbv'],
+        pbv_percentile=inputs['pbv_percentile'],
+        projected_pe=inputs['projected_pe'],
+        projected_peg=inputs['projected_peg'],
+        historical_dividend_yield=inputs['historical_dividend_yield'],
+        gpm_stability=inputs['gpm_stability'],
+    )
+    by_code = {row['metric_code']: row for row in rows}
+    raw = str(by_code[CLASSIFICATION_FINAL_TYPE_CODE].get('classification_code') or '')
+    asset_play = (
+        str(by_code[CLASSIFICATION_ASSET_PLAY_CODE].get('value_numeric') or '') == '1'
+    )
+
+    from calculate_valuation import normalise_classifier_type
+
+    try:
+        resolved_type = normalise_classifier_type(raw, asset_play)
+    except CalculationError as error:
+        # `UNCLASSIFIED` tanpa aturan yang cocok (INDF) tidak punya tipe yang
+        # bisa dipertanggungjawabkan. Fallback ke tipe snapshot terbaru hanya
+        # bila tipe itu memang ada; kalau tidak, alasannya diteruskan apa adanya.
+        return {
+            'stock_type': stock_type,
+            'stock_type_error': stock_type_error or str(error),
+            'raw_type': raw or None,
+            'years_available': years_available,
+            'base_quarter': str(cut.get('base_quarter') or ''),
+        }
+
+    return {
+        'stock_type': resolved_type,
+        'stock_type_error': None,
+        'raw_type': raw or None,
+        'years_available': years_available,
+        'base_quarter': str(cut.get('base_quarter') or ''),
+    }
+
+
+def valuation_for_case(
+    *,
+    ticker: str,
+    instrument: Mapping[str, Any],
+    stock_type: str,
+    analysis_date: date,
+    periods: Sequence[Mapping[str, Any]],
+    facts: Sequence[Mapping[str, Any]],
+    prices: Sequence[Mapping[str, Any]],
+    dividend_rows: Sequence[Mapping[str, Any]],
+    reference: Mapping[str, Any],
+    risk_free_rate: str | None,
+    risk_free_source: str | None,
+    valuation_parameters: Mapping[str, Any],
+    cut: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Hitung snapshot valuasi untuk satu kasus, seluruhnya point-in-time.
+
+    Yang dipotong dan mengapa:
+
+    * **periode** `period_end <= analysis_date` - tanpa ini, kasus 2022 Q1 akan
+      melihat laporan 2026 dan valuasinya tidak lagi historis.
+    * **harga** `trading_date <= analysis_date` - engine memilih close terakhir
+      pada atau sebelum `valuation_date`, jadi pemotongan ini hanya memperjelas
+      batas; tanpa itu pun tidak ada harga masa depan yang terpakai.
+
+    `years_available` (keputusan D2) dan kuartal dasar ikut dihitung di
+    :func:`_case_cut`, karena keduanya bergantung satu sama lain. Kegagalan
+    pembentukan skenario **tidak** ditelan: pemanggil yang memutuskan cara
+    mencatatnya, karena hanya pemanggil yang tahu cara menulis baris gagal.
+
+    ``cut`` boleh diberikan pemanggil yang sudah membentuknya. Itu yang terjadi
+    pada jalur D7: classifier per kasus memakai potongan yang **sama** persis,
+    jadi tipe dan valuasi tidak mungkin memakai kuartal dasar atau
+    `years_available` yang berbeda.
+
+    Bobot/ambang tipe dipilih **per tipe kasus ini** lewat
+    :func:`_reference_for_type`, bukan per tipe snapshot terbaru.
+    """
+    if cut is None:
+        cut = _case_cut(
+            ticker=ticker,
+            instrument=instrument,
+            analysis_date=analysis_date,
+            periods=periods,
+            facts=facts,
+            prices=prices,
+            dividend_rows=dividend_rows,
+            registry_years_available=REGISTRY_YEARS_AVAILABLE,
+        )
+    cutoff = str(cut['analysis_date'])
+    annual = cut['annual']
+    quarterly = cut['quarterly']
+    cut_facts = cut['facts']
+    cut_prices = cut['prices']
+    years_available = int(cut['years_available'])
+    scenario = cut['scenario']
+    type_reference = _reference_for_type(reference, stock_type)
     result = calculate_valuation_snapshot(
         ticker=ticker,
         sector=instrument.get('sector_name'),
@@ -441,15 +757,15 @@ def valuation_for_case(
         risk_free_rate=risk_free_rate,
         risk_free_source=risk_free_source,
         sector_weights=reference.get('sector_weights'),
-        type_weights=reference.get('type_weights'),
-        type_thresholds=reference.get('type_thresholds'),
+        type_weights=type_reference.get('type_weights'),
+        type_thresholds=type_reference.get('type_thresholds'),
         valuation_parameters=valuation_parameters,
     )
     # `years_available` dan flag pemotongannya dilaporkan dari sini supaya
     # pemanggil tidak menghitungnya ulang dengan cara yang bisa berbeda.
     result['years_available'] = years_available
-    result['years_available_flags'] = year_flags
-    result['base_quarter'] = str(base_period.get('period_label') or '')
+    result['years_available_flags'] = list(cut['years_available_flags'])
+    result['base_quarter'] = str(cut['base_quarter'])
     return result
 
 
@@ -548,6 +864,13 @@ def calculate_cases(
     setiap kasus juga mendapat snapshot valuasi point-in-time; lihat
     :func:`valuation_for_case`.
 
+    Bila ``valuation_inputs`` memuat ``per_case_stock_type=True``, tipe saham
+    dihitung ulang **pada tanggal setiap kasus** (D7) lewat
+    :func:`stock_type_for_case`, menggantikan ``stock_type`` yang diberikan.
+    Flag itu opsional supaya jalur Fase 2 lama (satu tipe untuk seluruh kasus)
+    tetap bisa diuji tanpa menyiapkan classifier, dan supaya pengujian pemotongan
+    harga tidak ikut bergantung pada classifier.
+
     ``as_of_date`` membuang kasus yang belum berumur
     :data:`backtest_engine.CASE_MIN_AGE_MONTHS` bulan. Kuartal terbaru belum
     terbit sebagai laporan saat snapshot diambil, jadi verdictnya hanya akan
@@ -626,21 +949,120 @@ def _valuation_metrics_for_case(
     metrics: Mapping[str, Any],
     inputs: Mapping[str, Any],
 ) -> dict[str, Any]:
-    """Valuasi satu kasus, dengan jalur gagal yang tetap menulis baris."""
-    stock_type = str(inputs.get('stock_type') or '')
+    """Valuasi satu kasus, dengan jalur gagal yang tetap menulis baris.
+
+    Dua jalur tipe saham:
+
+    * ``per_case_stock_type=True`` (D7): tipe dihitung ulang pada tanggal kasus,
+      lalu potongan point-in-time yang **sama** dipakai untuk valuasinya;
+    * selain itu: tipe yang diberikan dipakai apa adanya, seperti sebelum D7.
+
+    Tipe yang tidak bisa dipertanggungjawabkan menggagalkan **valuasi**, bukan
+    kasusnya: metrik harga tetap tersimpan.
+    """
     price = metrics.get('analysis_price')
-    # Tipe saham yang tidak bisa dipertanggungjawabkan menggagalkan valuasi,
-    # bukan kasusnya: metrik harga tetap tersimpan.
+    case_flags = case_provenance_flags(case)
+    stock_type = str(inputs.get('stock_type') or '')
     stock_type_error = inputs.get('stock_type_error')
+    cut: dict[str, Any] | None = None
+    raw_type: str | None = None
+
+    if inputs.get('per_case_stock_type'):
+        try:
+            cut = _case_cut(
+                ticker=str(inputs.get('ticker') or ''),
+                instrument=inputs.get('instrument') or {},
+                analysis_date=analysis_date,
+                periods=inputs.get('periods') or [],
+                facts=inputs.get('facts') or [],
+                prices=inputs.get('prices') or [],
+                dividend_rows=inputs.get('dividend_rows') or [],
+                registry_years_available=REGISTRY_YEARS_AVAILABLE,
+            )
+        except (CalculationError, ValuationError) as error:
+            # Skenario kasus tidak bisa dibentuk (mis. kuartal dasar belum
+            # lengkap: `BASE_QUARTER_FACT_MISSING`). Tipe pun tidak bisa
+            # dihitung, jadi alasannya dilaporkan apa adanya dan metrik harga
+            # tetap tersimpan. Tipe snapshot terbaru tetap dipakai bila ada,
+            # supaya satu kasus bermasalah tidak menghapus tipe yang sudah
+            # terbukti benar untuk kasus itu.
+            unavailable = unavailable_valuation_case_metrics(
+                price=price,
+                reason=str(error),
+                case_flags=case_flags,
+            )
+            unavailable['years_available'] = None
+            unavailable['years_compare'] = None
+            unavailable['stock_type'] = stock_type or None
+            unavailable['stock_type_source'] = 'GIVEN'
+            return unavailable
+
+        # Sidik input dibandingkan dengan cache: cache dipakai ulang hanya bila
+        # inputnya terbukti identik. Sidiknya selalu dihitung, jadi cache tidak
+        # pernah menyembunyikan perubahan input.
+        fingerprint = _stock_type_fingerprint(
+            instrument_id=str(inputs.get('instrument_id') or ''),
+            case_quarter=str(case.case_quarter),
+            analysis_date=str(cut['analysis_date']),
+            years_available=int(cut['years_available']),
+            base_quarter=str(cut['base_quarter']),
+            classifier_parameters=inputs.get('classifier_parameters') or {},
+            annual_periods=cut['annual'],
+            quarter_periods=cut['quarterly'],
+            facts=cut['facts'],
+            prices=cut['prices'],
+            dividend_rows=inputs.get('dividend_rows') or [],
+        )
+        cached = (inputs.get('stock_type_cache') or {}).get(str(case.case_quarter))
+        if cached and str(cached.get('fingerprint')) == fingerprint:
+            stock_type = str(cached.get('stock_type') or '')
+            stock_type_error = None
+            raw_type = cached.get('stock_type_raw')
+            stock_type_source = 'CACHE'
+        else:
+            try:
+                resolved = stock_type_for_case(
+                    instrument=inputs.get('instrument') or {},
+                    instrument_id=str(inputs.get('instrument_id') or ''),
+                    stock_type=stock_type or None,
+                    stock_type_error=stock_type_error,
+                    cut=cut,
+                    dividend_rows=inputs.get('dividend_rows') or [],
+                )
+            except (CalculationError, ValuationError) as error:
+                unavailable = unavailable_valuation_case_metrics(
+                    price=price,
+                    reason=str(error),
+                    case_flags=case_flags,
+                )
+                unavailable['years_available'] = None
+                unavailable['years_compare'] = None
+                unavailable['stock_type'] = stock_type or None
+                return unavailable
+            stock_type = str(resolved.get('stock_type') or '')
+            stock_type_error = resolved.get('stock_type_error')
+            raw_type = resolved.get('raw_type')
+            stock_type_source = 'RECOMPUTED'
+    else:
+        fingerprint = None
+        stock_type_source = 'GIVEN'
+
     if stock_type_error:
         unavailable = unavailable_valuation_case_metrics(
             price=price,
             reason=f'STOCK_TYPE_UNRESOLVED: {stock_type_error}',
-            case_flags=case_provenance_flags(case),
+            case_flags=case_flags,
         )
         unavailable['years_available'] = None
         unavailable['years_compare'] = None
         unavailable['stock_type'] = None
+        if cut is not None and cut.get('base_quarter'):
+            unavailable['base_quarter'] = cut['base_quarter']
+        if raw_type is not None:
+            unavailable['stock_type_raw'] = raw_type
+        if fingerprint is not None:
+            unavailable['stock_type_fingerprint'] = fingerprint
+            unavailable['stock_type_source'] = stock_type_source
         return unavailable
 
     try:
@@ -657,12 +1079,13 @@ def _valuation_metrics_for_case(
             risk_free_rate=inputs.get('risk_free_rate'),
             risk_free_source=inputs.get('risk_free_source'),
             valuation_parameters=inputs.get('valuation_parameters') or {},
+            cut=cut,
         )
     except (CalculationError, ValuationError) as error:
         unavailable = unavailable_valuation_case_metrics(
             price=price,
             reason=str(error),
-            case_flags=case_provenance_flags(case),
+            case_flags=case_flags,
         )
         unavailable['years_available'] = None
         unavailable['years_compare'] = None
@@ -682,6 +1105,20 @@ def _valuation_metrics_for_case(
     case_metrics['years_available'] = valuation.get('years_available')
     case_metrics['years_compare'] = valuation.get('years_compare')
     case_metrics['stock_type'] = stock_type
+    if raw_type is not None:
+        case_metrics['stock_type_raw'] = raw_type
+    # Kuartal dasar yang memotong jendela annual kasus ini. Diambil dari `cut`
+    # (bukan dari hasil valuasi) supaya tetap terisi pada jalur cache, dan
+    # supaya `details.base_quarter` bisa mengungkap mengapa `years_available`
+    # sebuah kasus lebih kecil dari jumlah tahun annualnya.
+    base_quarter = str(cut.get('base_quarter') or '') if cut is not None else ''
+    if not base_quarter:
+        base_quarter = str(valuation.get('base_quarter') or '')
+    if base_quarter:
+        case_metrics['base_quarter'] = base_quarter
+    if fingerprint is not None:
+        case_metrics['stock_type_fingerprint'] = fingerprint
+        case_metrics['stock_type_source'] = stock_type_source
     return case_metrics
 
 
@@ -722,8 +1159,11 @@ def _case_rows(
             'analysis_date': metrics['analysis_date'],
             'analysis_price': _json_value(metrics['analysis_price']),
             'analysis_price_source': metrics['analysis_price_source'],
-            # Tipe saham dari classifier terbaru (keputusan D7). Bukan tipe pada
-            # tanggal kasus, dan flag `STOCK_TYPE_LATEST_SNAPSHOT` menandai itu.
+            # Tipe saham pada tanggal kasus (keputusan D7): dihitung ulang oleh
+            # classifier atas potongan PIT kasus itu, bukan disalin dari snapshot
+            # hari ini. `details.stock_type_raw` menyimpan label mentah
+            # classifier sebelum dinormalkan, supaya bisa dibandingkan dengan
+            # kolom `Jenis Saham` workbook apa adanya.
             'stock_type': valuation.get('stock_type') if valuation else None,
             'sector_name': sector_name,
             'years_available': valuation.get('years_available'),
@@ -760,6 +1200,29 @@ def _case_rows(
             'details': {
                 **_json_value(metrics['details']),
                 **(_json_value(verdict.get('verdict_details')) or {}),
+                # Provenance tipe per kasus: label mentah classifier (sebelum
+                # dinormalkan), kuartal dasar yang memotong jendela annual, sidik
+                # input (dipakai cache pada run berikutnya), dan asal tipe
+                # (`RECOMPUTED` / `CACHE` / `GIVEN`). Kolom `stock_type` sendiri
+                # memuat tipe yang sudah dinormalkan ke kosakata engine, sehingga
+                # label workbook bisa berbeda ejaan (`TURN AROUND` vs
+                # `Turn around`) tanpa kehilangan jejak.
+                **(
+                    {'stock_type_raw': valuation['stock_type_raw']}
+                    if valuation.get('stock_type_raw') else {}
+                ),
+                **(
+                    {'base_quarter': valuation['base_quarter']}
+                    if valuation.get('base_quarter') else {}
+                ),
+                **(
+                    {'stock_type_fingerprint': valuation['stock_type_fingerprint']}
+                    if valuation.get('stock_type_fingerprint') else {}
+                ),
+                **(
+                    {'stock_type_source': valuation['stock_type_source']}
+                    if valuation.get('stock_type_source') else {}
+                ),
             },
         })
     return rows
@@ -897,6 +1360,70 @@ def _create_run(
     return str(created[0]['id'])
 
 
+def _stock_type_cache(db: SupabaseRest, instrument_id: str) -> dict[str, dict[str, Any]]:
+    """Tipe per kasus dari run SUCCEEDED terbaru, untuk dipakai ulang.
+
+    **Kunci cache** adalah ``(instrument_id, case_quarter)``. Nilainya dipakai
+    ulang hanya bila **sidik input** yang tersimpan sama dengan sidik yang baru
+    dihitung (lihat :func:`_stock_type_fingerprint`). Jadi cache ini bukan
+    "percaya pada hasil lama", melainkan "hasil lama yang inputnya terbukti tidak
+    berubah".
+
+    Konsekuensi saat input berubah:
+
+    * **revisi laporan** (fakta pada periode yang sama berubah, atau
+      `revision_key` bergeser) mengubah sidik fakta, sehingga tipe kasus itu
+      dihitung ulang;
+    * **ambang classifier** di registry berubah -> sidik berubah -> dihitung
+      ulang;
+    * **harga/dividen** baru yang jatuh pada atau sebelum tanggal kasus -> sidik
+      berubah -> dihitung ulang;
+    * **kasus baru** (kuartal yang belum ada di run sebelumnya) tidak punya entri,
+      jadi selalu dihitung.
+
+    Baris run lama yang belum punya `details.stock_type_fingerprint` (mis. hasil
+    versi metodologi sebelum D7) dilewati, sehingga cache-nya kosong dan seluruh
+    tipe dihitung ulang. Itu memang yang diinginkan: hasil lama itu memakai tipe
+    snapshot terbaru, bukan tipe kasus.
+
+    Cache hanya mengurangi **perhitungan ulang**, bukan verifikasi: sidiknya tetap
+    dibandingkan untuk setiap kasus pada setiap run.
+    """
+    runs = _pages(db, 'calculation_runs', {
+        'calculation_type': 'eq.' + METHOD_CODE,
+        'scope_id': 'eq.' + instrument_id,
+        'status': 'eq.SUCCEEDED',
+        'select': 'id,completed_at,created_at',
+        'order': 'completed_at.desc.nullslast,created_at.desc',
+    })
+    if not runs:
+        return {}
+
+    rows = _pages(db, CASE_TABLE, {
+        'calculation_run_id': 'eq.' + str(runs[0]['id']),
+        'instrument_id': 'eq.' + instrument_id,
+        'select': 'case_quarter,stock_type,details',
+    })
+    cache: dict[str, dict[str, Any]] = {}
+    for row in rows:
+        details = row.get('details') or {}
+        fingerprint = details.get('stock_type_fingerprint')
+        # Kasus yang tipenya tidak bisa dipertanggungjawabkan (`stock_type` NULL)
+        # **tidak** di-cache. Cache menyimpan tipe, bukan alasan; mengubah NULL
+        # menjadi string kosong akan membuat pemanggil menganggapnya tipe yang
+        # sah dan melewati jalur `STOCK_TYPE_UNRESOLVED`. Kasus seperti itu
+        # dihitung ulang setiap run - jumlahnya sedikit dan hasilnya tetap
+        # dilaporkan apa adanya.
+        if not fingerprint or not row.get('stock_type'):
+            continue
+        cache[str(row['case_quarter'])] = {
+            'fingerprint': str(fingerprint),
+            'stock_type': str(row['stock_type']),
+            'stock_type_raw': details.get('stock_type_raw'),
+        }
+    return cache
+
+
 def _store(
     db: SupabaseRest,
     rows: list[dict[str, Any]],
@@ -1025,10 +1552,21 @@ def run_ticker(
         'instrument_id': 'eq.' + instrument_id,
         'select': 'fact_type,period_year,amount_per_share',
     })
-    reference = fetch_reference_inputs(db, instrument.get('sector_name'), stock_type)
+    # Bobot/ambang tipe tidak lagi diambil untuk satu tipe: sejak D7 tipe berbeda
+    # per kasus, jadi seluruh baris tipe dibaca sekali dan dipilih per kasus.
+    reference = fetch_reference_inputs(db, instrument.get('sector_name'))
     reference['registry_years_available'] = REGISTRY_YEARS_AVAILABLE
     risk_free_rate, risk_free_source = fetch_risk_free_rate(db)
     valuation_parameters = _methodology_parameters(db)
+
+    # Parameter classifier ikut masuk sidik cache: kalau ambangnya berubah, tipe
+    # dihitung ulang alih-alih dipakai dari cache lama.
+    classifier_parameters = classifier_parameter_snapshot()
+    stock_type_cache = _stock_type_cache(db, instrument_id)
+    print(
+        f'  stock-type cache: {len(stock_type_cache)} case(s) reusable '
+        f'by input fingerprint'
+    )
 
     results = calculate_cases(
         periods,
@@ -1036,8 +1574,13 @@ def run_ticker(
         valuation_inputs={
             'ticker': ticker,
             'instrument': instrument,
+            'instrument_id': instrument_id,
             'stock_type': stock_type,
             'stock_type_error': classification_error,
+            # D7: tipe dihitung ulang per kasus, memakai potongan PIT kasus itu.
+            'per_case_stock_type': True,
+            'classifier_parameters': classifier_parameters,
+            'stock_type_cache': stock_type_cache,
             'annual_periods': [row for row in periods if row.get('period_type') == 'ANNUAL'],
             'periods': periods,
             'facts': facts,
@@ -1057,6 +1600,15 @@ def run_ticker(
         'price_count': len(prices),
         'stock_type': stock_type,
         'classification_run_id': classification_run_id,
+        'stock_type_cache_size': len(stock_type_cache),
+        'stock_type_recomputed': sum(
+            1 for result in results
+            if (result.get('valuation') or {}).get('stock_type_source') == 'RECOMPUTED'
+        ),
+        'stock_type_reused': sum(
+            1 for result in results
+            if (result.get('valuation') or {}).get('stock_type_source') == 'CACHE'
+        ),
         'run_id': None,
     }
 
@@ -1072,6 +1624,9 @@ def run_ticker(
                 'peak_price': result['metrics']['peak_price'],
                 'trough_price': result['metrics']['trough_price'],
                 'peak_month': result['metrics']['peak_month'],
+                'stock_type': (result.get('valuation') or {}).get('stock_type'),
+                'stock_type_raw': (result.get('valuation') or {}).get('stock_type_raw'),
+                'stock_type_source': (result.get('valuation') or {}).get('stock_type_source'),
                 'years_available': (result.get('valuation') or {}).get('years_available'),
                 'consensus': (result.get('valuation') or {}).get('consensus'),
                 'mos_main': (result.get('valuation') or {}).get('mos_main'),
@@ -1120,6 +1675,12 @@ def run_ticker(
         'years_available_rule': 'min(registry_years, annual_on_or_before_analysis_date)',
         'fact_row_count': len(facts),
         'dividend_row_count': len(dividends),
+        # D7: tipe dihitung per kasus. Aturan dan sidik parameternya masuk
+        # snapshot supaya perubahan aturan tipe (atau ambangnya) menghasilkan
+        # kunci idempotensi baru, bukan run lama yang dipakai ulang.
+        'stock_type_rule': 'metrics_classification_recomputed_per_case',
+        'classifier_parameters': _json_value(classifier_parameters),
+        'stock_type_fingerprint_version': STOCK_TYPE_FINGERPRINT_VERSION,
     }
     run_id = _store(
         db,
@@ -1159,7 +1720,9 @@ def main(argv: list[str] | None = None) -> int:
         print(
             f'{ticker}: cases={summary["case_count"]} '
             f'periods={summary["period_count"]} prices={summary["price_count"]} '
-            f'stock_type={summary.get("stock_type")}'
+            f'stock_type={summary.get("stock_type")} '
+            f'recomputed={summary.get("stock_type_recomputed")} '
+            f'cached={summary.get("stock_type_reused")}'
             + (f' run_id={summary["run_id"]}' if summary.get('run_id') else '')
         )
         for case in summary.get('cases', []):
@@ -1169,6 +1732,7 @@ def main(argv: list[str] | None = None) -> int:
                 f'h12={case["high_12m"]} l12={case["low_12m"]} '
                 f'peak={case["peak_price"]} trough={case["trough_price"]} '
                 f'peak_month={case["peak_month"]} '
+                f'type={case.get("stock_type")} ({case.get("stock_type_source")}) '
                 f'years={case["years_available"]} consensus={case["consensus"]} '
                 f'mos_main={case["mos_main"]} ({case["mos_method_code"]}) '
                 f'{case["calculation_status"]} {case["flags"]}'

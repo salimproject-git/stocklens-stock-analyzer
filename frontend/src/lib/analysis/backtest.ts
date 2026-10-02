@@ -52,12 +52,6 @@ export function backtestConsensusDescription(kind: "method" | "mos") {
   return `Undervalued when MoS Main is ${mosPercent}% or higher. Below ${mosPercent}% means overvalued.`;
 }
 
-export function buildBacktestOutcomeExplanation() {
-  const upsidePercent = backtestMethodology.upsideThreshold * 100;
-  const downsidePercent = Math.abs(backtestMethodology.downsideThreshold) * 100;
-  return `A WIN means the case reached the +${upsidePercent}% target before the -${downsidePercent}% downside`;
-}
-
 export function classifyMosMain(mosMain: number | null) {
   return mosMain !== null && mosMain >= backtestMethodology.classification.mosMainThreshold
     ? "UNDERVALUED" as const

@@ -1,5 +1,5 @@
 import React from "react";
-import { StockDetail } from "@/data/mock-stock-details";
+import { StockDetail, type EvidenceOutcomeBreakdown } from "@/data/mock-stock-details";
 import { SectionCard } from "@/components/ui/section-card";
 import { UnavailableBadge } from "@/components/ui/unavailable-badge";
 import { DemoDataBadge } from "@/components/ui/demo-data-badge";
@@ -20,6 +20,7 @@ export function HistoricalEvidencePreviewCard({
             View Backtest →
           </span>
         }
+        paddingClassName="p-5"
       >
         <div className="flex flex-col items-start gap-2.5">
           <UnavailableBadge label="Not available" />
@@ -43,6 +44,7 @@ export function HistoricalEvidencePreviewCard({
           View Backtest →
         </span>
       }
+      paddingClassName="p-5"
     >
       <div className="grid gap-3 sm:grid-cols-2">
         {evidence.isDemoData && (
@@ -51,80 +53,114 @@ export function HistoricalEvidencePreviewCard({
           </div>
         )}
         {/* Verdict Based Method */}
-        <div className="rounded-xl border border-white/8 bg-[#07111c]/60 p-3.5">
-          <div className="text-[12px] font-semibold text-[#d4dcec]">
-            Verdict Based Method
-          </div>
-
-          <div className="mt-3 space-y-2 text-xs">
-            <div className="flex items-center justify-between gap-3">
-              <span className="text-[#8e9bb0]">Undervalued</span>
-              <span className="font-semibold text-white">
-                {evidence.verdictMethod.undervalued}
-              </span>
-            </div>
-
-            <div className="flex items-center justify-between gap-3">
-              <span className="text-[#8e9bb0]">Overvalued</span>
-              <span className="font-semibold text-white">
-                {evidence.verdictMethod.overvalued}
-              </span>
-            </div>
-          </div>
-
-          <div className="mt-3 border-t border-white/8 pt-2.5">
-            <span className="text-xs font-semibold text-[#3ef0a9]">
-              {evidence.verdictMethod.wins} WIN
-            </span>
-            <span className="ml-2 text-[11px] text-[#7f8c9f]">
-              · {evidence.verdictMethod.winRate}
-            </span>
-          </div>
-        </div>
+        <VerdictOutcomePanel
+          title="Verdict Based Method"
+          breakdown={evidence.verdictMethod}
+        />
 
         {/* Verdict Based MoS */}
-        <div className="rounded-xl border border-white/8 bg-[#07111c]/60 p-3.5">
-          <div className="text-[12px] font-semibold text-[#d4dcec]">
-            Verdict Based MoS
-          </div>
+        <VerdictOutcomePanel
+          title="Verdict Based MoS"
+          breakdown={evidence.verdictMos}
+        />
+      </div>
+    </SectionCard>
+  );
+}
 
-          <div className="mt-3 space-y-2 text-xs">
-            <div className="flex items-center justify-between gap-3">
-              <span className="text-[#8e9bb0]">Undervalued</span>
-              <span className="font-semibold text-white">
-                {evidence.verdictMos.undervalued}
-              </span>
-            </div>
+function VerdictOutcomePanel({
+  title,
+  breakdown,
+}: {
+  title: string;
+  breakdown: EvidenceOutcomeBreakdown;
+}) {
+  return (
+    <div className="rounded-xl border border-white/8 bg-[#07111c]/60 p-3.5">
+      <div className="text-[12px] font-semibold text-[#d4dcec]">{title}</div>
 
-            <div className="flex items-center justify-between gap-3">
-              <span className="text-[#8e9bb0]">Overvalued</span>
-              <span className="font-semibold text-white">
-                {evidence.verdictMos.overvalued}
-              </span>
-            </div>
-          </div>
+      <div className="mt-3 space-y-2 text-xs">
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-[#8e9bb0]">Undervalued</span>
+          <span className="font-semibold text-white">
+            {breakdown.undervalued}
+          </span>
+        </div>
 
-          <div className="mt-3 border-t border-white/8 pt-2.5">
-            <span className="text-xs font-semibold text-[#3ef0a9]">
-              {evidence.verdictMos.wins} WIN
-            </span>
-            <span className="ml-2 text-[11px] text-[#7f8c9f]">
-              · {evidence.verdictMos.winRate}
-            </span>
-          </div>
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-[#8e9bb0]">Overvalued</span>
+          <span className="font-semibold text-white">
+            {breakdown.overvalued}
+          </span>
         </div>
       </div>
 
-      <div className="mt-3 flex items-start gap-2.5 rounded-xl border border-[#d6a24d]/40 bg-[#2b2212]/80 p-3 text-[11px] leading-relaxed text-[#f4d18b]">
-        <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-[#d6a24d]/50 bg-[#f2bb5c]/20 text-xs">
-          💡
-        </span>
+      {/* The three rates cover every Undervalued case, so they add up to 100%.
+          Each is labelled `<name> %` so the label and the figure need only one
+          line, leaving the row below for what the rate actually counts. */}
+      <div className="mt-3 grid grid-cols-3 gap-3 border-t border-white/8 pt-2.5">
+        <RateBlock
+          label="Win %"
+          value={breakdown.winRate}
+          note="WIN + RECOVERED"
+          valueClassName="text-[#3ef0a9]"
+        />
 
-        <span>
-          {evidence.outcomeExplanation}
-        </span>
+        <RateBlock
+          label="Risk %"
+          value={breakdown.riskRate}
+          note="RISK"
+          valueClassName="text-[#ff827d]"
+          className="border-l border-white/10 pl-3"
+        />
+
+        <RateBlock
+          label="Flat %"
+          value={`${breakdown.flatRate}${breakdown.flatSuffix}`}
+          note="FLAT"
+          valueClassName="text-[#8290a4]"
+          className="border-l border-white/10 pl-3"
+        />
       </div>
-    </SectionCard>
+    </div>
+  );
+}
+
+function RateBlock({
+  label,
+  value,
+  note,
+  valueClassName,
+  className = "",
+}: {
+  label: string;
+  value: string;
+  note: string;
+  valueClassName: string;
+  className?: string;
+}) {
+  return (
+    <div className={["min-w-0", className].join(" ")}>
+      <div className="text-[10px] font-medium uppercase tracking-[0.08em] text-[#7f8c9f]">
+        {label}
+      </div>
+
+      <div
+        className={[
+          "mt-1 text-[18px] font-semibold leading-none",
+          valueClassName,
+        ].join(" ")}
+      >
+        {value}
+      </div>
+
+      {/* Smaller than the label and kept off the wrap path: "WIN + RECOVERED"
+          is the longest of the three and still fits one line in the narrowest
+          column, so a rate never pushes its panel to a second row. */}
+      <div className="mt-1 whitespace-nowrap text-[9px] leading-tight text-[#7f8c9f]">
+        {note}
+      </div>
+    </div>
   );
 }
 

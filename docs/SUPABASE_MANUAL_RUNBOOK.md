@@ -125,6 +125,92 @@ Dua kolom baru ikut ditambahkan sepanjang Fase 4:
 Hasil `1.3.0`: 348 kasus (dari 367), 0 `OBSERVE`, penyebut `/3` 23 kasus, `/4` 74
 kasus, `/5` 225 kasus.
 
+**Versi 1.4.0 - tipe saham per kasus (D7 ditutup).** Hasil lama tetap utuh;
+`1.4.0` adalah versi baru, bukan timpaan.
+
+Sebelumnya `calc_backtest_cases.stock_type` berisi **satu snapshot terbaru** yang
+disalin ke semua kasus, ditandai flag `STOCK_TYPE_LATEST_SNAPSHOT`. Workbook
+menghitung ulang `MetricsClassification` tiap kasus, jadi itu salah secara
+material: tipe memilih bobot referensi (CYCLICAL → PBV-heavy, TURN AROUND →
+aset, dst.), sehingga tipe yang salah menggeser Peter Lynch IV, konsensus, MoS
+Main, `mos_method_code`, verdict, dan kedua Win Rate di UI.
+
+`1.4.0` menghitung ulang tipe **pada tanggal setiap kasus**, dengan potongan
+point-in-time yang sama dengan valuasi kasus itu (lihat
+`docs/BACKTEST_ARCHITECTURE.md` D7). Konsekuensinya:
+
+- flag `STOCK_TYPE_LATEST_SNAPSHOT` **tidak lagi ditulis** (baris lama tetap
+  memuatnya di `flags`-nya sendiri);
+- bobot/ambang tipe dipilih per tipe kasus, bukan per tipe hari ini;
+- `details.stock_type_raw`, `details.base_quarter`, `details.stock_type_fingerprint`,
+  dan `details.stock_type_source` (`RECOMPUTED` / `CACHE` / `GIVEN`) menyimpan
+  provenance tipe per baris.
+
+Cache tipe: kuncinya `(instrument_id, case_quarter)`, dipakai ulang hanya bila
+**sidik input** (`details.stock_type_fingerprint`) masih sama. Revisi laporan,
+perubahan ambang classifier, atau harga/dividen baru pada/sebelum tanggal kasus
+mengubah sidiknya dan memaksa perhitungan ulang; run lama tanpa sidik
+menghasilkan cache kosong.
+
+Hasil perbandingan dengan workbook `Backtest_Historical (New)` kolom `Jenis
+Saham` (277 kasus): 180 (65,0%) cocok sebelum, 201 (72,6%) sesudah; batas atas
+classifier per kasus 215 (77,6%). Sisa 62 mismatch adalah batas metodologi
+(19 GOLD, 11 WIFI, 7 INDF, 6 `BASE_QUARTER_FACT_MISSING`), bukan bug.
+
+Jalankan `python Testing/stock_type_pit_check.py ALL` untuk memeriksa ulang, dan
+`python Testing/stock_type_audit.py` untuk laju mismatch terhadap workbook.
+**Versi growth/quality (bukan backtest) - rasio dividen DPR & Yield.** Hasil
+lama tetap utuh; run baru, bukan timpaan.
+
+Dua metrik annual baru masuk ke `calc_annual_growth_quality`, sehingga baris
+DPR dan Yield pada kartu Dividend Consistency (dan sumbu Yield di chart Dividend
+Trend pada tab Growth) akhirnya terisi:
+
+| Kode | Rumus | Sumber Excel |
+|---|---|---|
+| `DIVIDEND_PAYOUT_RATIO` | `DPS / EPS` | `DataInput!B28` = `B26/B30` |
+| `DIVIDEND_YIELD` | `DPS / harga close akhir tahun fiskal` | `DataInput!B29` = `B26/B25` |
+
+Poin penting:
+
+- **Basis harga Yield adalah point-in-time akhir tahun**, bukan harga terbaru
+  (blueprint §5.8 menandai ini *critical*). Itu sebabnya nilainya **disimpan**
+  sebagai hasil kalkulasi, bukan dihitung di browser: RPC hanya mengirim 260
+  baris harga terakhir, yang untuk GEMA baru mulai Agustus 2025 - tidak ada
+  close 31 Desember 2022-2025 di payload sama sekali.
+- **`dividend_facts.yield_ratio` tetap tidak dipakai** (NULL di semua baris).
+  Kolom provider itu memakai basis TTM/harga yang berbeda dari template.
+- Kedua baris **selalu ada** walau nilainya tidak bisa dihitung, dengan flag
+  `DIVIDEND_PER_SHARE_MISSING` (tidak ada DPS tahun itu) atau `PRICE_MISSING`
+  (tidak ada close di tahun fiskal itu). DPS nol yang tercatat adalah nilai
+  sah (`VALID`), bukan dianggap hilang.
+- **Deviasi sadar dari workbook: EPS negatif menolak DPR.** Workbook AUTO 2020
+  menghasilkan DPR `-19846%` (disebut sendiri oleh blueprint §5.7 sebagai
+  outlier yang diserap `TRIMMEAN`). Di sini `_divide_optional` mengembalikan
+  `NULL` + `NEGATIVE_DENOMINATOR`, mengikuti konvensi `ratio_result` yang
+  dipakai semua rasio lain di modul ini. Efeknya hanya pada **tampilan**:
+  sel 2020 berisi "Not available", bukan angka negatif raksasa. Proyeksi tidak
+  terpengaruh, karena `derive_projection_scenario.annual_dpr_series` memakai
+  seri DPS/EPS-nya sendiri, bukan metrik ini.
+- Verifikasi terhadap workbook GEMA: 2024 DPR `43,6%` (workbook `43,6%`),
+  2025 `22,6%` (`22,6%`), 2020 `632,9%` (`634,6%` - selisih dari
+  `OUTSTANDING_SHARES` provider yang dibulatkan). Yield 2024/2025 `3,09%`
+  (workbook `3,1%`), 2020 `1,45%` (`1,4%`).
+
+Dua perubahan pendukung yang menyertainya:
+
+1. `populate_growth_quality.py` kini membaca `dividend_facts` dan `prices_daily`
+   dan memasukkannya ke `input_snapshot` run, sehingga dividen yang berubah atau
+   harga yang direvisi membuat run baru - bukan meninggalkan rasio lama yang basi.
+2. `supabase/migrations/0028_stock_research_latest_growth_run.sql` memaku bacaan
+   `calc_annual_growth_quality` dan `calc_quarterly_quality` di RPC ke run
+   `QUARTERLY_GROWTH_QUALITY` **terbaru**. Tanpa itu, menambah input ke snapshot
+   membuat run kedua dan RPC - yang join-nya hanya lewat `instrument_id` - akan
+   mengembalikan setiap metrik annual dua kali. Ini cacat yang sama dengan yang
+   diperbaiki `0021` untuk valuasi dan `0026` untuk backtest.
+
+
+
 UI: `get_stock_backtest` dibaca di `app/market/[ticker]/page.tsx` bersama
 `get_stock_research_data` (dua-duanya paralel), lalu diadaptasi oleh
 `frontend/src/lib/backtest-adapter.ts`. Verdict **ditampilkan apa adanya** dari
@@ -147,8 +233,11 @@ akan menolak jalan (`BACKTEST_METHODOLOGY_REGISTRY_DRIFT`) kalau hash di registr
 tidak lagi cocok dengan kode, dan itu memang sinyal untuk menaikkan versi.
 
 Jalankan tanpa `--apply` untuk melihat angkanya lebih dulu. Ticker yang
-classifier-nya belum menghasilkan tipe (INDF, JSMR) tetap tersimpan metrik
-harganya, dengan valuasi bertanda `VALUATION_UNAVAILABLE` dan alasannya.
+classifier-nya tidak menemukan aturan yang cocok **pada tanggal kasus** (GOLD,
+JSMR, INDF) tetap tersimpan metrik harganya, dengan valuasi bertanda
+`VALUATION_UNAVAILABLE` dan alasan `STOCK_TYPE_UNRESOLVED` di
+`details.methods[].details.reason`. Tipe mentah classifier tersimpan di
+`details.stock_type_raw` supaya bisa dibandingkan dengan workbook.
 
 Yang **tidak** lagi perlu dikerjakan manual:
 
@@ -715,7 +804,7 @@ Daftar grafik yang **masih kosong** dan perlu diisi satu per satu:
 | Grafik | Sumber data yang dibutuhkan |
 |---|---|
 | Price Chart (Overview) | `prices_daily.close_price` untuk ticker tersebut (sudah ada untuk AMRT/AUTO/MIDI; ticker lain belum di-ingest) |
-| Dividend Trend (Growth) | `dividend_facts` + `yield_ratio`; **`yield_ratio` masih NULL** untuk semua baris, jadi sumbu yield kosong walau DPS ada |
+| Dividend Trend (Growth) | `dividend_facts` untuk DPS, dan `DIVIDEND_YIELD` dari `calc_annual_growth_quality` untuk sumbu yield. `dividend_facts.yield_ratio` sendiri **masih NULL** dan tidak dipakai (basis TTM/harga berbeda dari template) |
 | Backtest & Historical Evidence | Belum ada tabel backtest; untuk ticker selain AUTO memang kosong, untuk AUTO masih data contoh (`DemoDataBadge`) |
 | DDM & Discounted Earnings (Valuation) | Sudah terisi setelah `--risk-free-from-reference` dijalankan; ticker yang belum di-run ulang masih `UNAVAILABLE` |
 
@@ -775,7 +864,7 @@ Verifikasi terhadap angka workbook: AUTO 2026-Q2 = `9.224.000.000` IDR → tampi
 
 | Metrik | Status di tabel | Dampak |
 |---|---|---|
-| `dividend_facts.yield_ratio` | **NULL di seluruh 21 baris** | Sumbu Yield pada chart Dividend Trend kosong; DPS tetap ada |
+| `dividend_facts.yield_ratio` | **NULL di seluruh baris** | Tidak dipakai; sumbu Yield pada chart Dividend Trend kini membaca `DIVIDEND_YIELD` yang dihitung (lihat bagian 1.5) |
 | `dividend_facts.event_date` | **NULL di seluruh 21 baris** | Tidak ada tanggal pembayaran dividen |
 | `financial_periods.report_date` / `available_date` | **NULL di seluruh 99 periode** | Output belum point-in-time; backtest belum aman secara as-of |
 | `COST_OF_REVENUE` (ANNUAL) | 3 baris `MISSING` (2019 di ketiga ticker) | Baris 2019 kosong; tahun lain lengkap |

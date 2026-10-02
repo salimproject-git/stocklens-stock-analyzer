@@ -1,12 +1,22 @@
-import { VALUATION_METHOD_LABELS } from "@/lib/valuation-methods";
+import { VALUATION_METHOD_LABELS, type ValuationMethodCode } from "@/lib/valuation-methods";
+
+/**
+ * Which rule acts as the main rule, per `SUMMARY!B69`: stalwart / fast grower use
+ * the blended rule, every other stock type uses the adaptive Peter Lynch rule.
+ *
+ * Returns the **code** so callers can compare it against stored rows. The
+ * workbook's other main-rule candidate is `TYPE_SECTOR_WEIGHTED`; the two
+ * together are the pair the UI calls "Weighted IV" and "Peter Lynch".
+ */
+export function preferredMainMethodCode(stockType: string): ValuationMethodCode {
+  const normalizedStockType = stockType.trim().toLowerCase();
+  return normalizedStockType === "stalwart" || normalizedStockType === "fast grower"
+    ? "TYPE_SECTOR_WEIGHTED"
+    : "PETER_LYNCH";
+}
 
 export function getMainValuationMethod(stockType: string) {
-  const normalizedStockType = stockType.trim().toLowerCase();
-  // Mirrors `SUMMARY!B69`: stalwart / fast grower use the blended rule, every
-  // other stock type uses the adaptive Peter Lynch rule.
-  return normalizedStockType === "stalwart" || normalizedStockType === "fast grower"
-    ? VALUATION_METHOD_LABELS.TYPE_SECTOR_WEIGHTED
-    : VALUATION_METHOD_LABELS.PETER_LYNCH;
+  return VALUATION_METHOD_LABELS[preferredMainMethodCode(stockType)];
 }
 
 export type FinancialMetricStatus = "EXPANDING" | "CONTRACTING" | "STABLE_MARGIN" | "IMPROVING" | "DECLINING" | "STRONG_CASH_CONVERSION" | "MODERATE_CASH_CONVERSION" | "WEAK_CASH_CONVERSION" | "ABOVE_AVERAGE" | "BELOW_AVERAGE" | "IN_LINE_WITH_AVERAGE";

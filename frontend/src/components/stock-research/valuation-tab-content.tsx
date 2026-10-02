@@ -3,8 +3,7 @@ import { StockDetail } from '@/data/mock-stock-details'
 import { SectionCard } from '@/components/ui/section-card'
 import { StatusBadge } from '@/components/ui/status-badge'
 import { formatRupiah } from '@/utils/currency'
-import { getMainValuationMethod } from '@/lib/analysis'
-import { valuationMethodColor, valuationMethodShortLabel } from '@/lib/valuation-methods'
+import { valuationMethodColor, valuationMethodShortLabel, type ValuationMethodStatus } from '@/lib/valuation-methods'
 import { VALUATION_LENS_CARDS } from '@/data/valuation-lenses'
 import { UnavailableBadge } from '@/components/ui/unavailable-badge'
 import { ChartEmptyState } from '@/components/ui/chart-empty-state'
@@ -17,10 +16,28 @@ function formatChangePercent(value: number | null) {
   return `${sign}${new Intl.NumberFormat('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value)}% today`;
 }
 
+function methodStatusTone(status: ValuationMethodStatus) {
+  if (status === "UNDERVALUED") return "undervalued" as const;
+  if (status === "SKIPPED") return "skipped" as const;
+  return "overvalued" as const;
+}
+
+/**
+ * A skipped method has no MoS to colour, so the cell must not inherit the
+ * negative/positive tone: "Not available" is neither.
+ */
+function marginOfSafetyTone(marginOfSafety: string) {
+  if (marginOfSafety === "Not available") return "text-[#9aa9bf]";
+  return marginOfSafety.startsWith("-") ? "text-[#ff8b82]" : "text-[#3ef0a9]";
+}
+
 export function ValuationTabContent({ stock }: { stock: StockDetail }) {
-  const mainMethod = getMainValuationMethod(stock.stockType);
   const valuation = stock.currentValuation;
   const methods = valuation.methods;
+  // The badge follows `mainMethodCode`, not the stock type, so it stays on the
+  // row whose numbers the headline actually uses — including after the fallback
+  // that fires when the preferred rule values the company at or below zero.
+  const mainMethodCode = valuation.mainMethodCode;
   const hasMethods = methods.length > 0;
   const hasCurrentPrice = valuation.currentPrice != null;
   const points = methods.map((method) => ({
@@ -47,7 +64,7 @@ export function ValuationTabContent({ stock }: { stock: StockDetail }) {
        <div className='grid items-stretch gap-4 xl:grid-cols-[minmax(0,7fr)_minmax(280px,3fr)]'>{hasMethods && hasCurrentPrice ? <EqualSpacedSpectrum currentPrice={valuation.currentPrice as number} points={points} /> : <div className='flex min-h-[160px] flex-col items-center justify-center gap-2.5 rounded-2xl border border-white/[0.08] bg-[#07111c]/65 p-6 text-center'><UnavailableBadge /><p className='text-xs leading-relaxed text-[#8e9bb0]'>No stored valuation result to compare against the current price.</p></div>}<div className='h-full rounded-2xl border border-[#d6a24d]/25 bg-[#1d1b15] p-4'><div className='flex items-center gap-2 text-sm font-semibold text-[#f2d18f]'><InsightIcon />Key Takeaway</div><p className='mt-3 text-xs leading-6 text-[#d2dbea]'>{valuation.comparison.takeaway}</p><ul className='mt-4 space-y-2 text-xs text-[#b9c6d8]'>{valuation.comparison.readouts.map((readout) => <li key={readout}>- {readout}</li>)}</ul></div></div>
     </SectionCard>
     <SectionCard icon={<SectionIcon kind='methods' />} title='Valuation Methods' subtitle='Intrinsic value estimates using different valuation approaches.' className='p-5 md:p-6'>
-      <div className='overflow-x-auto rounded-xl border border-white/[0.08]'>{!hasMethods && <div className='flex flex-col items-start gap-2.5 p-4'><UnavailableBadge /><p className='text-xs leading-relaxed text-[#8e9bb0]'>No valuation result is stored in the database for this ticker yet.</p></div>}<table className='w-full min-w-[900px] border-collapse text-left text-xs'><thead className='bg-[#081523] text-[10px] uppercase tracking-[0.1em] text-[#7f8fa6]'><tr>{['Method', 'Intrinsic Value', 'Potential', 'Margin of Safety', 'Status', 'How it works'].map(heading => <th key={heading} className='px-4 py-3'>{heading}</th>)}</tr></thead><tbody>{methods.map(({ method, intrinsicValue, potential, marginOfSafety, status, description }) => <tr key={method} className='border-t border-white/[0.07]'><td className='whitespace-nowrap px-4 py-4 font-medium text-white'><span className='inline-flex items-center gap-2'>{method}{method === mainMethod && <span className='rounded-md border border-[#d6a24d]/45 bg-[#f2bb5c]/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#f2d18f]'>Main</span>}</span></td><td className='px-4 py-4 font-semibold text-[#f2d18f]'>{formatRupiah(intrinsicValue)}</td><td className={`px-4 py-4 font-semibold ${potential.startsWith('+') ? 'text-[#3ef0a9]' : 'text-[#ff8b82]'}`}>{potential}</td><td className={`px-4 py-4 font-semibold ${marginOfSafety.startsWith('-') ? 'text-[#ff8b82]' : 'text-[#3ef0a9]'}`}>{marginOfSafety}</td><td className='px-4 py-4'><StatusBadge tone={status === 'UNDERVALUED' ? 'undervalued' : 'overvalued'}>{status}</StatusBadge></td><td className='px-4 py-4 text-[#9aa9bf]'>{description}</td></tr>)}</tbody></table></div>
+      <div className='overflow-x-auto rounded-xl border border-white/[0.08]'>{!hasMethods && <div className='flex flex-col items-start gap-2.5 p-4'><UnavailableBadge /><p className='text-xs leading-relaxed text-[#8e9bb0]'>No valuation result is stored in the database for this ticker yet.</p></div>}<table className='w-full min-w-[900px] border-collapse text-left text-xs'><thead className='bg-[#081523] text-[10px] uppercase tracking-[0.1em] text-[#7f8fa6]'><tr>{['Method', 'Intrinsic Value', 'Margin of Safety', 'Status', 'How it works'].map(heading => <th key={heading} className='px-4 py-3'>{heading}</th>)}</tr></thead><tbody>{methods.map(({ method, methodCode, intrinsicValue, marginOfSafety, status, description }) => <tr key={method} className='border-t border-white/[0.07]'><td className='whitespace-nowrap px-4 py-4 font-medium text-white'><span className='inline-flex items-center gap-2'>{method}{methodCode === mainMethodCode && <span className='rounded-md border border-[#d6a24d]/45 bg-[#f2bb5c]/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#f2d18f]'>Main</span>}</span></td><td className='px-4 py-4 font-semibold text-[#f2d18f]'>{formatRupiah(intrinsicValue)}</td><td className={`px-4 py-4 font-semibold ${marginOfSafetyTone(marginOfSafety)}`}>{marginOfSafety}</td><td className='px-4 py-4'><StatusBadge tone={methodStatusTone(status)}>{status}</StatusBadge></td><td className='px-4 py-4 text-[#9aa9bf]'>{description}</td></tr>)}</tbody></table></div>
     </SectionCard>
     <SectionCard icon={<SectionIcon kind='compare' />} title='Why the Methods Differ?' subtitle='Each valuation method looks at the company from a different perspective, which leads to different intrinsic value estimates.' className='p-5 md:p-6'>
       <div className='grid gap-3 md:grid-cols-3'>

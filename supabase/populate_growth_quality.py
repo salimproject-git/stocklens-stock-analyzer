@@ -132,6 +132,8 @@ def _prepare_outputs(
     run_id: str,
     methodology_version_id: str,
     years_available: int,
+    dividend_rows: Sequence[Mapping[str, Any]] = (),
+    prices: Sequence[Mapping[str, Any]] = (),
 ) -> dict[str, list[dict[str, Any]]]:
     annual_periods = [p for p in periods if p.get('period_type') == 'ANNUAL']
     quarter_periods = [p for p in periods if p.get('period_type') == 'QUARTER']
@@ -158,6 +160,8 @@ def _prepare_outputs(
             run_id,
             methodology_version_id=methodology_version_id,
             years_available=None,
+            dividend_rows=dividend_rows,
+            prices=prices,
         )
         if any(row.get('financial_period_id') != str(target_period['id']) for row in snapshot_rows):
             raise CalculationError(
@@ -186,6 +190,8 @@ def _input_snapshot(
     periods: Sequence[Mapping[str, Any]],
     facts: Sequence[Mapping[str, Any]],
     years_available: int,
+    dividend_rows: Sequence[Mapping[str, Any]] = (),
+    prices: Sequence[Mapping[str, Any]] = (),
 ) -> dict[str, Any]:
     sorted_periods = sorted(
         (dict(p) for p in periods),
@@ -199,6 +205,36 @@ def _input_snapshot(
             str(f.get('revision_key') or ''),
         ),
     )
+    # The dividend ratios read DPS and the year-end close, so both enter the
+    # input snapshot. Without them, a changed dividend or a restated price would
+    # keep the same idempotency key and the stored ratio would go stale.
+    sorted_dividends = sorted(
+        (
+            {
+                'fact_type': str(row.get('fact_type') or ''),
+                'period_year': row.get('period_year'),
+                'amount_per_share': (
+                    None if row.get('amount_per_share') is None
+                    else format_decimal(Decimal(str(row.get('amount_per_share'))))
+                ),
+            }
+            for row in dividend_rows
+        ),
+        key=lambda row: (str(row.get('fact_type') or ''), str(row.get('period_year') or '')),
+    )
+    sorted_prices = sorted(
+        (
+            {
+                'trading_date': str(row.get('trading_date') or ''),
+                'close_price': (
+                    None if row.get('close_price') is None
+                    else format_decimal(Decimal(str(row.get('close_price'))))
+                ),
+            }
+            for row in prices
+        ),
+        key=lambda row: str(row.get('trading_date') or ''),
+    )
     return {
         'ticker': ticker,
         'instrument_id': instrument_id,
@@ -207,13 +243,22 @@ def _input_snapshot(
         'point_in_time_status': 'UNVERIFIED_REPORT_AND_AVAILABLE_DATES_MISSING',
         'periods': sorted_periods,
         'facts': sorted_facts,
+        'dividends': sorted_dividends,
+        'prices': sorted_prices,
     }
 
 
 def _load_live_source(
     db: SupabaseRest,
     ticker: str,
-) -> tuple[dict[str, Any], list[dict[str, Any]], list[dict[str, Any]], str]:
+) -> tuple[
+    dict[str, Any],
+    list[dict[str, Any]],
+    list[dict[str, Any]],
+    str,
+    list[dict[str, Any]],
+    list[dict[str, Any]],
+]:
     instrument_rows = db.get_all(
         'instruments',
         {
@@ -254,7 +299,31 @@ def _load_live_source(
                 },
             )
         )
-    return instrument, periods, facts, instrument_id
+
+    # Dividend ratios need DPS (per fiscal year) and the year-end close, which is
+    # a price basis. Both are read here rather than in the engine because the
+    # engine is pure: it must not know how to query the database.
+    dividend_rows = _paged_get(
+        db.session,
+        db.rest_url,
+        'dividend_facts',
+        {
+            'instrument_id': 'eq.' + instrument_id,
+            'select': 'fact_type,period_year,amount_per_share,currency_code',
+            'order': 'period_year.asc',
+        },
+    )
+    prices = _paged_get(
+        db.session,
+        db.rest_url,
+        'prices_daily',
+        {
+            'instrument_id': 'eq.' + instrument_id,
+            'select': 'trading_date,close_price',
+            'order': 'trading_date.asc',
+        },
+    )
+    return instrument, periods, facts, instrument_id, dividend_rows, prices
 
 
 def _methodology_version_id(db: SupabaseRest) -> str:
@@ -439,6 +508,8 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     if args.offline_fixture:
         instrument, periods, facts, instrument_id = _load_offline_fixture(args.offline_fixture)
+        dividend_rows: list[dict[str, Any]] = []
+        prices: list[dict[str, Any]] = []
         methodology_version_id = 'offline-methodology-version'
         db = None
     else:
@@ -447,7 +518,14 @@ def main(argv: Sequence[str] | None = None) -> int:
             os.getenv('SUPABASE_URL', ''),
             os.getenv('SUPABASE_SERVICE_ROLE_KEY', ''),
         )
-        instrument, periods, facts, instrument_id = _load_live_source(db, ticker)
+        (
+            instrument,
+            periods,
+            facts,
+            instrument_id,
+            dividend_rows,
+            prices,
+        ) = _load_live_source(db, ticker)
         methodology_version_id = _methodology_version_id(db)
 
     _assert_source(periods, args.years_available)
@@ -457,6 +535,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         periods=periods,
         facts=facts,
         years_available=args.years_available,
+        dividend_rows=dividend_rows,
+        prices=prices,
     )
     annual_periods = [p for p in periods if p.get('period_type') == 'ANNUAL']
     quarter_periods = [p for p in periods if p.get('period_type') == 'QUARTER']
@@ -492,6 +572,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         run_id=run_id,
         methodology_version_id=methodology_version_id,
         years_available=args.years_available,
+        dividend_rows=dividend_rows,
+        prices=prices,
     )
     counts = {table: len(rows) for table, rows in output.items()}
     expected_annual_metrics = {row['metric_code'] for row in output[ANNUAL_TABLE]}

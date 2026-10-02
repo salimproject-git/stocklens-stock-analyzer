@@ -9,7 +9,8 @@ type BadgeTone =
   | "info"
   | "stable"
   | "cukup"
-  | "caution";
+  | "caution"
+  | "skipped";
 
 export function StatusBadge({
   tone = "positive",
@@ -30,6 +31,8 @@ export function StatusBadge({
     cukup: "border-[#d9a23c]/40 bg-[#2b2212] text-[#eab308]",
     caution: "border-[#ff4b5f]/35 bg-[#32161e] text-[#ff5f73]",
     overvalued: "border-[#ff4b5f]/35 bg-[#32161e] text-[#ff5f73]",
+    // Neutral, not red: a skipped method is "not applicable", not a verdict.
+    skipped: "border-[#8f9db1]/30 bg-[#1a2332]/60 text-[#9aa9bf]",
   };
 
   return (

@@ -1,13 +1,29 @@
 import React from "react";
 import { StockDetail } from "@/data/mock-stock-details";
 import { formatRupiah } from "@/utils/currency";
-import { getMainValuationMethod } from "@/lib/analysis";
+import { EVIDENCE_RATE_UNAVAILABLE } from "@/lib/analysis";
+import { valuationMethodLabel } from "@/lib/valuation-methods";
 import { toDayLabel } from "@/utils/dates";
 export function KeyMetricSummary({ stock }: { stock: StockDetail }) {
   // The card states *when* the price was last refreshed instead of a daily
   // change: the database stores point-in-time closes, so a "% today" figure
   // would imply an intraday feed the pipeline does not have.
   const lastDataLabel = `Last updated: ${toDayLabel(stock.updatedAt) ?? "Not available"}`;
+
+  // The label follows the row that actually supplies the headline figures, not
+  // the stock type's preferred rule: when that rule values the company at or
+  // below zero the headline comes from the other rule, and naming the wrong one
+  // would misattribute the number.
+  const mainMethodName = stock.currentValuation.mainMethodCode
+    ? valuationMethodLabel(stock.currentValuation.mainMethodCode)
+    : "Not available";
+
+  // A margin of safety can be negative (the price sits above the intrinsic
+  // value), so the subtext and its colour follow the sign instead of always
+  // claiming a discount.
+  const mos = stock.mos;
+  const mosTone: "green" | "slate" | "red" = mos == null ? "slate" : mos >= 0 ? "green" : "red";
+  const mosSubtext = mos == null ? "Not available" : mos >= 0 ? "Below intrinsic value" : "Above intrinsic value";
 
   return (
     <section className="mb-6 grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-5">
@@ -26,7 +42,7 @@ export function KeyMetricSummary({ stock }: { stock: StockDetail }) {
         label="Intrinsic Value"
         value={formatRupiah(stock.intrinsicValue)}
         subtext="Estimated fair value"
-        secondarySubtext={`Method: ${getMainValuationMethod(stock.stockType)}`}
+        secondarySubtext={`Method: ${mainMethodName}`}
         subtextTone="slate"
         icon={<DatabaseIcon className="h-4 w-4" />}
         iconTone="blue"
@@ -35,12 +51,12 @@ export function KeyMetricSummary({ stock }: { stock: StockDetail }) {
       {/* 3. Margin of Safety */}
       <KeyMetricCard
         label="Margin of Safety"
-        value={stock.mos != null ? `${stock.mos.toFixed(1).replace(".", ",")}%` : "Not available"}
-        subtext="Below intrinsic value"
-        secondarySubtext={`Method: ${getMainValuationMethod(stock.stockType)}`}
-        subtextTone="green"
+        value={mos != null ? `${mos.toFixed(1).replace(".", ",")}%` : "Not available"}
+        subtext={mosSubtext}
+        secondarySubtext={`Method: ${mainMethodName}`}
+        subtextTone={mosTone}
         icon={<ShieldCheckIcon className="h-4 w-4" />}
-        iconTone="green"
+        iconTone={mosTone === "red" ? "gold" : "green"}
       />
 
       {/* 4. Stock Character */}
@@ -56,12 +72,8 @@ export function KeyMetricSummary({ stock }: { stock: StockDetail }) {
       {/* 5. Historical Evidence */}
       <KeyMetricCard
         label="Historical Evidence"
-        value={
-          stock.evidenceWins != null && stock.evidenceTotal != null
-            ? `${stock.evidenceWins} / ${stock.evidenceTotal}`
-            : "Not available"
-        }
-        subtext="successful cases"
+        valueSlot={<EvidenceWinRates rates={stock.evidenceWinRates} />}
+        subtext="Successful cases"
         secondarySubtext="Similar conditions in the past"
         subtextTone="slate"
         icon={<BarChartIcon className="h-4 w-4" />}
@@ -71,9 +83,62 @@ export function KeyMetricSummary({ stock }: { stock: StockDetail }) {
   );
 }
 
+/**
+ * The two Historical Evidence win rates side by side.
+ *
+ * Both rules are shown because they disagree by design: the five-method
+ * consensus and the `MoS Main >= 30%` rule flag different cases, so a single
+ * figure would hide the other. Each figure keeps its own `by ...` label so
+ * `100%` next to `47.1%` stays readable.
+ */
+function EvidenceWinRates({
+  rates,
+}: {
+  rates: StockDetail["evidenceWinRates"];
+}) {
+  return (
+    <div className="grid grid-cols-2 gap-3">
+      <EvidenceRate label="by Method" value={rates.method} />
+      <EvidenceRate label="by MoS" value={rates.mos} className="border-l border-white/10 pl-3" />
+    </div>
+  );
+}
+
+function EvidenceRate({
+  label,
+  value,
+  className = "",
+}: {
+  label: string;
+  value: string;
+  className?: string;
+}) {
+  // "Not available" is a word, not a figure. At `text-xl` it wraps to two lines
+  // in a half-width column and makes this card taller than the other four, so
+  // the unavailable state drops a size and stays on one line.
+  const isUnavailable = value === EVIDENCE_RATE_UNAVAILABLE;
+
+  return (
+    <div className={["min-w-0", className].join(" ")}>
+      <div
+        className={[
+          "mt-1 font-bold tracking-tight",
+          isUnavailable ? "text-[11px] text-[#8e9bb0]" : "text-xl text-white",
+        ].join(" ")}
+      >
+        {value}
+      </div>
+      <div className="text-[10px] font-medium uppercase tracking-[0.08em] text-[#7f8c9f]">
+        {label}
+      </div>
+    </div>
+  );
+}
+
 function KeyMetricCard({
   label,
   value,
+  valueSlot,
   subtext,
   secondarySubtext,
   subtextTone = "slate",
@@ -81,7 +146,14 @@ function KeyMetricCard({
   iconTone = "blue",
 }: {
   label: string;
-  value: string;
+  /** Single-line value. Ignored when `valueSlot` is provided. */
+  value?: string;
+  /**
+   * Custom value area for cards that need more than one figure (the two
+   * Historical Evidence win rates). Replaces `value` so the other four cards
+   * keep the shared `text-xl` treatment.
+   */
+  valueSlot?: React.ReactNode;
   subtext?: string;
   secondarySubtext?: string;
   subtextTone?: "green" | "slate" | "red";
@@ -118,9 +190,11 @@ function KeyMetricCard({
             </span>
           )}
         </div>
-        <div className="mt-2.5 text-xl font-bold tracking-tight text-white">
-          {value}
-        </div>
+        {valueSlot ?? (
+          <div className="mt-2.5 text-xl font-bold tracking-tight text-white">
+            {value}
+          </div>
+        )}
       </div>
       {(subtext || secondarySubtext) && (
         <div className="mt-3">

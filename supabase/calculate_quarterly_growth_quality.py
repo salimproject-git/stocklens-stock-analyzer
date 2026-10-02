@@ -63,11 +63,13 @@ from calculation_v1_common import (
     FLAG_CAGR_PERIOD_ZERO,
     FLAG_COMPARISON_PERIOD_MISSING,
     FLAG_DENOMINATOR_ZERO,
+    FLAG_DIVIDEND_PER_SHARE_MISSING,
     FLAG_EPS_DERIVED_FROM_EARNINGS,
     FLAG_MEAN_ZERO,
     FLAG_NEGATIVE_BASE,
     FLAG_NEGATIVE_DENOMINATOR,
     FLAG_NEGATIVE_SERIES_VALUE,
+    FLAG_PRICE_MISSING,
     FLAG_QUARTERLY_COMPARISON_MISSING,
     FLAG_SERIES_INSUFFICIENT,
     FLAG_STATEMENT_SCOPE_UNKNOWN,
@@ -133,6 +135,11 @@ ANNUAL_GROWTH_METRICS: tuple[str, ...] = (
     'QUALITY_REVENUE_MOMENTUM',
     'FORENSIC_DEBT_GROWTH_GAP',
     'FORENSIC_MARGIN_SPIKE',
+    # Dividend ratios (workbook `DataInput!B28` / `B29`, blueprint 5.7 / 5.8).
+    # They live here, not in the projection driver, because they are annual
+    # series metrics like the rest of this tuple: one row per annual snapshot.
+    'DIVIDEND_PAYOUT_RATIO',
+    'DIVIDEND_YIELD',
 )
 
 #: Canonical alias pairs. Quarterly balance-sheet facts use different codes from
@@ -1121,6 +1128,54 @@ def _eps_value(
     return divide(earnings, shares), [FLAG_EPS_DERIVED_FROM_EARNINGS]
 
 
+def _dividend_per_share(
+    dividend_rows: Sequence[Mapping[str, Any]],
+    year: int,
+) -> tuple[Decimal | None, list[str]]:
+    """Total DPS declared for one fiscal year (``DataInput`` DPS row).
+
+    Canonical dividends are stored as ``ANNUAL_TOTAL`` rows keyed by
+    ``period_year``, so a year with no row means "no dividend was recorded" and
+    returns ``UNAVAILABLE`` with ``DIVIDEND_PER_SHARE_MISSING``. A recorded zero
+    is a real value and stays ``VALID``: the workbook's ``DPS`` row genuinely is
+    zero for years a company skipped, and treating that as missing would hide
+    the difference between "paid nothing" and "not loaded".
+    """
+    for row in dividend_rows:
+        if str(row.get('fact_type') or '') != 'ANNUAL_TOTAL':
+            continue
+        if to_decimal(row.get('period_year')) != Decimal(year):
+            continue
+        value = to_decimal(row.get('amount_per_share'))
+        if value is None:
+            return None, [FLAG_DIVIDEND_PER_SHARE_MISSING]
+        return value, []
+    return None, [FLAG_DIVIDEND_PER_SHARE_MISSING]
+
+
+def _year_end_close(
+    prices: Sequence[Mapping[str, Any]],
+    period_end: str,
+) -> tuple[Decimal | None, list[str]]:
+    """Last close in the fiscal year of ``period_end``, on or before it.
+
+    This is the price basis the workbook uses for ``DataInput!B29``
+    (``B26/B25``): the year-end close, **not** the latest price. The XLOOKUP
+    searches backwards for the first date ``<= DATE(year,12,31)``, so a year
+    whose final trading day is not 31 December still resolves correctly.
+    """
+    year_start = period_end[:4] + '-01-01'
+    eligible = [
+        row for row in prices
+        if year_start <= str(row.get('trading_date') or '') <= period_end
+        and to_decimal(row.get('close_price')) is not None
+    ]
+    if not eligible:
+        return None, [FLAG_PRICE_MISSING]
+    selected = max(eligible, key=lambda row: str(row.get('trading_date') or ''))
+    return to_decimal(selected.get('close_price')), []
+
+
 def calculate_annual_growth_outputs(
     periods: Sequence[Mapping[str, Any]],
     facts: Sequence[Mapping[str, Any]],
@@ -1129,6 +1184,8 @@ def calculate_annual_growth_outputs(
     *,
     methodology_version_id: str | None = None,
     years_available: int | None = None,
+    dividend_rows: Sequence[Mapping[str, Any]] = (),
+    prices: Sequence[Mapping[str, Any]] = (),
 ) -> list[dict[str, Any]]:
     """Compute the annual Class-B growth, quality and forensic rows.
 
@@ -1151,6 +1208,8 @@ def calculate_annual_growth_outputs(
     ``QUALITY_REVENUE_MOMENTUM``                ``MetricsClassification!B9``
     ``FORENSIC_DEBT_GROWTH_GAP``                ``FinancialHealth!B16``
     ``FORENSIC_MARGIN_SPIKE``                   ``FinancialHealth!B17``
+    ``DIVIDEND_PAYOUT_RATIO``                   ``DataInput!B28`` = ``B26/B30``
+    ``DIVIDEND_YIELD``                          ``DataInput!B29`` = ``B26/B25``
     ==========================================  ==========================================
 
     ``Years_Avail`` defaults to the count of annual periods with a usable
@@ -1175,6 +1234,22 @@ def calculate_annual_growth_outputs(
     raw labels are preserved in the row's ``flags`` as
     ``REVENUE_MOMENTUM_ACCELERATING`` / ``REVENUE_MOMENTUM_SLOWING`` so the
     textual meaning is not lost.
+
+    ``dividend_rows`` and ``prices`` are optional because the first thirteen
+    metrics are pure fundamental series. They are required only by the two
+    dividend ratios:
+
+    * ``DIVIDEND_PAYOUT_RATIO`` = ``DPS / EPS`` (``DataInput!B28``). ``EPS`` is
+      the same value ``GROWTH_EPS_CAGR_*`` reads, so a year with no earnings
+      produces ``UNAVAILABLE`` rather than a fabricated zero.
+    * ``DIVIDEND_YIELD`` = ``DPS / year-end close`` (``DataInput!B29``). The
+      price basis is **critical** (blueprint 5.8): it is the last close on or
+      before 31 December of that fiscal year, not the latest price.
+
+    Both are emitted for the **anchor** year (the newest year in the window),
+    because a result row belongs to one ``financial_period_id``. The historical
+    series the UI charts is assembled from one snapshot per year, so each
+    year's own snapshot carries that year's DPS and year-end price.
     """
     all_annual_periods = _annual_periods(periods)
     facts_by_period = _facts_by_period(facts)
@@ -1528,6 +1603,73 @@ def calculate_annual_growth_outputs(
         identity=identity,
         value=spike_value,
         flags=spike_flags,
+    )
+
+    # --- DataInput!B28 / B29: dividend payout ratio and dividend yield -------
+    # Both belong to the anchor year, because a result row carries exactly one
+    # `financial_period_id`. The UI's per-year series is built from one snapshot
+    # per year (see `populate_growth_quality._prepare_outputs`), so each year's
+    # snapshot resolves its own DPS and its own year-end close.
+    #
+    # The denominator differs on purpose:
+    #   * DPR = DPS / EPS, so it reuses `_eps_value` - the same accessor the EPS
+    #     CAGR rows read - rather than recomputing EARNINGS / OUTSTANDING_SHARES.
+    #     That keeps one definition of EPS in this module.
+    #   * Yield = DPS / year-end close, which is a *price* basis, so it must not
+    #     use the latest price (`_latest_price` elsewhere) - blueprint 5.8 marks
+    #     this as critical.
+    anchor_year: int | None = None
+    anchor_end = ''
+    if anchor is not None:
+        anchor_end = str(anchor.get('period_end') or '')
+        if anchor_end[:4].isdigit():
+            anchor_year = int(anchor_end[:4])
+
+    if anchor_year is None:
+        dps_value, dps_flags = None, [FLAG_SERIES_INSUFFICIENT]
+    else:
+        dps_value, dps_flags = _dividend_per_share(dividend_rows, anchor_year)
+
+    anchor_eps, anchor_eps_flags = _eps_value(ordered, facts_by_period, 1)
+    # `_rri` documents the distinction this must respect: `EPS_DERIVED_FROM_EARNINGS`
+    # is a *provenance* flag, not a missing-input flag. The value is present and
+    # usable, so it must never refuse the division. Only carry the flag forward,
+    # and only let it block when the value really is absent. The same treatment
+    # is applied to the price side for symmetry.
+    payout_value, payout_flags = _divide_optional(
+        dps_value,
+        anchor_eps,
+        dps_flags,
+        None if anchor_eps is not None else anchor_eps_flags,
+    )
+    if anchor_eps is not None:
+        payout_flags = merge_flags(payout_flags, anchor_eps_flags)
+    _emit(
+        rows,
+        metric_code='DIVIDEND_PAYOUT_RATIO',
+        identity=identity,
+        value=payout_value,
+        flags=payout_flags,
+    )
+
+    if anchor_end:
+        year_end_price, price_flags = _year_end_close(prices, anchor_end)
+    else:
+        year_end_price, price_flags = None, [FLAG_SERIES_INSUFFICIENT]
+    yield_value, yield_flags = _divide_optional(
+        dps_value,
+        year_end_price,
+        dps_flags,
+        None if year_end_price is not None else price_flags,
+    )
+    if year_end_price is not None:
+        yield_flags = merge_flags(yield_flags, price_flags)
+    _emit(
+        rows,
+        metric_code='DIVIDEND_YIELD',
+        identity=identity,
+        value=yield_value,
+        flags=yield_flags,
     )
 
     return rows

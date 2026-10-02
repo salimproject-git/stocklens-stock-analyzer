@@ -19,6 +19,21 @@ export type ValuationMethodCode =
   | "DDM"
   | "DISCOUNTED_EARNINGS";
 
+/**
+ * Display status for one valuation-method row.
+ *
+ * `SKIPPED` is the workbook's `⚪ N/A (Skip)`: the model produced no value
+ * (`IV = 0`, e.g. DDM for a company that has never paid a dividend), so the
+ * method is left out of the comparison rather than being called "overvalued".
+ * The row stays visible — the reader should see that the method exists and was
+ * deliberately skipped, not silently missing.
+ *
+ * A **negative** IV is not skipped: it is a real (if bleak) estimate and keeps
+ * its `OVERVALUED` status. Only its margin of safety is withheld, because the
+ * ratio divides by that value.
+ */
+export type ValuationMethodStatus = "UNDERVALUED" | "OVERVALUED" | "SKIPPED";
+
 /** Fixed display order for every surface that lists valuation methods. */
 export const VALUATION_METHOD_ORDER: ValuationMethodCode[] = [
   "PETER_LYNCH",
