@@ -263,6 +263,79 @@ def methodology_seeds() -> list[dict[str, Any]]:
     return seeds
 
 
+def growth_quality_methodology_seed(
+    method_version: str = '1.1.0',
+) -> dict[str, Any]:
+    """Definisi metodologi `QUARTERLY_GROWTH_QUALITY` versi terbaru.
+
+    Versi `1.0.0` tetap hidup di migrasi `0008` dan tetap dipakai run lama. Baris
+    ini adalah versi **berikutnya**, dibuat karena rumusnya berubah:
+
+    * lapisan rasio tahunan baru (`EPS`, `BVPS`, `ROE`, `GROSS_MARGIN`,
+      `NET_MARGIN`, `TOTAL_ASSETS`, `TOTAL_ASSETS_DERIVED`, dua CAGR jendela)
+      disimpan di `calc_annual_ratios`; dan
+    * `EPS`/`BVPS` memakai **satu** jumlah saham untuk seluruh tabel, mengikuti
+      `=Proj_Shares` di workbook, bukan jumlah saham tahun berjalan.
+
+    Perubahan kedua mengubah angka tersimpan, jadi ia wajib menjadi versi baru -
+    bukan penimpaan `1.0.0` (docs/BACKEND_SINGLE_SOURCE_OF_TRUTH.md §9.2).
+
+    `formula_text` memuat aturan yang menentukan angka, termasuk aturan saham,
+    supaya perubahan aturan terlihat di registry dan hasil lama bisa direproduksi.
+    """
+    from calculation_registry import methodology_hashes
+
+    formula_text = (
+        'Annual Class-B growth, quality and forensic metrics over the trailing '
+        'annual window, plus the annual ratio layer. Revenue/EPS CAGR use RRI over '
+        'the full and comparison windows, falling back to the registered '
+        'linear_normalized rate when the base is negative; CoV is STDEV.P/AVERAGE; '
+        'DPR = DPS / EPS and Yield = DPS / year-end close. Annual ratios: '
+        'EPS = EARNINGS / shares, BVPS = TOTAL_EQUITY / shares, '
+        'ROE = EARNINGS / TOTAL_EQUITY, GROSS_MARGIN = GROSS_PROFIT / REVENUE, '
+        'NET_MARGIN = EARNINGS / REVENUE, TOTAL_ASSETS_DERIVED = TOTAL_LIABILITIES '
+        '+ TOTAL_EQUITY, TOTAL_ASSETS = the reported provider figure, and the two '
+        'window CAGRs refuse rather than approximate when an endpoint is '
+        'non-positive. shares is the workbook Proj_Shares rule: the newest annual '
+        'period reporting a positive OUTSTANDING_SHARES, at full precision, used '
+        'unchanged for every year of the table. Every refusal carries its own flag.'
+    )
+    parameter_spec: dict[str, Any] = {
+        'negative_base_cagr_mode': 'linear_normalized',
+        'years_compare_thresholds': {
+            'years_avail_ge_7': '5', 'years_avail_ge_5': '3',
+            'years_avail_ge_3': '2', 'default': '0',
+        },
+        'payout_trim_historical': '0.2',
+        'yield_trim_historical': '0.2',
+        'cf_status_ocf_ratio': '0.5',
+        'quarterly_yoy_offset_quarters': '3',
+        # Aturan saham rasio tahunan, dipakai EPS dan BVPS.
+        'annual_ratio_shares_rule': 'latest_reported_positive_count_full_precision',
+        'annual_ratio_shares_carried_forward_flag': 'SHARES_CARRIED_FORWARD',
+        'annual_ratio_total_assets_rule': 'reported_value_with_identity_reconciliation',
+    }
+
+    formula_hash, parameter_hash = methodology_hashes(formula_text, parameter_spec)
+    return {
+        'method_code': 'QUARTERLY_GROWTH_QUALITY',
+        'method_version': method_version,
+        'method_name': 'Quarterly Growth and Quality',
+        'description': (
+            'Quarter-on-quarter and year-on-year growth, annual quality and '
+            'forensic metrics, and the annual ratio layer computed from canonical '
+            'facts.'
+        ),
+        'formula_text': formula_text,
+        'formula_hash': formula_hash,
+        'parameter_spec': parameter_spec,
+        'parameter_hash': parameter_hash,
+        'code_version': CODE_VERSION,
+        'input_vocabulary_version': INPUT_VOCABULARY_VERSION,
+        'status': 'DRAFT',
+    }
+
+
 def supplemental_methodology_seeds() -> list[dict[str, Any]]:
     """Methodologies added by later additive migrations.
 

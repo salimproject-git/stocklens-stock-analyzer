@@ -945,17 +945,23 @@ PARAMETERS_BACKTEST: tuple[tuple[str, str, Any, str, str, str, str], ...] = (
         {'upside': '0.2', 'downside': '-0.15'},
         'ratio',
         RESOLUTION_RESOLVED,
-        'frontend/src/lib/analysis/backtest.ts undervalued',
-        'WIN and RISK thresholds applied to an undervalued case.',
+        'supabase/backtest_engine.py VERDICT_UPSIDE (1.20) / VERDICT_DOWNSIDE (0.85)',
+        'WIN and RISK thresholds applied to an undervalued case. One pair now '
+        'serves both classifications; the browser-side copy that used to mirror '
+        'these values was removed with the entry-price simulation, so the '
+        'backend constant is the only live definition.',
     ),
     (
         'backtest_thresholds_overvalued_or_mixed',
         METHOD_BACKTEST_ENGINE,
         {'upside': '0.15', 'downside': '-0.1'},
         'ratio',
-        RESOLUTION_RESOLVED,
-        'frontend/src/lib/analysis/backtest.ts overvaluedOrMixed',
-        'Thresholds applied to an overvalued or mixed case.',
+        RESOLUTION_UNRESOLVED_DEFINITION,
+        'supabase/backtest_engine.py VERDICT_UPSIDE_OTHER / VERDICT_DOWNSIDE_OTHER',
+        'Thresholds applied to an overvalued or mixed case. The engine aliases '
+        'these to the same 1.20/0.85 pair as the undervalued branch, so the '
+        'distinct 0.15/-0.10 values recorded here are historical and no longer '
+        'produced by any live code path.',
     ),
     (
         'backtest_generation_rule',

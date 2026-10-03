@@ -10,6 +10,7 @@ sys.path.insert(0, str(ROOT / 'supabase'))
 
 from valuation_engine import (  # noqa: E402
     ValuationError,
+    calculate_daily_valuation_status,
     calculate_valuation_snapshot,
     comparison_years,
 )
@@ -221,6 +222,111 @@ class ValuationEngineTests(unittest.TestCase):
                 annual_periods=annual, quarterly_periods=quarters, facts=facts,
                 prices=prices, scenario=scenario, valuation_date='2026-06-29',
             )
+
+
+class ValuationMethodMosTests(unittest.TestCase):
+    """Workbook rule D6: `MoS = (IV - price) / IV`, which is not `gap_ratio`.
+
+    `gap_ratio` divides by the *price*. For the AUTO DDM row the two are -0.5739
+    and -1.3467 from identical inputs, so storing one under the other's name would
+    be wrong by a wide margin.
+    """
+
+    def snapshot(self, **overrides):
+        annual, quarters, facts, prices, scenario = fixture_inputs()
+        kwargs = {
+            'ticker': 'AUTO', 'sector': 'Consumer Cyclicals', 'stock_type': 'CYCLICAL',
+            'annual_periods': annual, 'quarterly_periods': quarters, 'facts': facts,
+            'prices': prices, 'scenario': scenario, 'valuation_date': '2026-09-25',
+            'sector_weights': {'w_pe': '3', 'w_pbv': '1'},
+            'type_weights': {'w_pe': '0', 'w_pbv': '10'},
+        }
+        kwargs.update(overrides)
+        return calculate_valuation_snapshot(**kwargs)
+
+    def test_mos_divides_by_the_intrinsic_value_not_the_price(self) -> None:
+        result = self.snapshot()
+        method = next(
+            row for row in result['methods']
+            if row['intrinsic_value'] is not None and row['intrinsic_value'] > 0
+        )
+        price = method['current_price']
+        intrinsic = method['intrinsic_value']
+        self.assertEqual(method['mos'], (intrinsic - price) / intrinsic)
+        self.assertEqual(method['gap_ratio'], (intrinsic - price) / price)
+        # The two are genuinely different numbers, so neither can stand in for
+        # the other.
+        self.assertNotEqual(method['mos'], method['gap_ratio'])
+
+    def test_every_method_row_carries_a_mos_key(self) -> None:
+        result = self.snapshot()
+        self.assertTrue(result['methods'])
+        for method in result['methods']:
+            self.assertIn('mos', method, method['method_code'])
+
+    def test_unavailable_intrinsic_value_has_no_mos_and_no_flag(self) -> None:
+        """No IV means no ratio at all - not a zero, and not a refusal flag."""
+        result = self.snapshot()
+        ddm = next(row for row in result['methods'] if row['method_code'] == 'DDM')
+        self.assertIsNone(ddm['intrinsic_value'])
+        self.assertIsNone(ddm['mos'])
+        self.assertNotIn('MOS_DENOMINATOR_ZERO', ddm['flags'])
+        self.assertNotIn('MOS_NOT_APPLICABLE', ddm['flags'])
+
+    def test_zero_intrinsic_value_is_flagged_as_a_zero_denominator(self) -> None:
+        """IV = 0 is undefined, so the row is flagged rather than given a value.
+
+        The workbook writes `N/A (Skip)` for exactly this case.
+        """
+        from valuation_engine import FLAG_MOS_DENOMINATOR_ZERO
+
+        annual, quarters, facts, prices, scenario = fixture_inputs()
+        # Force Peter Lynch's forward BVPS to zero by zeroing projected equity.
+        scenario = dict(scenario, values={**scenario['values'], 'TOTAL_EQUITY': '0'})
+        result = calculate_valuation_snapshot(
+            ticker='AUTO', sector='Consumer Cyclicals', stock_type='CYCLICAL',
+            annual_periods=annual, quarterly_periods=quarters, facts=facts,
+            prices=prices, scenario=scenario, valuation_date='2026-09-25',
+            sector_weights={'w_pe': '3', 'w_pbv': '1'},
+            type_weights={'w_pe': '0', 'w_pbv': '10'},
+        )
+        zero_iv = [row for row in result['methods'] if row['intrinsic_value'] == 0]
+        self.assertTrue(zero_iv, 'fixture no longer produces a zero-IV method')
+        for method in zero_iv:
+            self.assertIsNone(method['mos'], method['method_code'])
+            self.assertIn(FLAG_MOS_DENOMINATOR_ZERO, method['flags'], method['method_code'])
+
+
+class ValuationFrequencyTests(unittest.TestCase):
+    def test_intrinsic_snapshot_excludes_quote_from_hash_and_method_rows(self) -> None:
+        annual, quarters, facts, prices, scenario = fixture_inputs()
+        base = calculate_valuation_snapshot(
+            ticker='AUTO', sector='Consumer Cyclicals', stock_type='CYCLICAL',
+            annual_periods=annual, quarterly_periods=quarters, facts=facts,
+            prices=prices, scenario=scenario, valuation_date='2026-09-25',
+            include_daily_status=False,
+        )
+        changed_quote = [*prices, {'trading_date': '2026-09-25', 'close_price': '9999'}]
+        changed = calculate_valuation_snapshot(
+            ticker='AUTO', sector='Consumer Cyclicals', stock_type='CYCLICAL',
+            annual_periods=annual, quarterly_periods=quarters, facts=facts,
+            prices=changed_quote, scenario=scenario, valuation_date='2026-09-25',
+            include_daily_status=False,
+        )
+        self.assertEqual(base['fundamental_input_hash'], changed['fundamental_input_hash'])
+        self.assertTrue(all('current_price' not in row and 'mos' not in row for row in base['methods']))
+
+    def test_daily_status_changes_without_recalculating_intrinsic_values(self) -> None:
+        methods = [
+            {'method_code': 'PETER_LYNCH', 'intrinsic_value': '120', 'calculation_status': 'VALID'},
+            {'method_code': 'TYPE_SECTOR_WEIGHTED', 'intrinsic_value': '100', 'calculation_status': 'VALID'},
+            {'method_code': 'DDM', 'intrinsic_value': '-10', 'calculation_status': 'VALID'},
+        ]
+        first = calculate_daily_valuation_status(methods, current_price='90', preferred_method_code='PETER_LYNCH')
+        second = calculate_daily_valuation_status(methods, current_price='110', preferred_method_code='PETER_LYNCH')
+        self.assertEqual(first['methods'][0]['intrinsic_value'], second['methods'][0]['intrinsic_value'])
+        self.assertNotEqual(first['methods'][0]['gap_ratio'], second['methods'][0]['gap_ratio'])
+        self.assertEqual(first['based_method_code'], 'PETER_LYNCH')
 
 
 if __name__ == '__main__':

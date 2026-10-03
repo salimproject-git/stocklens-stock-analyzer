@@ -10,6 +10,7 @@ angka dihitung** sebelum satu baris kode ditulis, supaya:
 3. tidak ada lagi perhitungan bisnis yang hanya hidup di dalam browser.
 
 Rujukan: `docs/BACKTEST_ARCHITECTURE.md` (aturan backtest),
+`docs/CONSENSUS_ARCHITECTURE.md` (aturan consensus: simpan vs hitung),
 `docs/SUPABASE_MANUAL_RUNBOOK.md` (cara menjalankan),
 `docs/FRONTEND_SAMPLE_VS_CURRENT_AUDIT.md` (selisih UI vs database),
 `docs/DATA_RULES.md` (aturan data).
@@ -86,6 +87,7 @@ diambil dari kolom `unit_code`, bukan dari string yang sudah diformat.
 | Tabel | Isi | Baris | Metric/method code |
 |---|---|---|---|
 | `calc_annual_growth_quality` | 18 metrik annual | 4.828 | CAGR, CoV, momentum, NWC, forensic, DPR, Yield, YEARS_* |
+| `calc_annual_ratios` | 9 rasio annual (**baru**, migrasi `0029`) | 1.278 | `EPS`, `BVPS`, `ROE`, `GROSS_MARGIN`, `NET_MARGIN`, `TOTAL_ASSETS`, `TOTAL_ASSETS_DERIVED`, `*_CAGR_WINDOW` |
 | `calc_quarterly_quality` | 4 rasio kuartalan | 4.128 | `QUALITY_GROSS_MARGIN`, `QUALITY_NET_MARGIN`, `QUALITY_OCF_TO_NET_INCOME`, `QUALITY_ROE` |
 | `calc_quarterly_growth` | 5 metrik QoQ | 5.160 | `*_QOQ` |
 | `calc_metrics_classification` | 6 flag + FINAL_TYPE + CONFIDENCE | 180 | `CLASSIFICATION_*` |
@@ -97,19 +99,25 @@ diambil dari kolom `unit_code`, bukan dari string yang sudah diformat.
 | `prices_daily`, `dividend_facts` | harga & dividen | 32.002 / 101 | — |
 | `projection_scenarios`, `projection_values` | skenario proyeksi | 20 / 199 | 10 metric code |
 
-**Fakta kanonik yang tersedia (`financial_facts`), hanya 12 metric code:**
+**Fakta kanonik yang tersedia (`financial_facts`), 13 metric code:**
 
 ```
 REVENUE, COST_OF_REVENUE, INTEREST_EXPENSE_NON_OPERATING, EARNINGS,
 OPERATING_CASH_FLOW, GROSS_PROFIT, CURRENT_ASSETS, TOTAL_CURRENT_ASSET,
-CURRENT_LIABILITIES, TOTAL_LIABILITIES, TOTAL_EQUITY, OUTSTANDING_SHARES
+CURRENT_LIABILITIES, TOTAL_LIABILITIES, TOTAL_EQUITY, OUTSTANDING_SHARES,
+TOTAL_ASSETS
 ```
 
-**Yang TIDAK ada** meski ada di raw JSON provider: `total_assets`,
-`operating_pnl`, `ebit`, `ebitda`, `inventories`, `fixed_assets`,
-`free_cash_flow`, `capital_expenditure`. Penyebabnya: `ANNUAL_FIELDS` di
-`supabase/load_annual_financials_to_supabase.py` sengaja memetakan hanya 10
-field, dan `tests/test_auto_loader_mapping.py` mengunci daftar itu.
+`TOTAL_ASSETS` ditambahkan pada 2026-10-02 (keputusan S1) sehingga angka laporan
+punya rumah kanonis; 142 baris dimuat untuk 20 ticker.
+
+**Yang TIDAK ada** meski ada di raw JSON provider: `operating_pnl`,
+`ebit`, `ebitda`, `inventories`, `fixed_assets`,
+`free_cash_flow`, `capital_expenditure`. `operating_pnl` sengaja tidak dimuat
+(keputusan S2: template tidak punya baris Laba Operasi dan tidak ada konsumennya);
+sisanya karena `ANNUAL_FIELDS` di
+`supabase/load_annual_financials_to_supabase.py` memetakan hanya field yang
+dibutuhkan, dan `tests/test_auto_loader_mapping.py` mengunci daftar itu.
 
 ### 3.2 Yang dihitung di frontend (harus dipindah)
 
@@ -276,20 +284,44 @@ dihitung di browser.
 5. **`EPS_DERIVED_FROM_EARNINGS`** adalah flag **provenance**, bukan
    missing-input. Nilainya tetap sah. Jangan biarkan flag ini memblokir
    pembagian lain (kesalahan ini pernah terjadi pada DPR).
-6. **Setiap metrik baru masuk `ANNUAL_GROWTH_METRICS`** di
+6. **Setiap metrik baru masuk `ANNUAL_RATIO_METRICS`** di
    `calculate_quarterly_growth_quality.py`, karena `populate_growth_quality.py`
-   memverifikasi set-nya sama persis.
+   memverifikasi set-nya sama persis. (Metrik rasio masuk tuple baru ini, bukan
+   `ANNUAL_GROWTH_METRICS`, karena keputusan S3 memisahkan tabelnya.)
+
+**Catatan implementasi (2026-10-02):** keenam aturan di atas sudah dipatuhi. Satu
+tambahan yang tidak ada di daftar semula: **jumlah saham** yang dipakai EPS/BVPS
+adalah jumlah saham **tahun terakhir yang dilaporkan, presisi penuh** — mengikuti
+rumus `=Proj_Shares` di baris `Shares Outstanding [Juta]` template, yang muncul di
+**setiap kolom**. Aturan 2 tetap dipatuhi dengan memakai ulang logika mundur-ke-tahun-
+sebelumnya, **tetapi bukan** fungsi `annual_share_count`: fungsi itu membulatkan ke
+juta untuk kebutuhan lembar proyeksi, dan pembulatan itu membuat hanya 49/70 sel
+workbook cocok (ITMG 0/14). Presisi penuh cocok **70/70**.
+
+Dua kesalahan yang sudah terukur dan diperbaiki:
+
+| Kesalahan | Sel workbook yang cocok |
+|---|---|
+| Membagi tiap tahun dengan jumlah saham tahun itu | **29/70** (ITMG 2021 EPS `6139,41` vs template `6010,73`) |
+| Membulatkan jumlah saham ke juta | **49/70** (ITMG 0/14, BIRD 7/14) |
+| Presisi penuh, satu angka untuk seluruh tabel | **70/70** ✅ |
+
+Karena perubahan ini mengubah angka tersimpan, `QUARTERLY_GROWTH_QUALITY` dinaikkan
+dari `1.0.0` ke `1.1.0` (bukan ditimpa).
 
 **Definition of done:**
 
-- `ANNUAL_GROWTH_METRICS` memuat 8 metrik baru.
+- `ANNUAL_RATIO_METRICS` memuat 9 metrik baru (8 yang diminta + `TOTAL_ASSETS_DERIVED`
+  karena keputusan S1 menyimpan kedua angka aset).
 - Dry-run `python supabase/populate_growth_quality.py --ticker GEMA` melaporkan
-  `18 → 26` metrik per snapshot.
-- 20 ticker di-`--apply` ulang; nilai 18 metrik lama **bit-identik** (dibuktikan
-  dengan query pembanding dua run, seperti yang sudah dilakukan untuk DPR/Yield).
+  **18 growth + 9 ratio = 27** metrik per snapshot. (Dokumen ini semula menulis
+  `18 → 26`; angka 26 dihitung sebelum S1 memutuskan menyimpan versi turunan.)
+- 20 ticker di-`--apply` ulang; nilai 16 metrik lama **bit-identik** (dibuktikan
+  dengan fingerprint 2.272 baris, `4c726ce2e1f9911ab7f7316e572ff97a` sebelum dan
+  sesudah).
 - Verifikasi numerik terhadap ERAA (data uji yang sudah dipakai):
-  Revenue `32,94 … 76,61`, EPS `18 … 75`, ROE `5,9% … 11,8%`,
-  Gross Margin `8,6% … 10,9%`, BVPS `312 … 638`.
+  Revenue `32,94 … 76,61`, EPS `18,50 … 74,98`, ROE `5,9% … 11,8%`,
+  Gross Margin `8,6% … 10,9%`, BVPS `312,15 … 638,08`.
 
 ### Langkah 2 — MoS tersimpan
 
@@ -316,10 +348,36 @@ kolom di level method.
 
 ### Langkah 3 — RPC untuk AI
 
-**Tujuan:** n8n menerima satu payload JSON yang sudah bersih, tanpa perlu tahu
-skema tabel.
+**STATUS: SELESAI (2026-10-02), migrasi `0031`.**
 
-**Kontrak yang diminta** (`get_stock_ai_payload(p_ticker text)`):
+Keputusan **S4 = dua pintu**: `get_stock_research_data` (UI + n8n) dan
+`get_stock_backtest` (backtest) tetap terpisah. Yang ditambahkan ke pintu pertama:
+
+| Bagian baru | Isi |
+|---|---|
+| `annual_ratios` | 9 rasio, masing-masing dengan `unit_code`, `calculation_status`, `flags` |
+| `valuation_methods[].mos` | aturan D6, di samping `gap_ratio` |
+| `stock_classification` | `final_type`, `system_recommendation`, `confidence`, `rule_flags` |
+| `data_quality.warnings` | 5 peringatan yang diturunkan dari flag tersimpan |
+
+Catatan implementasi yang tidak ada di rancangan semula:
+
+1. **`annual_ratios` tidak menyaring `VALID`.** `annual_growth` menyaring; bagian
+   baru ini sengaja tidak, karena rasio yang ditolak guard adalah informasi
+   ("CAGR tahun ini tidak tersedia karena jendelanya mulai dari rugi"). Kalau
+   disaring, tahun itu terlihat *tidak ada* alih-alih *tidak tersedia*.
+2. **`unit_code` dibawa per baris**, bukan diturunkan dari nama metrik. Ini
+   persis yang mencegah AI salah 1.000× antara miliar dan triliun.
+3. **Tipe run classifier adalah `CLASSIFICATION_DESCRIPTIVE`**, bukan
+   `METRICS_CLASSIFICATION`. Percobaan pertama memakai nama yang salah dan
+   bagian klasifikasi keluar `null` tanpa error — sekarang dikunci di blok
+   `$verify$` (`STOCKLENS_CLASSIFICATION_RUN_TYPE_WRONG`) dan di
+   `tests/test_research_rpc_annual_ratios.py`.
+4. **Grant `calc_metrics_classification` ditambahkan** (per-kolom). Tabel itu
+   sebelumnya tidak punya grant untuk `stocklens_market_reader`, yang juga
+   ditutup oleh advisor RLS.
+
+**Kontrak yang diminta** (`get_stock_research_data(p_ticker text)`):
 
 ```
 {
@@ -353,7 +411,42 @@ skema tabel.
 
 ### Langkah 4 — Rampingkan adapter
 
-**Tujuan:** `stock-detail-adapter.ts` tinggal memformat dan merender.
+**STATUS: SELESAI (2026-10-02).** Perhitungan bisnis yang dipindahkan:
+
+| Dulu dihitung di browser | Sekarang dibaca dari |
+|---|---|
+| `computeMos` | `calc_valuation_methods.mos` (aturan D6) |
+| `ratioSeries(EARNINGS, TOTAL_EQUITY)` → ROE | `annual_ratios.ROE` |
+| `ratioSeries(GROSS_PROFIT, REVENUE)` → Gross Margin | `annual_ratios.GROSS_MARGIN` |
+| `ratioSeries(EARNINGS, REVENUE)` → Net Margin | `annual_ratios.NET_MARGIN` |
+| `perShareSeries(EARNINGS)` → EPS | `annual_ratios.EPS` |
+| `perShareSeries(TOTAL_EQUITY)` → BVPS | `annual_ratios.BVPS` |
+| `windowCagr(factSeries(REVENUE))` | `annual_ratios.REVENUE_CAGR_WINDOW` |
+| `windowCagr(factSeries(EARNINGS))` | `annual_ratios.EARNINGS_CAGR_WINDOW` |
+| EPS di `buildGrowthVisuals` | `annual_ratios.EPS` |
+| Gross/Net Margin di `buildQuarterlyMetrics` | `quarterly_quality.QUALITY_*` |
+| Total Assets (tidak ditampilkan) | `financial_facts.TOTAL_ASSETS` |
+
+Yang **tetap** di frontend (presentasi, bukan bisnis): pembulatan & locale,
+`Rp Trillion`, tanda & warna, `"Not available"`, urutan baris, geometri chart.
+
+Dua hal yang **sengaja tidak diubah**:
+
+- **`windowCagrOf` tetap ada** sebagai fallback untuk baris yang backend-nya
+  memang tidak menyimpan CAGR (Gross Profit). Hanya baris itu yang memakainya;
+  Revenue dan Net Income memakai nilai tersimpan.
+- **`lib/analysis/*.ts` belum dipensiunkan.** Isinya masih dipakai
+  (`preferredMainMethodCode` menentukan main rule, `classifyFinancialMetric`
+  mengisi label status kartu, `analyzeHistoricalGrowth` merangkum Growth tab,
+  dan modul backtest dipakai tab Backtest). Memensiunkan sebagian akan
+  memutus fungsi yang masih hidup, jadi langkah itu ditunda sampai setiap
+  penggantinya punya rumah. Ini dicatat sebagai **sisa pekerjaan**, bukan
+  diklaim selesai.
+
+**Bukti tidak ada regresi:** `Testing/evidence_check/ui_vs_workbook_check.js`
+membandingkan nilai yang **dirender UI** dengan **lima workbook asli**:
+**70 dari 70 sel EPS/BVPS cocok**.
+
 
 - Hapus semua perhitungan bisnis dari §3.2.
 - Setiap kartu membaca nilai dari RPC, lalu memformat.
@@ -379,6 +472,29 @@ bertanya dulu, bukan memilih sendiri.
 | S4 | Satu RPC untuk UI+AI atau dua? | (a) satu, (b) dua | (a) lebih sedikit kode, tapi bentuknya harus melayani dua kebutuhan. (b) `get_stock_research_data` tetap untuk UI, `get_stock_ai_payload` untuk n8n. |
 | S5 | Hasil AI disimpan? | (a) tabel `ai_company_summaries`, (b) tidak disimpan | (a) popup bisa cache, bisa diaudit, bisa dibandingkan antar waktu. (b) lebih sederhana tapi setiap buka popup memanggil n8n lagi. |
 
+### 7.1 Keputusan yang sudah diambil (2026-10-02)
+
+Langkah 1 dan Langkah 2 sudah dikerjakan dengan keputusan berikut. S4 dan S5
+**sengaja ditunda** karena keduanya baru berdampak di Langkah 3/4.
+
+| # | Keputusan | Catatan |
+|---|---|---|
+| S1 | **Dua-duanya disimpan.** `TOTAL_ASSETS` = angka laporan (nilai resmi), `TOTAL_ASSETS_DERIVED` = `liabilities + equity` (audit). Selisih ditandai `TOTAL_ASSETS_RECONCILIATION_MISMATCH`. | Keputusan ini langsung menemukan bahwa identitas **tidak** persis di 142/142 baris: ARII, INKP, ITMG 2019 meleset 1 IDR. Lihat §8. |
+| S2 | **Tidak dimuat.** `OPERATING_PNL` tidak ada sebagai baris di template dan tidak ada konsumennya. | `ANNUAL_FIELDS` tetap tidak memuat `operating_pnl`; `tests/test_auto_loader_mapping.py` mengunci itu. |
+| S3 | **Tabel baru `calc_annual_ratios`** (migrasi `0029`). | 9 metric code: EPS, BVPS, ROE, GROSS_MARGIN, NET_MARGIN, TOTAL_ASSETS, TOTAL_ASSETS_DERIVED, REVENUE_CAGR_WINDOW, EARNINGS_CAGR_WINDOW. `unit_code` **per baris**, mengikuti `calc_valuation_inputs`. |
+| Saham | **Jumlah saham tahun terakhir, presisi penuh** (rumus `=Proj_Shares` template). | Diuji ke 5 workbook asli: presisi penuh **70/70** sel cocok; per-tahun hanya 29/70; dibulatkan ke juta hanya 49/70. Perubahan angka menaikkan versi metodologi ke `1.1.0`. |
+| S4 | **Dijawab: tetap DUA pintu** (2026-10-02). `get_stock_research_data` untuk UI dan `get_stock_backtest` untuk backtest, seperti sekarang. | Pemilik repo memutuskan backtest tetap terpisah karena n8n juga mengambilnya terpisah ("paling ku pisah antara perusahaannya, dan backtestnya"). Sumber datanya tetap satu; yang terpisah hanya cara mengantar. Konsekuensi: Langkah 3 **tidak** perlu menggabung payload, dan aturan "UI tidak berubah" di Langkah 4 jadi lebih mudah dipenuhi. |
+| S5 | **Ditunda.** Rekomendasi: simpan di `ai_company_summaries`. | Baru relevan di Langkah 3/4. |
+
+**Konsekuensi pada checklist §10:** karena S1 meminta dua angka disimpan, jumlah
+metrik per snapshot menjadi **18 growth + 9 ratio = 27**, bukan `18 → 26` seperti
+tertulis di Langkah 1. Angka 26 dihitung sebelum S1 diputuskan.
+
+**Catatan untuk Langkah 3:** `calc_annual_ratios` sudah menyimpan `unit_code` per
+baris. Kontrak AI di Langkah 3 cukup membacanya, tidak perlu menurunkan satuan
+dari nama metrik.
+
+
 ---
 
 ## 8. Fakta yang sudah diverifikasi — jangan dihitung ulang
@@ -394,8 +510,17 @@ di workbook AUTO 2026-Q2 = `9.224.000.000 IDR / 1e9`.
 
 **`gap_ratio` ≠ MoS.** Lihat Langkah 2.
 
-**Fakta kanonik hanya 12 metric code.** `total_assets`, `operating_pnl`, `ebit`,
-`ebitda` tidak ada di `financial_facts`.
+**Identitas neraca tidak persis 142/142.** `total_assets` (laporan) meleset **1
+rupiah** dari `liabilities + equity` di **ARII, INKP, dan ITMG 2019** — 139 dari
+142 baris persis sama, 3 sisanya berbeda 1 IDR dari nilai ratusan triliun. Ini
+pembulatan sisi provider, bukan data rusak. Karena S1 menyimpan kedua angka,
+ketiga baris itu kini ditandai `TOTAL_ASSETS_RECONCILIATION_MISMATCH` dan
+terdeteksi otomatis. (Klaim lama "142/142" di §7 S1 dan di
+`docs/FRONTEND_SAMPLE_VS_CURRENT_AUDIT.md` sudah dikoreksi.)
+
+**Fakta kanonik kini 13 metric code.** `TOTAL_ASSETS` ditambahkan ke
+`ANNUAL_FIELDS` (keputusan S1). `operating_pnl`, `ebit`, `ebitda` tetap tidak
+dimuat.
 
 **`OUTSTANDING_SHARES` kosong di tahun terakhir** untuk BIRD 2025. Backend
 (`annual_share_count`) dan frontend sama-sama mundur ke tahun sebelumnya.
@@ -448,17 +573,49 @@ akhir periode sebagai proksi dan menandainya `POINT_IN_TIME_UNAVAILABLE_DATE`.
 
 Setiap langkah dianggap selesai hanya bila:
 
-- [ ] `python -m unittest discover -s tests -t .` lulus seluruhnya
-- [ ] `py_compile` lulus untuk setiap file Python yang diubah
-- [ ] `npx tsc --noEmit` lulus di `frontend/`
-- [ ] `npx eslint src/` tidak menambah error baru
-- [ ] `npm run build` lulus
-- [ ] Tiga harness `Testing/evidence_check/{check,valuation_check,render_check}.js` lulus
-- [ ] Nilai metrik lama **bit-identik** sebelum vs sesudah (query pembanding dua run)
-- [ ] Tidak ada duplikat di RPC: `rows == distinct_pairs` untuk 20 ticker
-- [ ] Verifikasi numerik terhadap ticker uji (ERAA untuk rasio, GEMA untuk
-      dividen, AUTO untuk parity workbook)
-- [ ] Dokumentasi diperbarui: `SUPABASE_MANUAL_RUNBOOK.md` (versi + cara jalan),
-      `FRONTEND_SAMPLE_VS_CURRENT_AUDIT.md` (addendum), dokumen ini
-- [ ] `supabase/get_advisors` diperiksa setelah perubahan DDL
+- [x] `python -m unittest discover -s tests -t .` lulus seluruhnya (**438**; baseline 383)
+- [x] `py_compile` lulus untuk setiap file Python yang diubah
+- [x] `npx tsc --noEmit` lulus di `frontend/` (exit 0)
+- [x] `npx eslint src/` tidak menambah error baru (0 error, 10 warning yang sudah ada)
+- [x] `npm run build` lulus
+- [x] Tiga harness `Testing/evidence_check/{check,valuation_check,render_check}.js` lulus
+- [x] Nilai metrik lama **bit-identik** sebelum vs sesudah — fingerprint 2.272 baris `4c726ce2e1f9911ab7f7316e572ff97a` identik (16 metrik growth; lihat catatan di bawah)
+- [x] Tidak ada duplikat di RPC: `rows == distinct_pairs` untuk 20 ticker (1.278 = 1.278)
+- [x] Verifikasi numerik terhadap ticker uji (ERAA untuk rasio, GEMA untuk dividen, AUTO untuk parity workbook)
+- [x] Verifikasi terhadap **5 workbook asli**: 70/70 sel EPS/BVPS cocok (`tests/test_workbook_share_basis.py`)
+- [x] Verifikasi **UI yang dirender** vs 5 workbook asli: **70/70** cocok (`Testing/evidence_check/ui_vs_workbook_check.js`)
+- [x] Dokumentasi diperbarui: `SUPABASE_MANUAL_RUNBOOK.md` (§1.6.1, §1.6.2, §1.8), `FRONTEND_SAMPLE_VS_CURRENT_AUDIT.md` (addendum), dokumen ini (§7.1, §8, §10)
+- [x] `supabase/get_advisors` diperiksa setelah perubahan DDL (temuan RLS turun 13 → 12; tidak ada temuan baru)
 
+**Sisa pekerjaan yang dicatat, bukan diklaim selesai:**
+
+- `lib/analysis/*.ts` belum dipensiunkan (lihat Langkah 4). Isinya masih dipakai
+  untuk main-rule, label status kartu, ringkasan Growth tab, dan tab Backtest.
+- Aturan win-rate backtest (`≥3 metode`, `MoS ≥30%`) masih hidup di
+  `lib/analysis/backtest.ts`, belum pindah ke SQL. Karena S4 memutuskan backtest
+  tetap di RPC-nya sendiri, ini tidak menghalangi UI maupun n8n hari ini; ia
+  menjadi relevan bila n8n mulai butuh agregat backtest.
+
+
+**Bukti Langkah 1–2 (2026-10-02):**
+
+| Pemeriksaan | Hasil |
+|---|---|
+| Metrik per snapshot | 18 growth + 9 ratio = **27** (S1 menyimpan `TOTAL_ASSETS_DERIVED`) |
+| `calc_annual_ratios` | 1.278 baris, 20 instrumen, 142 baris per metric code |
+| 16 metrik growth bit-identik | ya — fingerprint sama |
+| Sel EPS/BVPS vs 5 workbook | **70/70** cocok |
+| `mos` terisi | 102 dari 120 baris; 8 IV null, 8 IV = 0, 2 IV < 0 |
+| AUTO DDM | `gap_ratio −0,5739` vs `mos −1,3467` — dua angka berbeda, keduanya tersimpan |
+| GEMA Peter Lynch (IV −22) | `mos` NULL + `MOS_NOT_APPLICABLE` (bukan `+522%`) |
+| Rekonsiliasi aset | 3 baris terdeteksi: ARII/INKP/ITMG 2019, selisih tepat 1 IDR |
+| ITMG EPS 2021 | `6010,73` — sama dengan workbook (sebelum perbaikan: `6139,41`) |
+| ERAA | Revenue 32,94→76,61 · EPS 18,50→74,98 · ROE 5,9%→11,8% · GM 8,6%→10,9% · BVPS 312→638 |
+
+**Catatan penting soal "bit-identik".** Klaim itu berlaku untuk **16 metrik
+growth** (`calc_annual_growth_quality`), dan itu sudah dibuktikan. Metrik
+**ratio** (`calc_annual_ratios`) adalah tabel baru, jadi tidak punya nilai
+"sebelum" untuk dibandingkan. Namun di dalamnya, EPS dan BVPS **sengaja berubah**
+dari implementasi pertama: aturan sahamnya salah (lihat §6 Langkah 1), dan
+perbaikannya mengubah 153 nilai. Angka yang benar sekarang adalah yang cocok
+dengan workbook (70/70), bukan yang cocok dengan implementasi pertama.

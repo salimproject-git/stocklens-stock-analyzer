@@ -147,6 +147,20 @@ FLAG_MEAN_ZERO = 'MEAN_ZERO'
 FLAG_NEGATIVE_SERIES_VALUE = 'NEGATIVE_SERIES_VALUE'
 FLAG_QUICK_ASSET_MISSING = 'QUICK_ASSET_MISSING'
 
+#: Flags for the annual ratio layer (`calculate_annual_ratio_outputs`).
+#:
+#: These mark *provenance* and *approximation*, never a missing input, with one
+#: exception: ``FLAG_TOTAL_ASSETS_RECONCILIATION_MISMATCH`` records that the
+#: reported total assets and the balance-sheet identity disagree. The identity
+#: is exact for 139 of the 142 canonical annual rows; ARII/INKP/ITMG 2019 differ
+#: by exactly 1 IDR, which is provider rounding rather than a data defect. The
+#: reported figure stays the official value (decision S1) and the difference is
+#: surfaced instead of hidden.
+FLAG_SHARES_CARRIED_FORWARD = 'SHARES_CARRIED_FORWARD'
+FLAG_TOTAL_ASSETS_DERIVED_FROM_IDENTITY = 'TOTAL_ASSETS_DERIVED_FROM_IDENTITY'
+FLAG_TOTAL_ASSETS_RECONCILIATION_MISMATCH = 'TOTAL_ASSETS_RECONCILIATION_MISMATCH'
+FLAG_MOS_NOT_APPLICABLE = 'MOS_NOT_APPLICABLE'
+
 PHASE_4_2_FLAGS = (
     FLAG_COMPARISON_PERIOD_MISSING,
     FLAG_SECTOR_UNKNOWN,
@@ -161,6 +175,10 @@ PHASE_4_2_FLAGS = (
     FLAG_MEAN_ZERO,
     FLAG_NEGATIVE_SERIES_VALUE,
     FLAG_QUICK_ASSET_MISSING,
+    FLAG_SHARES_CARRIED_FORWARD,
+    FLAG_TOTAL_ASSETS_DERIVED_FROM_IDENTITY,
+    FLAG_TOTAL_ASSETS_RECONCILIATION_MISMATCH,
+    FLAG_MOS_NOT_APPLICABLE,
 )
 
 #: Missing-input flag aliases. The forward specification names

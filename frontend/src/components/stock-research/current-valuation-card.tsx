@@ -4,7 +4,6 @@ import { SectionCard } from "@/components/ui/section-card";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { UnavailableBadge } from "@/components/ui/unavailable-badge";
 import { formatRupiah } from "@/utils/currency";
-import { classifyCurrentValuationMos } from "@/lib/analysis";
 
 export function CurrentValuationCard({
   valuation,
@@ -17,6 +16,8 @@ export function CurrentValuationCard({
   // saying "no stored valuation result" would be wrong for a company that has
   // five stored methods and one undefined ratio.
   const hasMethods = valuation.methods.length > 0;
+  const hasMethodVerdict =
+    valuation.methodVerdict === "UNDERVALUED" || valuation.methodVerdict === "OVERVALUED";
   const hasComparison =
     valuation.currentPrice != null && valuation.intrinsicValue != null && valuation.intrinsicValue !== 0;
 
@@ -32,12 +33,12 @@ export function CurrentValuationCard({
     ? "No stored valuation result in the database for this ticker."
     : !hasValuation
       ? "Margin of safety is not available because the main method's intrinsic value is zero or negative."
-      : valuation.verdict.toLowerCase() === "undervalued"
+      : valuation.methodVerdict === "UNDERVALUED"
         ? "Most valuation methods indicate the stock is trading below its estimated value"
         : "Most valuation methods indicate the stock is trading above its estimated value";
 
-  const mosUndervalued =
-    valuation.mos != null && classifyCurrentValuationMos(valuation.mos) === "UNDERVALUED";
+  const mosUndervalued = valuation.mosVerdict === "UNDERVALUED";
+  const hasMosVerdict = valuation.mosVerdict === "UNDERVALUED" || valuation.mosVerdict === "OVERVALUED";
 
   const mosText =
     formattedMos == null
@@ -67,12 +68,12 @@ export function CurrentValuationCard({
     </div>
 
     <div className="mt-3">
-      {hasValuation ? (
+      {hasMethodVerdict ? (
         <StatusBadge
-          tone={verdictTone(valuation.verdict)}
+          tone={summaryVerdictTone(valuation.methodVerdict)}
           className="text-xs"
         >
-          {valuation.verdict.toUpperCase()}
+          {valuation.methodVerdict}
         </StatusBadge>
       ) : (
         <UnavailableBadge />
@@ -91,7 +92,7 @@ export function CurrentValuationCard({
     </div>
 
     <div className="mt-2">
-      {formattedMos != null ? (
+      {formattedMos != null && hasMosVerdict ? (
         <StatusBadge
           tone={mosUndervalued ? "undervalued" : "overvalued"}
           className="text-xs"
@@ -165,6 +166,12 @@ function verdictTone(verdict: StockDetail["currentValuation"]["verdict"]) {
   if (verdict === "Undervalued") return "undervalued" as const;
   if (verdict === "Overvalued") return "overvalued" as const;
   if (verdict === "Fairly Valued") return "fairly-valued" as const;
+  return "info" as const;
+}
+
+function summaryVerdictTone(verdict: StockDetail["currentValuation"]["methodVerdict"]) {
+  if (verdict === "UNDERVALUED") return "undervalued" as const;
+  if (verdict === "OVERVALUED") return "overvalued" as const;
   return "info" as const;
 }
 

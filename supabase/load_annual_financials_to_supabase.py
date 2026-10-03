@@ -40,6 +40,13 @@ RAW_MONETARY_FIELDS = (
     'non_operating_income_or_loss', 'interest_expense_non_operating',
 )
 SHARES_FIELD = 'outstanding_shares'
+#: Fields mapped into canonical `financial_facts`.
+#:
+#: `total_assets` was added so the reported figure has a home (decision S1:
+#: store the reported value *and* the balance-sheet reconstruction). It is
+#: deliberately absent from the read RPC's fact whitelist, so the UI payload is
+#: unchanged by its arrival. `operating_pnl` stays out on purpose (decision S2):
+#: the workbook template has no Operating Profit row and nothing consumes it.
 ANNUAL_FIELDS = (
     'revenue',
     'cost_of_revenue',
@@ -51,6 +58,7 @@ ANNUAL_FIELDS = (
     'current_liabilities',
     'total_liabilities',
     'total_equity',
+    'total_assets',
 )
 METRIC_CODES = {field: field.upper() for field in ANNUAL_FIELDS}
 

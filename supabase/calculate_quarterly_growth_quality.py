@@ -72,7 +72,10 @@ from calculation_v1_common import (
     FLAG_PRICE_MISSING,
     FLAG_QUARTERLY_COMPARISON_MISSING,
     FLAG_SERIES_INSUFFICIENT,
+    FLAG_SHARES_CARRIED_FORWARD,
     FLAG_STATEMENT_SCOPE_UNKNOWN,
+    FLAG_TOTAL_ASSETS_DERIVED_FROM_IDENTITY,
+    FLAG_TOTAL_ASSETS_RECONCILIATION_MISMATCH,
     CalculationError,
     divide,
     fact_value,
@@ -88,11 +91,15 @@ from calculation_v1_common import (
 
 __all__ = [
     'ANNUAL_GROWTH_METRICS',
+    'ANNUAL_RATIO_METRICS',
+    'ANNUAL_RATIO_UNITS',
     'GROWTH_FLOW_METRICS',
     'QUALITY_RATIO_METRICS',
     'calculate_annual_growth_outputs',
+    'calculate_annual_ratio_outputs',
     'calculate_quarterly_outputs',
     'classify_metrics_classification',
+    'latest_share_count',
 ]
 
 #: The five canonical flows the quarterly layer differences. This is exactly the
@@ -141,6 +148,42 @@ ANNUAL_GROWTH_METRICS: tuple[str, ...] = (
     'DIVIDEND_PAYOUT_RATIO',
     'DIVIDEND_YIELD',
 )
+
+#: Annual ratio metrics, in emit order. These are **levels**, not growth series,
+#: and they live in their own result table (`calc_annual_ratios`) so the growth
+#: table's name stays honest (decision S3).
+#:
+#: Every one of them is a per-share value, a margin, a return or a
+#: window-CAGR - the figures the UI used to recompute in the browser
+#: (`frontend/src/lib/stock-detail-adapter.ts`) and that n8n could therefore not
+#: see. Each is emitted once per annual snapshot, so year Y's snapshot carries
+#: year Y's own value.
+ANNUAL_RATIO_METRICS: tuple[str, ...] = (
+    'EPS',
+    'BVPS',
+    'ROE',
+    'GROSS_MARGIN',
+    'NET_MARGIN',
+    'TOTAL_ASSETS',
+    'TOTAL_ASSETS_DERIVED',
+    'REVENUE_CAGR_WINDOW',
+    'EARNINGS_CAGR_WINDOW',
+)
+
+#: Unit label per ratio metric. Stored on the row so a consumer can never read a
+#: ratio as an amount; the single largest risk in the AI payload is mistaking a
+#: ratio for an IDR figure (docs/BACKEND_SINGLE_SOURCE_OF_TRUTH.md section 2).
+ANNUAL_RATIO_UNITS: dict[str, str] = {
+    'EPS': 'IDR_PER_SHARE',
+    'BVPS': 'IDR_PER_SHARE',
+    'ROE': 'RATIO',
+    'GROSS_MARGIN': 'RATIO',
+    'NET_MARGIN': 'RATIO',
+    'TOTAL_ASSETS': 'IDR',
+    'TOTAL_ASSETS_DERIVED': 'IDR',
+    'REVENUE_CAGR_WINDOW': 'RATIO',
+    'EARNINGS_CAGR_WINDOW': 'RATIO',
+}
 
 #: Canonical alias pairs. Quarterly balance-sheet facts use different codes from
 #: annual ones (blueprint section 4.3). Querying only one side silently returns
@@ -1670,6 +1713,379 @@ def calculate_annual_growth_outputs(
         identity=identity,
         value=yield_value,
         flags=yield_flags,
+    )
+
+    return rows
+
+
+# --------------------------------------------------------------------------
+# Annual ratio layer (`calc_annual_ratios`)
+# --------------------------------------------------------------------------
+
+def latest_share_count(
+    ordered_periods: Sequence[Mapping[str, Any]],
+    facts: Sequence[Mapping[str, Any]],
+) -> tuple[Decimal | None, list[str]]:
+    """The workbook's single `Shares Outstanding [Juta]` value, at full precision.
+
+    The workbook writes `=Proj_Shares` in **every** column of the shares row, so one
+    figure divides every year of the table. `Proj_Shares` is
+    `IF(SharesThisYear > 0, SharesThisYear, SharesFallback)`, where `SharesFallback`
+    is the newest year that reported a count.
+
+    ``ordered_periods`` must be the **whole annual history, newest first**, not one
+    snapshot's window: `populate_growth_quality.py` computes this once per run and
+    hands the same value to every snapshot. Passing only a snapshot's window would
+    silently fall back to that year's own count, which is a different number -
+    ITMG 2021 EPS would report 6139.41 instead of the workbook's 6010.73.
+
+    ``facts`` is the flat fact sequence (the same list the other entry points take),
+    not a pre-built index, so a caller cannot accidentally collapse it.
+
+    **No rounding to whole millions.** The obvious reuse target,
+    `derive_projection_scenario.annual_share_count`, rounds to *Juta* because the
+    projection sheet needs a display-friendly figure. Applying that rounding here
+    breaks the match against the workbooks: measured against the five sample
+    workbooks, full precision reproduces 70/70 EPS and BVPS cells while the rounded
+    value reproduces only 49/70 (ITMG 0/14, BIRD 7/14). The rule is therefore
+    implemented directly, and `tests/test_annual_ratios.py` pins the 70/70 result.
+
+    Unlike `annual_share_count`, a ticker with no usable count is not an error: it
+    returns ``(None, flags)`` so one incomplete ticker cannot abort a
+    whole-portfolio run. `SHARES_CARRIED_FORWARD` marks the case where the newest
+    period did not report the count itself, so the approximation stays visible.
+    """
+    facts_by_period = _facts_by_period(facts)
+    for period in ordered_periods:
+        shares, flags = fact_value(
+            facts_by_period.get(_period_id(period), {}).get('OUTSTANDING_SHARES'),
+            'OUTSTANDING_SHARES',
+        )
+        if not flags and shares is not None and shares > 0:
+            carried = (
+                bool(ordered_periods)
+                and _period_id(period) != _period_id(ordered_periods[0])
+            )
+            return shares, [FLAG_SHARES_CARRIED_FORWARD] if carried else []
+    return None, ['OUTSTANDING_SHARES_MISSING']
+
+
+def _window_cagr(
+    periods_count: int,
+    first: Decimal | None,
+    last: Decimal | None,
+    *,
+    first_flags: Sequence[str] | None = None,
+    last_flags: Sequence[str] | None = None,
+) -> tuple[Decimal | None, list[str]]:
+    """CAGR across the displayed window: ``(last/first)**(1/n) - 1``.
+
+    This is the ratio layer's own CAGR and it **refuses** rather than
+    approximates. `_rri` is not reused on purpose: for a negative base it falls
+    back to the registered ``linear_normalized`` rate, which is the right answer
+    for the workbook's `MetricsClassification` CAGR cells but the wrong answer for
+    a window that starts in a loss. ARII and GOLD both begin their windows in a
+    loss, and the honest output there is "not available", not a normalised
+    stand-in (docs/BACKEND_SINGLE_SOURCE_OF_TRUTH.md Langkah 1 rule 3, and
+    section 8's note that those guards are correct behaviour).
+
+    Guards, each with its own flag so the reason survives:
+
+    * either endpoint missing          -> that endpoint's missing-input flags
+    * ``periods_count <= 0``           -> ``CAGR_PERIOD_ZERO``
+    * ``first == 0``                   -> ``DENOMINATOR_ZERO``
+    * ``first < 0`` or ``last <= 0``   -> ``NEGATIVE_BASE``
+    """
+    if first is None:
+        return None, list(first_flags or [FLAG_SERIES_INSUFFICIENT])
+    if last is None:
+        return None, list(last_flags or [FLAG_SERIES_INSUFFICIENT])
+    if periods_count <= 0:
+        return None, [FLAG_CAGR_PERIOD_ZERO]
+    if first == 0:
+        return None, [FLAG_DENOMINATOR_ZERO]
+    if first < 0 or last <= 0:
+        return None, [FLAG_NEGATIVE_BASE]
+
+    ratio = divide(last, first)
+
+    from decimal import localcontext
+
+    with localcontext() as context:
+        context.prec = 50
+        root = ratio ** (Decimal(1) / Decimal(periods_count))
+    return root - Decimal(1), []
+
+
+def _emit_ratio(
+    rows: list[dict[str, Any]],
+    *,
+    metric_code: str,
+    identity: Mapping[str, Any],
+    value: Decimal | None,
+    flags: Sequence[str] | None = None,
+) -> None:
+    """Append one annual ratio row, carrying its unit label.
+
+    The unit is written **beside** the value rather than formatted into it, so a
+    consumer can never read ``0.1087`` as an amount when it is a margin
+    (docs/BACKEND_SINGLE_SOURCE_OF_TRUTH.md section 2).
+    """
+    row_flags = list(flags or ())
+    unit_code = ANNUAL_RATIO_UNITS[metric_code]
+    if value is None:
+        rows.append(
+            unavailable_result(
+                identity=identity,
+                metric_code=metric_code,
+                flags=row_flags,
+                unit_code=unit_code,
+            )
+        )
+        return
+    rows.append(
+        result_row(
+            identity=identity,
+            metric_code=metric_code,
+            value_numeric=value,
+            calculation_status=CALCULATION_STATUS_VALID,
+            flags=row_flags,
+            unit_code=unit_code,
+        )
+    )
+
+
+def calculate_annual_ratio_outputs(
+    periods: Sequence[Mapping[str, Any]],
+    facts: Sequence[Mapping[str, Any]],
+    instrument_id: str,
+    run_id: str,
+    *,
+    methodology_version_id: str | None = None,
+    years_available: int | None = None,
+    shares: Decimal | None = None,
+    shares_flags: Sequence[str] | None = None,
+) -> list[dict[str, Any]]:
+    """Compute the annual ratio rows for one annual snapshot.
+
+    ==========================================  ==========================================
+    metric_code                                 formula
+    ==========================================  ==========================================
+    ``EPS``                                     ``EARNINGS / shares``
+    ``BVPS``                                    ``TOTAL_EQUITY / shares``
+    ``ROE``                                     ``EARNINGS / TOTAL_EQUITY``
+    ``GROSS_MARGIN``                            ``GROSS_PROFIT / REVENUE``
+    ``NET_MARGIN``                              ``EARNINGS / REVENUE``
+    ``TOTAL_ASSETS``                            reported ``TOTAL_ASSETS`` (fallback: identity)
+    ``TOTAL_ASSETS_DERIVED``                    ``TOTAL_LIABILITIES + TOTAL_EQUITY``
+    ``REVENUE_CAGR_WINDOW``                     ``(last/first)**(1/(n-1)) - 1``
+    ``EARNINGS_CAGR_WINDOW``                    idem for ``EARNINGS``
+    ==========================================  ==========================================
+
+    One snapshot per annual period, like the growth layer: `populate_growth_quality`
+    passes the trailing window ending at year Y, so the level metrics resolve to
+    year Y's own figures. The anchor period is the newest period in the window.
+
+    ``shares`` **must be the workbook's single share count for the whole run**, not
+    this window's newest count. The workbook writes `=Proj_Shares` in every column
+    of the shares row, so year 2021's EPS uses the *latest* reported count rather
+    than 2021's own. `populate_growth_quality.py` therefore resolves it once from
+    the full annual history and passes the same value to every snapshot; see
+    :func:`latest_share_count`. When it is omitted (direct callers, tests) it is
+    resolved from the supplied window, which is correct only when that window *is*
+    the full history.
+
+    ``TOTAL_ASSETS`` and ``TOTAL_ASSETS_DERIVED`` are both stored, by decision: the
+    reported figure is the official value, the reconstruction is kept beside it for
+    audit, and a disagreement is flagged
+    (``TOTAL_ASSETS_RECONCILIATION_MISMATCH``) instead of being hidden. The identity
+    is exact for 139 of the 142 canonical annual rows; ARII, INKP and ITMG 2019
+    differ by exactly 1 IDR, which is provider rounding.
+    """
+    ordered = _annual_periods(periods)
+    if years_available is not None:
+        if isinstance(years_available, bool) or not isinstance(years_available, int):
+            raise CalculationError('YEARS_AVAILABLE_MUST_BE_AN_INTEGER')
+        if years_available < 1:
+            raise CalculationError('YEARS_AVAILABLE_OUT_OF_RANGE')
+        ordered = ordered[:years_available]
+
+    facts_by_period = _facts_by_period(facts)
+    anchor = ordered[0] if ordered else None
+    identity = _annual_identity(
+        instrument_id=instrument_id,
+        run_id=run_id,
+        period=anchor,
+        methodology_version_id=methodology_version_id,
+    )
+    rows: list[dict[str, Any]] = []
+
+    if anchor is None:
+        # No annual period was supplied. Emit one refused row per metric so the
+        # metric set stays complete and the loader's set check still passes.
+        for metric_code in ANNUAL_RATIO_METRICS:
+            _emit_ratio(
+                rows,
+                metric_code=metric_code,
+                identity=identity,
+                value=None,
+                flags=[FLAG_SERIES_INSUFFICIENT],
+            )
+        return rows
+
+    latest_facts = facts_by_period.get(_period_id(anchor), {})
+
+    earnings, earnings_flags = fact_value(latest_facts.get('EARNINGS'), 'EARNINGS')
+    equity, equity_flags = fact_value(latest_facts.get('TOTAL_EQUITY'), 'TOTAL_EQUITY')
+    revenue, revenue_flags = fact_value(latest_facts.get('REVENUE'), 'REVENUE')
+    gross_profit, gross_profit_flags = fact_value(
+        latest_facts.get('GROSS_PROFIT'), 'GROSS_PROFIT'
+    )
+    liabilities, liabilities_flags = fact_value(
+        latest_facts.get('TOTAL_LIABILITIES'), 'TOTAL_LIABILITIES'
+    )
+    reported_assets, reported_assets_flags = fact_value(
+        latest_facts.get('TOTAL_ASSETS'), 'TOTAL_ASSETS'
+    )
+
+    shares, shares_flags = (
+        (shares, list(shares_flags or ()))
+        if shares is not None or shares_flags is not None
+        else latest_share_count(ordered, facts)
+    )
+    shares_missing_flags = shares_flags if shares is None else None
+
+    # --- Per-share values ---------------------------------------------------
+    # A provenance flag on a *present* value must not block the division:
+    # `EPS_DERIVED_FROM_EARNINGS` marks how a value was obtained, not that it is
+    # missing. Only the missing case passes its flags through. This is the bug
+    # that once blanked every dividend payout ratio.
+    eps_value, eps_flags = _divide_optional(
+        earnings, shares, earnings_flags, shares_missing_flags
+    )
+    if shares is not None:
+        eps_flags = merge_flags(eps_flags, shares_flags)
+    _emit_ratio(rows, metric_code='EPS', identity=identity, value=eps_value, flags=eps_flags)
+
+    bvps_value, bvps_flags = _divide_optional(
+        equity, shares, equity_flags, shares_missing_flags
+    )
+    if shares is not None:
+        bvps_flags = merge_flags(bvps_flags, shares_flags)
+    _emit_ratio(rows, metric_code='BVPS', identity=identity, value=bvps_value, flags=bvps_flags)
+
+    # --- Returns and margins ------------------------------------------------
+    roe_value, roe_flags = _divide_optional(earnings, equity, earnings_flags, equity_flags)
+    _emit_ratio(rows, metric_code='ROE', identity=identity, value=roe_value, flags=roe_flags)
+
+    gross_margin, gross_margin_flags = _divide_optional(
+        gross_profit, revenue, gross_profit_flags, revenue_flags
+    )
+    _emit_ratio(
+        rows,
+        metric_code='GROSS_MARGIN',
+        identity=identity,
+        value=gross_margin,
+        flags=gross_margin_flags,
+    )
+
+    net_margin, net_margin_flags = _divide_optional(
+        earnings, revenue, earnings_flags, revenue_flags
+    )
+    _emit_ratio(
+        rows,
+        metric_code='NET_MARGIN',
+        identity=identity,
+        value=net_margin,
+        flags=net_margin_flags,
+    )
+
+    # --- Total assets: reported (official) beside the identity reconstruction
+    if liabilities is not None and equity is not None:
+        derived_assets: Decimal | None = liabilities + equity
+        derived_flags: list[str] = [FLAG_TOTAL_ASSETS_DERIVED_FROM_IDENTITY]
+    else:
+        derived_assets = None
+        derived_flags = merge_flags(
+            liabilities_flags if liabilities is None else [],
+            equity_flags if equity is None else [],
+        ) or [FLAG_SERIES_INSUFFICIENT]
+    _emit_ratio(
+        rows,
+        metric_code='TOTAL_ASSETS_DERIVED',
+        identity=identity,
+        value=derived_assets,
+        flags=derived_flags,
+    )
+
+    if reported_assets is not None:
+        assets_value: Decimal | None = reported_assets
+        assets_flags: list[str] = []
+        if derived_assets is not None and derived_assets != reported_assets:
+            # Reported and reconstructed disagree. The reported figure stays
+            # official (decision S1); the difference is recorded, not smoothed.
+            assets_flags = [FLAG_TOTAL_ASSETS_RECONCILIATION_MISMATCH]
+    elif derived_assets is not None:
+        # The reported figure has not been ingested for this row yet. The
+        # reconstruction supplies the value and the flag says it is not reported.
+        assets_value = derived_assets
+        assets_flags = [FLAG_TOTAL_ASSETS_DERIVED_FROM_IDENTITY]
+    else:
+        assets_value = None
+        assets_flags = merge_flags(reported_assets_flags, derived_flags)
+    _emit_ratio(
+        rows,
+        metric_code='TOTAL_ASSETS',
+        identity=identity,
+        value=assets_value,
+        flags=assets_flags,
+    )
+
+    # --- Window CAGR --------------------------------------------------------
+    # `ordered` is newest-first, so the oldest period of the window is last.
+    window_years = len(ordered)
+    periods_count = window_years - 1
+
+    first_revenue, _p, first_revenue_flags = _indexed_value(
+        ordered, facts_by_period, 'REVENUE', window_years
+    )
+    last_revenue, _p, last_revenue_flags = _indexed_value(
+        ordered, facts_by_period, 'REVENUE', 1
+    )
+    revenue_cagr, revenue_cagr_flags = _window_cagr(
+        periods_count,
+        first_revenue,
+        last_revenue,
+        first_flags=first_revenue_flags,
+        last_flags=last_revenue_flags,
+    )
+    _emit_ratio(
+        rows,
+        metric_code='REVENUE_CAGR_WINDOW',
+        identity=identity,
+        value=revenue_cagr,
+        flags=revenue_cagr_flags,
+    )
+
+    first_earnings, _p, first_earnings_flags = _indexed_value(
+        ordered, facts_by_period, 'EARNINGS', window_years
+    )
+    last_earnings, _p, last_earnings_flags = _indexed_value(
+        ordered, facts_by_period, 'EARNINGS', 1
+    )
+    earnings_cagr, earnings_cagr_flags = _window_cagr(
+        periods_count,
+        first_earnings,
+        last_earnings,
+        first_flags=first_earnings_flags,
+        last_flags=last_earnings_flags,
+    )
+    _emit_ratio(
+        rows,
+        metric_code='EARNINGS_CAGR_WINDOW',
+        identity=identity,
+        value=earnings_cagr,
+        flags=earnings_cagr_flags,
     )
 
     return rows

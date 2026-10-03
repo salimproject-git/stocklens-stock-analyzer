@@ -558,6 +558,12 @@ annual rows (verified, 0 exceptions) — but it would be a reconstruction rather
 than a reported figure, so `Total Liabilities` is shown instead. The workbook
 template itself has no Operating Profit or Total Assets row either.
 
+> **Superseded (2026-10-02).** The reported `total_assets` is now ingested and
+> stored, so no reconstruction is needed for the official figure. Re-measurement
+> also found the identity is exact for **139 of 142** rows, not 142/142: ARII,
+> INKP and ITMG 2019 differ by exactly 1 IDR. See the addendum at the end of this
+> document.
+
 Two additional defects were fixed while rewiring the table:
 
 1. **The right-hand column was mislabelled.** It read `YoY Change` but computed
@@ -583,6 +589,186 @@ Frontend files changed: `frontend/src/lib/stock-detail-adapter.ts`
 (`buildFinancialHistory`) and `frontend/src/data/mock-stock-details.ts` (mock
 table and summary rows realigned to the same row set).
 
+
+---
+
+## Addendum — 2026-10-02: Annual ratios and MoS now live in the database
+
+This records Langkah 1 and Langkah 2 of
+`docs/BACKEND_SINGLE_SOURCE_OF_TRUTH.md`. Both are **backend-only**: no frontend
+file changed, so the values this document audits are unchanged in the UI. What
+changed is that the numbers now have a home, and the audit can be re-run from the
+database instead of from the adapter.
+
+### What moved
+
+| Figure | Before | Now |
+|---|---|---|
+| EPS, BVPS, ROE, Gross/Net Margin | recomputed in `buildFinancialHistory` / `buildAnnualMetrics` / `buildValuationMetrics` | stored per annual snapshot in `calc_annual_ratios` |
+| Window CAGR (revenue, earnings) | `windowCagr` in the adapter | stored as `REVENUE_CAGR_WINDOW` / `EARNINGS_CAGR_WINDOW` |
+| Total Assets | not shown; the adapter printed Total Liabilities instead | reported figure stored as `TOTAL_ASSETS`, reconstruction beside it as `TOTAL_ASSETS_DERIVED` |
+| MoS (`(IV − price) / IV`) | `computeMos` in the adapter | stored as `calc_valuation_methods.mos` |
+
+`gap_ratio` is untouched and still divides by the **price**; `mos` divides by the
+**intrinsic value**. For AUTO's DDM row they are `−0.5739` and `−1.3467`.
+
+### Values verified against the database
+
+The four rows this document flagged as "computed in the browser" now match what
+the database returns. ERAA (2019 → 2025):
+
+| Figure | Database | This document's expectation |
+|---|---|---|
+| Revenue | 32.94 → 76.61 | `32,94 … 76,61` |
+| EPS | 18.50 → 74.98 | `18 … 75` |
+| ROE | 5.93% → 11.75% | `5,9% … 11,8%` |
+| Gross Margin | 8.65% → 10.90% | `8,6% … 10,9%` |
+| BVPS | 312.15 → 638.08 | `312 … 638` |
+
+### One deliberate difference from the browser
+
+EPS and BVPS use the workbook's **single latest annual share count, at full
+precision**, not a per-year share count. This is the decision taken with the repo
+owner ("di template kan pakai shares di tahun terakhir") and it is what makes the
+stored EPS match the template.
+
+The first implementation got this wrong in two ways, and both are now measured and
+pinned by `tests/test_workbook_share_basis.py` against the five sample workbooks:
+
+| Implementation | Workbook cells matched |
+|---|---|
+| Per-year share count (the original bug) | **29 / 70** |
+| Latest count, rounded to millions | **49 / 70** (ITMG 0/14, BIRD 7/14) |
+| Latest count, full precision (**current**) | **70 / 70** |
+
+The workbook's `Shares Outstanding [Juta]` row is the formula `=Proj_Shares`
+repeated in every column, so one figure divides every year of the table. Dividing
+each year by that year's own count made ITMG 2021 EPS report `6139.41` instead of
+the workbook's `6010.73`; the fix changes 153 stored values (EPS 71, BVPS 82).
+
+Because the stored numbers changed, `QUARTERLY_GROWTH_QUALITY` was raised from
+`1.0.0` to **`1.1.0`** rather than overwritten. Runs written before the fix still
+point at `1.0.0`, so their meaning is unchanged.
+
+### The identity that is not quite exact
+
+`total_assets = total_liabilities + total_equity` holds for **139 of the 142**
+canonical annual rows, not all 142 as this document previously stated in section
+13. ARII, INKP and ITMG **2019** each differ by exactly **1 IDR** out of hundreds
+of trillions — provider rounding, not a data defect. Both figures are stored and
+the difference is flagged `TOTAL_ASSETS_RECONCILIATION_MISMATCH`, which is how
+the three rows were found.
+
+### Regression evidence
+
+The 16 pre-existing annual metric codes are **bit-identical** before and after:
+the fingerprint over 2,272 rows
+(`ticker|metric_code|period|value|status|flags`) is
+`4c726ce2e1f9911ab7f7316e572ff97a` in both snapshots. The ratio table has no
+duplicates on the RPC read path: 1,278 rows returned, 1,278 distinct
+`(ticker, metric_code, period)` triples.
+
+
+
+
+---
+
+## Addendum — 2026-10-02: Langkah 3 & 4 — UI reads stored ratios, not recomputed ones
+
+Langkah 3 (`0031`) added `annual_ratios`, `mos`, `stock_classification` and
+`data_quality.warnings` to `get_stock_research_data`. Langkah 4 rewired the
+adapter to read them. This is the first frontend change in this series, so the
+file-level record matters.
+
+### Frontend files changed
+
+| File | Change |
+|---|---|
+| `frontend/src/lib/stock-data.ts` | `ValuationMethod.mos` + `flags`, new `AnnualRatioMetric`, `StockClassification`, `DataQuality` types, their mappers, and `asStringArray` |
+| `frontend/src/lib/stock-detail-adapter.ts` | `computeMos` → `formatStoredMos`; `ratioSeries` / `perShareSeries` / `windowCagr` → `storedRatioSeries` / `storedCagr`; EPS in `buildGrowthVisuals`; margins in `buildAnnualMetrics` / `buildQuarterlyMetrics` |
+
+`lib/analysis/*.ts` is **unchanged** and not retired: `preferredMainMethodCode`
+still picks the main rule, `classifyFinancialMetric` still labels the metric
+cards, `analyzeHistoricalGrowth` still summarises the Growth tab, and the
+backtest modules still drive the Backtest tab. Retiring them requires a home for
+each first, so that is recorded as remaining work rather than claimed done.
+
+### Verification
+
+`Testing/evidence_check/ui_vs_workbook_check.js` renders the Financials table
+through the real pipeline and compares every EPS/BVPS cell against the five
+sample workbooks: **70 of 70 match**. Before the share-basis fix the same check
+would have failed 41 of 70.
+
+The three existing harnesses (`check.js`, `valuation_check.js`,
+`render_check.js`) still pass, so the Backtest and Valuation tabs are unchanged.
+`npx tsc --noEmit`, `npx eslint src/` (0 errors) and `npm run build` all pass.
+
+### One displayed value that changes on purpose
+
+EPS/BVPS for years whose share count differs from the newest reported one now
+match the workbook instead of the old per-year divisor. ITMG 2021 EPS renders
+`6010,73` where it previously rendered `6139,41`. That is the correction, not a
+regression: the workbook writes `6010,73`.
+
+### New UI surfaces worth knowing about
+
+- `Total Assets (Rp T)` is now a row in the annual table (it was previously
+  omitted because the reported figure was not ingested).
+- `data_quality.warnings` is mapped into `StockResearchData.dataQuality` and is
+  available to any card that wants to surface an approximation note. The EPS/BVPS
+  card note already switches on the stored `SHARES_CARRIED_FORWARD` flag rather
+  than inferring it.
+
+
+---
+
+## Addendum — 2026-10-02: entry-price simulation removed
+
+The Backtest tab's user-entry-price simulation has been **deleted** (not
+disabled), so the tab no longer computes any business figure from a user input.
+
+**What was removed**
+
+| Removed | Where it lived |
+|---|---|
+| "Your Entry Simulation" panel, Apply/Reset buttons, "Simulated Verdict" row | `backtest-tab-content.tsx` |
+| `EditablePriceCell` and the editable Analysis Price column | `backtest-tab-content.tsx` |
+| `analysisPrices` / `loadingPriceIds` state and `updateAnalysisPrice` | `backtest-tab-content.tsx` |
+| `calculateSimulatedVerdict`, `closeAtBacktestHorizon` | `analysis/backtest.ts` |
+| `upsideThreshold`, `downsideThreshold` | `analysis/backtest.ts` |
+| `DetailTable`, `CompactTableLegacy`, `CompactTableLegacy2`, `SummaryCard` (dead) | `backtest-tab-content.tsx` |
+
+**What changed as a consequence**
+
+Peak and trough returns are now read from the stored `return_peak` /
+`return_down` instead of being re-derived. Re-deriving them existed *only* to
+follow a price the reader typed; with that control gone, the stored column is
+strictly better. The per-horizon returns are still derived from the stored
+horizon high/low prices, because the database has no matching return column.
+
+**One owner for the verdict thresholds**
+
+`+20% / −15%` now lives only in `supabase/backtest_engine.py`
+(`VERDICT_UPSIDE` = 1.20, `VERDICT_DOWNSIDE` = 0.85). The TypeScript copy is
+gone. Two catalogue entries in `calculation_parameter_catalogue.py` that pointed
+at the deleted `backtest.ts` lines were re-pointed at the Python constants; the
+`overvalued_or_mixed` pair is now correctly flagged
+`RESOLUTION_UNRESOLVED_DEFINITION`, because the engine aliases it to the same
+1.20/0.85 pair and no live code path produces the distinct 0.15/−0.10 values.
+
+**Guard added**
+
+`tests/test_backtest_no_browser_recomputation.py` (6 tests) fails if any of this
+returns: the panel strings, the price state, the threshold copies, the barrel
+exports, or new `x / analysisPrice - 1` arithmetic in the tab.
+
+**Verification**
+
+444 Python tests pass (438 before this change). `tsc --noEmit`, `eslint src`
+(0 errors; warnings 10 → 4, because four dead components were deleted) and
+`npm run build` pass. All three harnesses pass and the Financials table still
+matches the workbooks **70/70**.
 
 ---
 

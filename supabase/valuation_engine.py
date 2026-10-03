@@ -14,6 +14,12 @@ from typing import Any, Mapping, Sequence
 from calculation_registry import sha256_json
 from calculation_v1_common import DECIMAL_PRECISION
 
+#: Margin-of-safety refusal flags, workbook rule D6. Defined here rather than
+#: imported from `backtest_engine` so this module keeps its single dependency on
+#: the shared layer; `tests/test_valuation_engine.py` pins the literals.
+FLAG_MOS_DENOMINATOR_ZERO = 'MOS_DENOMINATOR_ZERO'
+FLAG_MOS_NOT_APPLICABLE = 'MOS_NOT_APPLICABLE'
+
 CODE_VERSION = 'stocklens-valuation-v1'
 REFERENCE_VERSION = '1.0.0'
 DEFAULT_YEARS_COMPARE = {
@@ -251,6 +257,7 @@ def calculate_valuation_snapshot(
     type_weights: Mapping[str, Any] | None = None,
     type_thresholds: Mapping[str, Any] | None = None,
     valuation_parameters: Mapping[str, Any] | None = None,
+    include_daily_status: bool = True,
 ) -> dict[str, Any]:
     """Compute valuation inputs and the five workbook method snapshots.
 
@@ -559,7 +566,7 @@ def calculate_valuation_snapshot(
             discounted_earnings_value = max(future_eps * pe_capped / ((Decimal(1) + disc_rate) ** horizon), Decimal(0))
 
     input_values: dict[str, tuple[Decimal | None, str, list[str], dict[str, Any]]] = {
-        'CURRENT_PRICE': (current_price, 'IDR_PER_SHARE', [] if current_price is not None else ['CURRENT_PRICE_MISSING'], {'price_date': current_price_date}),
+        **({'CURRENT_PRICE': (current_price, 'IDR_PER_SHARE', [] if current_price is not None else ['CURRENT_PRICE_MISSING'], {'price_date': current_price_date})} if include_daily_status else {}),
         'EPS_FWD': (eps_fwd, 'IDR_PER_SHARE', [] if eps_fwd is not None else ['FORWARD_EARNINGS_OR_SHARES_MISSING'], {}),
         'BVPS_FWD': (bvps_fwd, 'IDR_PER_SHARE', [] if bvps_fwd is not None else ['FORWARD_EQUITY_OR_SHARES_MISSING'], {}),
         'REVENUE_CAGR_LONG': (revenue_long, 'RATIO', [] if revenue_long is not None else ['REVENUE_HISTORY_INSUFFICIENT'], {}),
@@ -600,11 +607,6 @@ def calculate_valuation_snapshot(
         'MEAN_REVERSION_PBV_INTRINSIC_VALUE': (mean_reversion, 'IDR_PER_SHARE', mean_reversion_flags, {'valid_quarters': len(quarterly_pbvs), 'window_quarters': len(quarterly_window), 'annual_share_proxy_quarters': quarter_proxy_count}),
     }
 
-    def verdict(value: Decimal | None) -> str:
-        if value is None or value <= 0 or current_price is None or current_price <= 0:
-            return 'NOT_APPLICABLE'
-        return 'UNDERVALUED' if current_price < value else 'OVERVALUED'
-
     raw_methods = {
         'PETER_LYNCH': (peter_lynch, [] if peter_lynch is not None else ['PETER_LYNCH_INPUT_MISSING'], {'selected_branch': peter_branch}),
         'TYPE_SECTOR_WEIGHTED': (weighted_value, missing_weight_flags if missing_weight_flags else ([] if weighted_value is not None else ['WEIGHTED_INPUT_MISSING']), {'pe_component': decimal_text(pe_projected), 'pbv_component': decimal_text(pbv_projected), 'weight_pe': decimal_text(weight_pe), 'weight_pbv': decimal_text(weight_pbv)}),
@@ -613,22 +615,44 @@ def calculate_valuation_snapshot(
         'DISCOUNTED_EARNINGS': (discounted_earnings_value, rate_flags if not rfr_resolved else ([] if discounted_earnings_value is not None else ['DISCOUNTED_EARNINGS_INPUT_MISSING']), {'risk_free_rate_source': risk_free_source}),
     }
     methods: list[dict[str, Any]] = []
+    def current_verdict(value: Decimal | None) -> str:
+        if value is None or value <= 0 or current_price is None or current_price <= 0:
+            return 'NOT_APPLICABLE'
+        return 'UNDERVALUED' if current_price < value else 'OVERVALUED'
+
+    def current_mos(value: Decimal | None) -> tuple[Decimal | None, list[str]]:
+        if value is None or current_price is None:
+            return None, []
+        if value == 0:
+            return None, [FLAG_MOS_DENOMINATOR_ZERO]
+        if value < 0:
+            return None, [FLAG_MOS_NOT_APPLICABLE]
+        return (value - current_price) / value, []
+
     for method_code, (value, flags, details) in raw_methods.items():
         status = _status_for(value, flags)
-        methods.append({
+        method_row = {
             'method_code': method_code,
             'method_name': METHOD_NAMES[method_code],
             'stock_type': normalized_type,
             'years_available': available_years,
-            'years_compare': compare_years,
             'intrinsic_value': value,
-            'current_price': current_price,
-            'gap_ratio': None if value is None or current_price is None or current_price == 0 else (value - current_price) / current_price,
-            'verdict': verdict(value),
             'calculation_status': status,
-            'flags': list(dict.fromkeys(flags + (all_periods_pit_flags if value is not None else []))),
+            'flags': list(dict.fromkeys(
+                flags + (all_periods_pit_flags if value is not None else []) + annual_pit_flags
+            )),
             'details': details,
-        })
+        }
+        if include_daily_status:
+            mos_value, mos_flags = current_mos(value)
+            method_row.update({
+                'current_price': current_price,
+                'gap_ratio': None if value is None or current_price is None or current_price == 0 else (value-current_price)/current_price,
+                'mos': mos_value,
+                'verdict': current_verdict(value),
+                'flags': list(dict.fromkeys(method_row['flags'] + mos_flags)),
+            })
+        methods.append(method_row)
 
     inputs: list[dict[str, Any]] = []
     for metric_code, (value, unit_code, flags, details) in input_values.items():
@@ -675,16 +699,18 @@ def calculate_valuation_snapshot(
                 'trading_date': str(selected_price.get('trading_date')),
                 'close_price': decimal_text(decimal_value(selected_price.get('close_price'))),
             })
-    input_snapshot = {
+    historical_cutoff = as_of_end
+    fundamental_input_snapshot = {
         'ticker': ticker,
         'sector': sector,
         'stock_type': normalized_type,
-        'valuation_date': as_of_date.isoformat(),
-        'valuation_price_date': current_price_date,
+        'historical_price_cutoff': historical_cutoff,
         'as_of_period_id': as_of_period_id,
         'as_of_period_end': as_of_end,
         'projection_scenario_id': scenario.get('id'),
         'projection_input_hash': scenario.get('input_hash'),
+        'risk_free_rate': decimal_text(rfr) if rfr_resolved else None,
+        'risk_free_rate_source': risk_free_source if rfr_resolved else None,
         'years_available': available_years,
         'years_compare': compare_years,
         'risk_free_rate': decimal_text(rfr) if rfr_resolved else None,
@@ -699,13 +725,21 @@ def calculate_valuation_snapshot(
             if period_id in {_safe_id(row) for row in [*annual, *quarterly_window, as_of_period]}
         ],
         'prices': period_price_observations,
-        'current_price': decimal_text(current_price),
     }
+    input_snapshot = dict(fundamental_input_snapshot)
+    if include_daily_status:
+        input_snapshot.update({
+            'valuation_date': as_of_date.isoformat(),
+            'valuation_price_date': current_price_date,
+            'current_price': decimal_text(current_price),
+        })
     return {
         'ticker': ticker,
         'sector': sector,
         'stock_type': normalized_type,
         'valuation_date': as_of_date.isoformat(),
+        'snapshot_date': as_of_end,
+        'historical_price_cutoff': as_of_end,
         'as_of_financial_period_id': as_of_period_id,
         'projection_scenario_id': scenario.get('id'),
         'years_available': available_years,
@@ -715,5 +749,83 @@ def calculate_valuation_snapshot(
         'inputs': inputs,
         'methods': methods,
         'input_snapshot': input_snapshot,
+        'fundamental_input_snapshot': fundamental_input_snapshot,
+        'fundamental_input_hash': sha256_json(fundamental_input_snapshot),
         'input_hash': sha256_json(input_snapshot),
+    }
+
+
+def calculate_daily_valuation_status(
+    fundamental_methods: Sequence[Mapping[str, Any]],
+    *,
+    current_price: Any,
+    minimum_consensus_methods: int = 3,
+    mos_threshold: Any = '0.30',
+    preferred_method_code: str | None = None,
+    valuation_date: str | None = None,
+) -> dict[str, Any]:
+    """Compare immutable intrinsic values to one daily quote; never values fundamentals."""
+    price = decimal_value(current_price)
+    if price is None or price <= 0:
+        raise ValuationError('DAILY_PRICE_INVALID')
+    if minimum_consensus_methods <= 0:
+        raise ValuationError('DAILY_CONSENSUS_MINIMUM_INVALID')
+    threshold = decimal_value(mos_threshold)
+    if threshold is None or threshold < 0:
+        raise ValuationError('DAILY_MOS_THRESHOLD_INVALID')
+
+    methods: list[dict[str, Any]] = []
+    for source in fundamental_methods:
+        value = decimal_value(source.get('intrinsic_value'))
+        source_flags = list(source.get('flags') or [])
+        valid = value is not None and source.get('calculation_status') in ('VALID', 'APPROXIMATED')
+        verdict = (
+            'NOT_APPLICABLE' if not valid or value is None or value <= 0
+            else ('UNDERVALUED' if price < value else 'OVERVALUED')
+        )
+        gap = None if value is None else (value - price) / price
+        mos = None
+        flags = list(source_flags)
+        if value == 0:
+            flags.append(FLAG_MOS_DENOMINATOR_ZERO)
+        elif value is not None and value < 0:
+            flags.append(FLAG_MOS_NOT_APPLICABLE)
+        elif value is not None:
+            mos = (value - price) / value
+        methods.append({
+            'method_code': str(source.get('method_code') or ''),
+            'intrinsic_value': value,
+            'current_price': price,
+            'gap_ratio': gap,
+            'mos': mos,
+            'verdict': verdict,
+            'calculation_status': source.get('calculation_status') if valid else 'UNAVAILABLE',
+            'flags': list(dict.fromkeys(flags)),
+        })
+
+    valid_rows = [
+        row for row in methods
+        if row['calculation_status'] in ('VALID', 'APPROXIMATED')
+        and row['intrinsic_value'] is not None
+        and row['verdict'] in ('UNDERVALUED', 'OVERVALUED')
+    ]
+    undervalued_count = sum(row['verdict'] == 'UNDERVALUED' for row in valid_rows)
+    consensus = 'N/A' if len(valid_rows) < minimum_consensus_methods else (
+        'UNDERVALUED' if undervalued_count * 2 > len(valid_rows) else 'OVERVALUED'
+    )
+    preferred = next((row for row in valid_rows if row['method_code'] == preferred_method_code and row['intrinsic_value'] > 0), None)
+    if preferred is None:
+        preferred = next((row for row in valid_rows if row['method_code'] in ('PETER_LYNCH', 'TYPE_SECTOR_WEIGHTED') and row['intrinsic_value'] > 0), None)
+    mos_value = preferred.get('mos') if preferred else None
+    return {
+        'valuation_date': valuation_date,
+        'current_price': price,
+        'methods': methods,
+        'consensus_verdict': consensus,
+        'valid_method_count': len(valid_rows),
+        'undervalued_method_count': undervalued_count,
+        'based_method_code': preferred.get('method_code') if preferred else None,
+        'based_mos': mos_value,
+        'based_mos_verdict': 'N/A' if mos_value is None else ('UNDERVALUED' if mos_value >= threshold else 'OVERVALUED'),
+        'mos_threshold': threshold,
     }

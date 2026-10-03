@@ -1,7 +1,7 @@
 import "server-only";
 
-import type { BacktestData, StockResearchData, FinancialPeriod, ValuationMethod, StockPrice } from "@/lib/stock-data";
-import { mockStockDetails, type BacktestCase, type EvidenceOutcomeBreakdown, type StockDetail } from "@/data/mock-stock-details";
+import type { BacktestData, StockResearchData, FinancialPeriod, ValuationMethod, StockPrice, AnnualRatioMetric, QuarterlyQualityMetric, ValuationSummary } from "@/lib/stock-data";
+import type { BacktestCase, EvidenceOutcomeBreakdown, StockDetail } from "@/data/mock-stock-details";
 import { toMonthIndex, toMonthLabel } from "@/utils/dates";
 import { sortValuationMethods, valuationMethodLabel, type ValuationMethodCode } from "@/lib/valuation-methods";
 import { buildBacktestCase } from "@/lib/backtest-adapter";
@@ -10,12 +10,11 @@ import {
   EVIDENCE_RATE_UNAVAILABLE,
   evidenceWinRatePercent,
   formatEvidencePercent,
-  preferredMainMethodCode,
 } from "@/lib/analysis";
 
 const UNAVAILABLE = "Not available";
 
-function mapVerdict(dbVerdict: string | undefined): StockDetail["verdict"] {
+function mapVerdict(dbVerdict: string | null | undefined): StockDetail["verdict"] {
   switch (dbVerdict) {
     case "UNDERVALUED":
       return "Undervalued";
@@ -26,6 +25,13 @@ function mapVerdict(dbVerdict: string | undefined): StockDetail["verdict"] {
     default:
       return "Not available";
   }
+}
+
+function mapSummaryVerdict(
+  value: string | null | undefined,
+): StockDetail["currentValuation"]["methodVerdict"] {
+  if (value === "UNDERVALUED" || value === "OVERVALUED" || value === "N/A") return value;
+  return null;
 }
 
 /**
@@ -45,49 +51,35 @@ function mapVerdict(dbVerdict: string | undefined): StockDetail["verdict"] {
  * A stock with no usable value from either candidate keeps `null`, so the screen
  * reports "not available" instead of picking a method at random.
  */
-function pickMainMethod(
-  methods: ValuationMethod[],
-  stockType: string,
-): ValuationMethod | null {
-  const preferredCode = preferredMainMethodCode(stockType);
-  const alternativeCode: ValuationMethodCode =
-    preferredCode === "PETER_LYNCH" ? "TYPE_SECTOR_WEIGHTED" : "PETER_LYNCH";
-
-  const usable = (method: ValuationMethod | undefined) =>
-    method != null && method.intrinsicValue != null && method.intrinsicValue > 0;
-
-  const byCode = (code: ValuationMethodCode) =>
-    methods.find((method) => method.methodCode === code);
-
-  if (usable(byCode(preferredCode))) return byCode(preferredCode) ?? null;
-  if (usable(byCode(alternativeCode))) return byCode(alternativeCode) ?? null;
-
-  // Neither main-rule candidate produced a value. Falling back to any other
-  // method would change what "main" means, so the headline stays unavailable.
-  return null;
+/**
+ * Margin of safety for one method, **read from the stored row**.
+ *
+ * The backend computes `(IV − price) / IV` (workbook `SUMMARY`, D6) and stores it
+ * on `calc_valuation_methods.mos`. The UI used to recompute it here, which meant
+ * two implementations of one rule and a figure n8n could not see. The stored
+ * value is used as-is; when it is `null` the row's `flags` say why
+ * (`MOS_DENOMINATOR_ZERO` for `IV = 0`, `MOS_NOT_APPLICABLE` for `IV < 0`, whose
+ * negative divisor would flip the sign of the ratio and read as a large discount
+ * when the model values the company far *below* its price).
+ *
+ * The `* 100` is presentation only: the database stores a ratio, and the UI shows
+ * a percentage.
+ */
+function formatStoredMos(method: ValuationMethod): number | null {
+  if (method.mos == null) return null;
+  return method.mos * 100;
 }
 
-/**
- * Margin of safety for one method: `(IV − price) / IV`, as a percentage.
- *
- * The divisor is the intrinsic value, not the price (workbook `SUMMARY`, D6), so
- * the ratio is only defined for a **positive** IV:
- *
- *   * `IV = 0` — undefined; the workbook writes `⚪ N/A (Skip)` and the backend
- *     flags `MOS_DENOMINATOR_ZERO`.
- *   * `IV < 0` — the divisor's sign flips the whole ratio. GEMA's Peter Lynch IV
- *     of `−22.03` against a price of `93` would produce `+522%`, which reads as a
- *     huge discount when the model actually values the company far *below* its
- *     price. The backend marks `IV <= 0` as `NOT_APPLICABLE` for the same reason.
- *
- * Returning `null` here is what makes the row render "Not available" instead of
- * a sign-flipped number. The backtest keeps negative IVs in its own consensus
- * (decision D5) through a separate code path, so this guard does not touch it.
- */
-function computeMos(intrinsicValue: number | null, currentPrice: number | null): number | null {
-  if (intrinsicValue == null || currentPrice == null) return null;
-  if (intrinsicValue <= 0) return null;
-  return ((intrinsicValue - currentPrice) / intrinsicValue) * 100;
+/** Transitional legacy-reader mapping. New frequency RPCs always supply their
+ * authoritative Based Method; this branch is only used until safe backfill. */
+function legacyMainMethod(methods: ValuationMethod[], stockType: string): ValuationMethod | null {
+  const preferredCode = stockType.trim().toLowerCase() === "stalwart" || stockType.trim().toLowerCase() === "fast grower"
+    ? "TYPE_SECTOR_WEIGHTED" : "PETER_LYNCH";
+  const alternativeCode = preferredCode === "PETER_LYNCH" ? "TYPE_SECTOR_WEIGHTED" : "PETER_LYNCH";
+  const usable = (code: string) => methods.find((method) =>
+    method.methodCode === code && method.intrinsicValue != null && method.intrinsicValue > 0,
+  );
+  return usable(preferredCode) ?? usable(alternativeCode) ?? null;
 }
 
 function methodDisplayName(methodCode: string): string {
@@ -214,7 +206,11 @@ function toRpTrillion(value: number | null): number {
   return value / 1_000_000_000_000;
 }
 
-function buildFinancialHistory(periods: FinancialPeriod[]): StockDetail["financialHistory"] {
+function buildFinancialHistory(
+  periods: FinancialPeriod[],
+  ratios: AnnualRatioMetric[],
+  quality: QuarterlyQualityMetric[],
+): StockDetail["financialHistory"] {
   const annualPeriods = periods
     .filter((p) => p.periodType === "ANNUAL")
     .sort((a, b) => a.periodEnd.localeCompare(b.periodEnd));
@@ -242,19 +238,6 @@ function buildFinancialHistory(periods: FinancialPeriod[]): StockDetail["financi
   // steps), overstating every rate it described.
   const yearsSpanned = Math.max(annualPeriods.length - 1, 0);
 
-  // Shares are carried forward from the most recent year that reported them,
-  // mirroring `buildValuationMetrics` below and the backend's
-  // `annual_share_count`. The provider leaves `OUTSTANDING_SHARES` null for some
-  // tickers' latest year (BIRD 2025), and treating that as "no EPS/BVPS at all"
-  // blanked a trend card and two table columns.
-  const sharesForIndex = (index: number): number | null => {
-    for (let i = index; i >= 0; i -= 1) {
-      const shares = factValue(annualPeriods[i], "OUTSTANDING_SHARES");
-      if (shares != null && shares > 0) return shares;
-    }
-    return null;
-  };
-
   const perYear = (fn: (period: FinancialPeriod, index: number) => number | null) =>
     annualPeriods.map((period, index) => fn(period, index));
 
@@ -262,38 +245,34 @@ function buildFinancialHistory(periods: FinancialPeriod[]): StockDetail["financi
   const factSeries = (metricCode: string) =>
     perYear((period) => factValue(period, metricCode));
 
-  /** A ratio per year, refused when either side is absent or the divisor is 0. */
-  const ratioSeries = (numeratorCode: string, denominatorCode: string) =>
-    perYear((period) => {
-      const numerator = factValue(period, numeratorCode);
-      const denominator = factValue(period, denominatorCode);
-      if (numerator == null || denominator == null || denominator === 0) return null;
-      return numerator / denominator;
-    });
-
-  /** A per-share value per year, e.g. EPS = earnings / shares. */
-  const perShareSeries = (metricCode: string) =>
-    perYear((period, index) => {
-      const value = factValue(period, metricCode);
-      const shares = sharesForIndex(index);
-      if (value == null || shares == null || shares <= 0) return null;
-      return value / shares;
-    });
-
   /**
-   * CAGR across the displayed window. Both endpoints must be positive, so a
-   * series that starts or ends in a loss reports "Not available" rather than an
-   * imaginary root of a negative number.
+   * A stored annual ratio per year, read from `calc_annual_ratios`.
+   *
+   * These used to be recomputed here (`ratioSeries`, `perShareSeries`,
+   * `windowCagr`). They now come from the database so the UI and n8n read one
+   * number, and so EPS uses the workbook's single `=Proj_Shares` divisor rather
+   * than a per-year share count. `null` is the stored "unavailable" state and is
+   * rendered as "Not available"; the row's `flags` carry the reason.
    */
-  const windowCagr = (series: (number | null)[]): string => {
-    const first = series[0];
-    const last = series[series.length - 1];
-    if (
-      first == null || last == null || first <= 0 || last <= 0 || yearsSpanned <= 0
-    ) {
-      return UNAVAILABLE;
+  const ratioByYear = (metricCode: string): Record<string, number | null> => {
+    const map: Record<string, number | null> = {};
+    for (const row of ratios) {
+      if (row.metricCode === metricCode) map[row.periodLabel] = row.value;
     }
-    return formatCagr(Math.pow(last / first, 1 / yearsSpanned) - 1);
+    return map;
+  };
+
+  /** A stored ratio aligned to the displayed annual periods. */
+  const storedRatioSeries = (metricCode: string) => {
+    const byYear = ratioByYear(metricCode);
+    return annualPeriods.map((period) => byYear[yearLabel(period)] ?? null);
+  };
+
+  /** The stored window CAGR, formatted. */
+  const storedCagr = (metricCode: string): string => {
+    const byYear = ratioByYear(metricCode);
+    const latest = byYear[yearLabel(latestAnnual)];
+    return latest == null ? UNAVAILABLE : formatCagr(latest);
   };
 
   const money = (value: number | null) =>
@@ -303,13 +282,13 @@ function buildFinancialHistory(periods: FinancialPeriod[]): StockDetail["financi
   const percent1 = (value: number | null) =>
     value == null ? UNAVAILABLE : `${(value * 100).toFixed(1).replace(".", ",")}%`;
 
-  // EPS is derived per year (earnings / outstanding shares). A year missing
-  // either input is skipped, so the series can never claim a value it lacks.
-  const epsValues = perShareSeries("EARNINGS");
+  // The EPS series is the stored per-year EPS, so the chart and the table show
+  // the same number the database holds. Years the backend could not compute are
+  // skipped rather than drawn as a zero.
+  const epsValues = storedRatioSeries("EPS");
   const epsSeries = annualPeriods
     .map((p, index) => ({ year: yearLabel(p), value: epsValues[index] }))
     .filter((point): point is { year: string; value: number } => point.value != null);
-  const latestEps = epsValues.at(-1) ?? null;
 
   const cagrLabel = yearsSpanned > 0 ? `CAGR (${yearsSpanned}Y)` : "CAGR";
 
@@ -320,7 +299,7 @@ function buildFinancialHistory(periods: FinancialPeriod[]): StockDetail["financi
       unit: "Rp Trillion",
       latestValue: toRpTrillion(factValue(latestAnnual, "REVENUE")).toFixed(2),
       cagrLabel,
-      cagrValue: windowCagr(factSeries("REVENUE")),
+      cagrValue: storedCagr("REVENUE_CAGR_WINDOW"),
       subtext: "Annual revenue trend",
       series: buildSeries("REVENUE", annualPeriods),
     },
@@ -330,7 +309,7 @@ function buildFinancialHistory(periods: FinancialPeriod[]): StockDetail["financi
       unit: "Rp Trillion",
       latestValue: toRpTrillion(factValue(latestAnnual, "EARNINGS")).toFixed(2),
       cagrLabel,
-      cagrValue: windowCagr(factSeries("EARNINGS")),
+      cagrValue: storedCagr("EARNINGS_CAGR_WINDOW"),
       subtext: "Annual net income trend",
       series: buildSeries("EARNINGS", annualPeriods),
     },
@@ -338,9 +317,10 @@ function buildFinancialHistory(periods: FinancialPeriod[]): StockDetail["financi
       id: "eps",
       title: "Earnings per Share (EPS)",
       unit: "Rp per share",
-      latestValue: latestEps == null ? UNAVAILABLE : latestEps.toFixed(2),
+      latestValue:
+        storedRatioSeries("EPS").at(-1)?.toFixed(2) ?? UNAVAILABLE,
       cagrLabel,
-      cagrValue: windowCagr(epsValues),
+      cagrValue: storedCagr("EARNINGS_CAGR_WINDOW"),
       subtext: "Earnings / outstanding shares",
       series: epsSeries,
     },
@@ -362,29 +342,55 @@ function buildFinancialHistory(periods: FinancialPeriod[]): StockDetail["financi
     format: (value: number | null) => string,
     // A ratio is a level, not a stock, so the workbook leaves its CAGR blank.
     withCagr = true,
+    // The stored window CAGR for the row, when the backend has one. Reading it
+    // rather than recomputing keeps the right-hand column identical to what n8n
+    // sees, and honours the backend's refusal (ARII and GOLD start in a loss).
+    cagrMetric?: string,
   ) => ({
     metric,
     values: series.map(format),
-    change: withCagr ? windowCagr(series) : "-",
+    change: withCagr
+      ? cagrMetric
+        ? storedCagr(cagrMetric)
+        : windowCagrOf(series)
+      : "-",
   });
+
+  /**
+   * Fallback CAGR for rows the backend does not store a window CAGR for.
+   *
+   * Only used for rows like Gross Profit, which the workbook does not report a
+   * CAGR for. Both endpoints must be positive, so a series that starts or ends in
+   * a loss reports "Not available" rather than an imaginary root of a negative
+   * number.
+   */
+  const windowCagrOf = (series: (number | null)[]): string => {
+    const first = series[0];
+    const last = series[series.length - 1];
+    if (first == null || last == null || first <= 0 || last <= 0 || yearsSpanned <= 0) {
+      return UNAVAILABLE;
+    }
+    return formatCagr(Math.pow(last / first, 1 / yearsSpanned) - 1);
+  };
 
   const annualTable: NonNullable<StockDetail["financialHistory"]>["annualTable"] = {
     periods: annualPeriods.map(yearLabel),
     changeLabel: yearsSpanned > 0 ? `CAGR (${yearsSpanned}Y)` : "CAGR",
     rows: [
-      seriesRow("Revenue (Rp T)", factSeries("REVENUE"), money),
+      seriesRow("Revenue (Rp T)", factSeries("REVENUE"), money, true, "REVENUE_CAGR_WINDOW"),
       seriesRow("Gross Profit (Rp T)", factSeries("GROSS_PROFIT"), money),
-      seriesRow("Net Income (Rp T)", factSeries("EARNINGS"), money),
-      seriesRow("EPS (Rp)", perShareSeries("EARNINGS"), amount),
-      // Total assets is not stored as a fact; the balance sheet identity
-      // `assets = liabilities + equity` holds for every canonical annual row,
-      // so liabilities is shown instead of inventing a derived total.
+      seriesRow("Net Income (Rp T)", factSeries("EARNINGS"), money, true, "EARNINGS_CAGR_WINDOW"),
+      seriesRow("EPS (Rp)", storedRatioSeries("EPS"), amount),
+      // The reported total assets, stored per year. The reconstruction
+      // (`liabilities + equity`) is kept beside it in the database; the reported
+      // figure is the official one and a disagreement is flagged there.
+      seriesRow("Total Assets (Rp T)", factSeries("TOTAL_ASSETS"), money),
       seriesRow("Total Liabilities (Rp T)", factSeries("TOTAL_LIABILITIES"), money),
       seriesRow("Total Equity (Rp T)", factSeries("TOTAL_EQUITY"), money),
-      seriesRow("Return on Equity (ROE)", ratioSeries("EARNINGS", "TOTAL_EQUITY"), percent1, false),
-      seriesRow("Gross Margin", ratioSeries("GROSS_PROFIT", "REVENUE"), percent1, false),
-      seriesRow("Net Margin", ratioSeries("EARNINGS", "REVENUE"), percent1, false),
-      seriesRow("Book Value per Share (BVPS) (Rp)", perShareSeries("TOTAL_EQUITY"), amount),
+      seriesRow("Return on Equity (ROE)", storedRatioSeries("ROE"), percent1, false),
+      seriesRow("Gross Margin", storedRatioSeries("GROSS_MARGIN"), percent1, false),
+      seriesRow("Net Margin", storedRatioSeries("NET_MARGIN"), percent1, false),
+      seriesRow("Book Value per Share (BVPS) (Rp)", storedRatioSeries("BVPS"), amount),
     ],
   };
 
@@ -442,43 +448,50 @@ function buildFinancialHistory(periods: FinancialPeriod[]): StockDetail["financi
     subtitle: `Historical annual and quarterly financials based on ${annualPeriods.length} reported annual period(s).`,
     annualTrendCards,
     quarterlyTrendCards,
-    annualMetrics: buildAnnualMetrics(latestAnnual),
-    quarterlyMetrics: quarterlyPeriods.length > 0 ? buildQuarterlyMetrics(quarterlyPeriods.at(-1)!) : [],
+    annualMetrics: buildAnnualMetrics(latestAnnual, ratios),
+    quarterlyMetrics: quarterlyPeriods.length > 0 ? buildQuarterlyMetrics(quarterlyPeriods.at(-1)!, quality) : [],
     annualTable,
     quarterlyTable,
   };
 }
 
 /** Key ratio cards for the Financials tab, built from the latest period's facts. */
-function buildAnnualMetrics(period: FinancialPeriod): NonNullable<StockDetail["financialHistory"]>["annualMetrics"] {
+function buildAnnualMetrics(
+  period: FinancialPeriod,
+  ratios: AnnualRatioMetric[],
+): NonNullable<StockDetail["financialHistory"]>["annualMetrics"] {
   const revenue = factValue(period, "REVENUE");
-  const earnings = factValue(period, "EARNINGS");
-  const grossProfit = factValue(period, "GROSS_PROFIT");
   const equity = factValue(period, "TOTAL_EQUITY");
   const liabilities = factValue(period, "TOTAL_LIABILITIES");
 
   const percent = (value: number | null) =>
     value == null ? UNAVAILABLE : `${(value * 100).toFixed(2).replace(".", ",")}%`;
 
-  const ratio = (numerator: number | null, denominator: number | null) =>
-    numerator == null || denominator == null || denominator === 0
-      ? null
-      : numerator / denominator;
+  // ROE and the two margins are the stored ratios for this period, so this card
+  // and the annual table cannot disagree.
+  const storedRatio = (metricCode: string): number | null => {
+    const row = ratios.find(
+      (candidate) =>
+        candidate.metricCode === metricCode &&
+        candidate.periodLabel === period.periodLabel,
+    );
+    return row?.value ?? null;
+  };
 
   return [
     {
       label: "Return on Equity (ROE)",
-      value: percent(ratio(earnings, equity)),
+      value: percent(storedRatio("ROE")),
       subtext: "Net income / total equity",
     },
     {
       label: "Gross Margin",
-      value: percent(ratio(grossProfit, revenue)),
+      value: percent(storedRatio("GROSS_MARGIN")),
       subtext: "Gross profit / revenue",
     },
     {
       label: "Net Margin",
-      value: percent(ratio(earnings, revenue)),
+      value: percent(storedRatio("NET_MARGIN")),
       subtext: "Net income / revenue",
     },
     {
@@ -499,10 +512,11 @@ function buildAnnualMetrics(period: FinancialPeriod): NonNullable<StockDetail["f
   ];
 }
 
-function buildQuarterlyMetrics(period: FinancialPeriod): NonNullable<StockDetail["financialHistory"]>["quarterlyMetrics"] {
+function buildQuarterlyMetrics(
+  period: FinancialPeriod,
+  quality: QuarterlyQualityMetric[],
+): NonNullable<StockDetail["financialHistory"]>["quarterlyMetrics"] {
   const revenue = factValue(period, "REVENUE");
-  const earnings = factValue(period, "EARNINGS");
-  const grossProfit = factValue(period, "GROSS_PROFIT");
   const ocf = factValue(period, "OPERATING_CASH_FLOW");
   const liabilities = factValue(period, "TOTAL_LIABILITIES");
   const equity = factValue(period, "TOTAL_EQUITY");
@@ -510,18 +524,24 @@ function buildQuarterlyMetrics(period: FinancialPeriod): NonNullable<StockDetail
   const percent = (value: number | null) =>
     value == null ? UNAVAILABLE : `${(value * 100).toFixed(2).replace(".", ",")}%`;
 
-  const ratio = (numerator: number | null, denominator: number | null) =>
-    numerator == null || denominator == null || denominator === 0
-      ? null
-      : numerator / denominator;
-
   const amount = (value: number | null) =>
     value == null ? UNAVAILABLE : toRpTrillion(value).toFixed(2);
 
+  // Quarterly margins are the stored `QUALITY_*` ratios for this quarter, the
+  // same rows the Thesis Validator reads, so the two cards cannot disagree.
+  const storedQuality = (metricCode: string): number | null => {
+    const row = quality.find(
+      (candidate) =>
+        candidate.metricCode === metricCode &&
+        candidate.periodLabel === period.periodLabel,
+    );
+    return row?.value ?? null;
+  };
+
   return [
     { label: "Revenue", value: amount(revenue), subtext: "Rp Trillion" },
-    { label: "Gross Margin", value: percent(ratio(grossProfit, revenue)), subtext: "Gross profit / revenue" },
-    { label: "Net Margin", value: percent(ratio(earnings, revenue)), subtext: "Net income / revenue" },
+    { label: "Gross Margin", value: percent(storedQuality("QUALITY_GROSS_MARGIN")), subtext: "Gross profit / revenue" },
+    { label: "Net Margin", value: percent(storedQuality("QUALITY_NET_MARGIN")), subtext: "Net income / revenue" },
     { label: "Operating Cash Flow", value: amount(ocf), subtext: "Rp Trillion" },
     { label: "Total Liabilities", value: amount(liabilities), subtext: "Rp Trillion" },
     { label: "Total Equity", value: amount(equity), subtext: "Rp Trillion" },
@@ -531,10 +551,10 @@ function buildQuarterlyMetrics(period: FinancialPeriod): NonNullable<StockDetail
 /**
  * Build the Growth tab chart series from canonical annual facts.
  *
- * Values are converted to Rp Billion so the chart axis stays readable; EPS is
- * computed as earnings / outstanding shares. Everything is derived from stored
- * facts, and a metric that is missing for a year yields `null` in the series so
- * the chart can leave an honest gap instead of drawing a fake zero.
+ * Values are converted to Rp Billion so the chart axis stays readable; EPS is the
+ * **stored** annual ratio. Everything else is read from stored facts, and a metric
+ * that is missing for a year yields `null` in the series so the chart can leave an
+ * honest gap instead of drawing a fake zero.
  */
 function buildGrowthVisuals(data: StockResearchData): StockDetail["healthGrowth"]["growthVisuals"] {
   const annualPeriods = data.financialPeriods
@@ -553,12 +573,15 @@ function buildGrowthVisuals(data: StockResearchData): StockDetail["healthGrowth"
   const netIncome = series("EARNINGS");
   const operatingCashFlow = series("OPERATING_CASH_FLOW");
 
-  const eps = annualPeriods.map((p) => {
-    const earnings = factValue(p, "EARNINGS");
-    const shares = factValue(p, "OUTSTANDING_SHARES");
-    if (earnings == null || shares == null || shares <= 0) return null;
-    return earnings / shares;
-  });
+  // The stored EPS per year, aligned to the displayed periods. It used to be
+  // recomputed as `earnings / shares` here, which disagreed with the table for
+  // any year whose share count differed from the newest reported one.
+  const epsByYear = new Map(
+    data.annualRatios
+      .filter((row) => row.metricCode === "EPS")
+      .map((row) => [row.periodLabel, row.value] as const),
+  );
+  const eps = annualPeriods.map((p) => epsByYear.get(p.periodLabel) ?? null);
 
   // Year-over-year growth in percent, relative to the previous year. The first
   // year has no prior period, so it is reported as unavailable rather than 0.
@@ -919,34 +942,6 @@ function buildBacktest(data: BacktestData | null | undefined): StockDetail["back
  * stored path uses instead of being a second set of hand-written numbers that
  * could drift from the tab next to it.
  */
-function buildDemoEvidencePreview(
-  cases: BacktestCase[],
-): StockDetail["historicalEvidencePreview"] {
-  const preview = buildHistoricalEvidencePreview(cases);
-  return preview ? { ...preview, isDemoData: true } : undefined;
-}
-
-/**
- * Backtest history and the "Historical Evidence" preview have no backing
- * database table yet. To keep the existing UI demo-able without pretending the
- * numbers are real, we expose the sample dataset for the single ticker that
- * ships with it (AUTO) and mark it with `isDemoData: true` so the UI can label
- * it. Every other ticker gets nothing and renders the "Not available" state.
- */
-function pickDemoBacktestData(
-  ticker: string,
-): Pick<StockDetail, "backtest" | "historicalEvidencePreview"> {
-  if (ticker.toUpperCase() !== "AUTO") {
-    return { backtest: undefined, historicalEvidencePreview: undefined };
-  }
-
-  const demo = mockStockDetails.AUTO;
-  return {
-    backtest: demo.backtest,
-    historicalEvidencePreview: buildDemoEvidencePreview(demo.backtest?.cases ?? []),
-  };
-}
-
 /** Growth-quality / forensic cards from the stored annual growth metrics. */
 function buildForensicMetrics(
   data: StockResearchData,
@@ -1007,37 +1002,30 @@ function buildValuationMetrics(
   data: StockResearchData,
   currentPrice: number | null,
 ): StockDetail["currentValuation"]["metrics"] {
-  const annualPeriods = data.financialPeriods
-    .filter((p) => p.periodType === "ANNUAL")
-    .sort((a, b) => a.periodEnd.localeCompare(b.periodEnd));
-  const latestAnnual = annualPeriods.at(-1);
-
-  const earnings = latestAnnual ? factValue(latestAnnual, "EARNINGS") : null;
-  const equity = latestAnnual ? factValue(latestAnnual, "TOTAL_EQUITY") : null;
-
-  // Shares are carried forward from the most recent year that reported them.
-  // The provider leaves `OUTSTANDING_SHARES` null for some tickers' latest year
-  // (BIRD 2025 is one), and treating that as "no EPS/BVPS at all" hid four
-  // metrics behind a null that has a perfectly good prior value. This mirrors
-  // the backend's `annual_share_count`, which walks backwards for the same
-  // reason, and is flagged below so the approximation is visible.
-  const sharePeriod = [...annualPeriods]
-    .reverse()
-    .find((p) => (factValue(p, "OUTSTANDING_SHARES") ?? 0) > 0);
-  const shares = sharePeriod ? factValue(sharePeriod, "OUTSTANDING_SHARES") : null;
-  const sharesAreCarried =
-    sharePeriod != null && sharePeriod.periodEnd !== latestAnnual?.periodEnd;
-
-  const eps = earnings != null && shares != null && shares > 0 ? earnings / shares : null;
-  const bvps = equity != null && shares != null && shares > 0 ? equity / shares : null;
+  // EPS and BVPS are the stored annual ratios for the latest year, so the
+  // Valuation tab and the Financials tab cannot disagree. They used to be
+  // recomputed here from `EARNINGS / shares` with a per-year share count, which
+  // is a different (and non-template) divisor.
+  const latestRatio = (metricCode: string): number | null => {
+    const rows = data.annualRatios.filter((row) => row.metricCode === metricCode);
+    const latest = rows.at(-1);
+    return latest?.value ?? null;
+  };
+  const eps = latestRatio("EPS");
+  const bvps = latestRatio("BVPS");
 
   const multiple = (numerator: number | null, denominator: number | null) =>
     numerator == null || denominator == null || denominator <= 0
       ? UNAVAILABLE
       : `${(numerator / denominator).toFixed(2).replace(".", ",")}x`;
 
+  // The share-count note is read from the stored flags rather than inferred, so
+  // the UI reports the same approximation the backend recorded.
+  const sharesAreCarried = data.annualRatios.some(
+    (row) => row.metricCode === "EPS" && row.flags.includes("SHARES_CARRIED_FORWARD"),
+  );
   const sharesNote = sharesAreCarried
-    ? ` (shares from ${sharePeriod.periodEnd.slice(0, 4)}; latest year not reported)`
+    ? " (latest year did not report shares; the newest reported count is used)"
     : "";
 
   return [
@@ -1079,20 +1067,17 @@ function buildMonthlyPricePoints(prices: StockPrice[]): { date: string; value: n
     .sort((a, b) => (toMonthIndex(a.date) ?? 0) - (toMonthIndex(b.date) ?? 0));
 }
 
-export function buildStockDetail(data: StockResearchData, backtest?: BacktestData | null): StockDetail {
+export function buildStockDetail(
+  data: StockResearchData,
+  backtest?: BacktestData | null,
+  valuationSummary?: ValuationSummary | null,
+): StockDetail {
+  const valuationMethods = valuationSummary?.methods ?? data.valuationMethods;
   const storedBacktest = buildBacktest(backtest);
-  // Stored results win. The sample dataset is only a fallback so the tab stays
-  // demo-able for the one ticker that ships with it, and it keeps its
-  // `isDemoData` badge so it can never be mistaken for stored history.
-  const demoBacktest = storedBacktest
-    ? { backtest: undefined, historicalEvidencePreview: undefined }
-    : pickDemoBacktestData(data.instrument.ticker);
-  const backtestSection = storedBacktest ?? demoBacktest.backtest;
+  const backtestSection = storedBacktest;
   // The Overview preview reads the same cases the Backtest tab does, so both
   // screens report one set of numbers.
-  const evidencePreview =
-    buildHistoricalEvidencePreview(backtestSection?.cases ?? []) ??
-    demoBacktest.historicalEvidencePreview;
+  const evidencePreview = buildHistoricalEvidencePreview(backtestSection?.cases ?? []);
   // The Key Metric headline figures are the win rates of both rules, read from
   // the same preview the Overview panel renders so the top row and the panel
   // cannot drift apart.
@@ -1102,8 +1087,13 @@ export function buildStockDetail(data: StockResearchData, backtest?: BacktestDat
   };
   // Stock type comes from the stored rows, not from the chosen main method, so
   // the fallback below cannot change what type the ticker is.
-  const stockType = data.valuationMethods[0]?.stockType ?? UNAVAILABLE;
-  const mainMethod = pickMainMethod(data.valuationMethods, stockType);
+  const stockType = valuationSummary?.stockType ?? valuationSummary?.methods?.[0]?.stockType ?? data.valuationMethods[0]?.stockType ?? UNAVAILABLE;
+  const mainMethodCode = valuationSummary?.mosMethodCode ?? null;
+  const mainMethod = mainMethodCode
+    ? valuationMethods.find((method) => method.methodCode === mainMethodCode) ?? null
+    : valuationSummary?.methods?.length
+      ? null
+      : legacyMainMethod(data.valuationMethods, stockType);
   const latestPrice = data.prices.at(-1);
   const previousPrice = data.prices.at(-2);
 
@@ -1114,9 +1104,12 @@ export function buildStockDetail(data: StockResearchData, backtest?: BacktestDat
     change != null && previousPrice?.closePrice ? (change / previousPrice.closePrice) * 100 : null;
 
   const intrinsicValue = mainMethod?.intrinsicValue ?? null;
-  const currentPrice = mainMethod?.currentPrice ?? price;
-  const mos = computeMos(intrinsicValue, currentPrice);
+  const currentPrice = valuationSummary?.currentPrice ?? mainMethod?.currentPrice ?? price;
+  // Read from the stored row rather than recomputed: the backend owns rule D6.
+  const mos = mainMethod ? formatStoredMos(mainMethod) : null;
   const verdict = mapVerdict(mainMethod?.verdict);
+  const methodVerdict = mapSummaryVerdict(valuationSummary?.methodVerdict);
+  const mosVerdict = mapSummaryVerdict(valuationSummary?.mosVerdict);
 
   const prices52w = data.prices.filter((p) => p.closePrice != null).map((p) => p.closePrice as number);
   const low52W = prices52w.length > 0 ? Math.min(...prices52w) : null;
@@ -1124,7 +1117,7 @@ export function buildStockDetail(data: StockResearchData, backtest?: BacktestDat
   const latestMarketCap = latestPrice?.marketCap ?? null;
 
   const methods: import("@/data/mock-stock-details").ValuationMethodResult[] = sortValuationMethods(
-    data.valuationMethods
+    valuationMethods
       // `APPROXIMATED` rows carry a real computed intrinsic value (the engine only
       // proxied an input, e.g. quarterly shares -> latest annual figure), so they
       // must be shown. Dropping them hid the whole Mean Reversion PBV method.
@@ -1135,7 +1128,7 @@ export function buildStockDetail(data: StockResearchData, backtest?: BacktestDat
           (m.calculationStatus === "VALID" || m.calculationStatus === "APPROXIMATED"),
       ),
   ).map((m) => {
-    const marginOfSafety = computeMos(m.intrinsicValue, m.currentPrice);
+    const marginOfSafety = formatStoredMos(m);
     return {
       method: methodDisplayName(m.methodCode),
       methodCode: m.methodCode,
@@ -1192,9 +1185,12 @@ export function buildStockDetail(data: StockResearchData, backtest?: BacktestDat
       currentPrice,
       intrinsicValue,
       mos,
+      methodVerdict,
+      mosVerdict,
+      mosThreshold: valuationSummary?.mosThreshold ?? null,
       metrics: buildValuationMetrics(data, currentPrice),
       methods,
-      mainMethodCode: mainMethod ? (mainMethod.methodCode as ValuationMethodCode) : null,
+      mainMethodCode: mainMethodCode as ValuationMethodCode | null,
       comparison: {
         takeaway: mainMethod
           ? "Comparison of the current price against the intrinsic value estimates from the valuation methods stored in the database."
@@ -1246,10 +1242,14 @@ export function buildStockDetail(data: StockResearchData, backtest?: BacktestDat
       overall: { score: UNAVAILABLE, rating: UNAVAILABLE, clearance: UNAVAILABLE, context: UNAVAILABLE },
     },
     growthSummary: buildGrowthSummary(data),
-    historicalEvidencePreview: evidencePreview,
+    historicalEvidencePreview: evidencePreview ?? undefined,
     backtest: backtestSection,
     thesisValidator: buildThesisValidator(data),
     dividendConsistency: buildDividendConsistency(data),
-    financialHistory: buildFinancialHistory(data.financialPeriods),
+    financialHistory: buildFinancialHistory(
+      data.financialPeriods,
+      data.annualRatios,
+      data.quarterlyQuality,
+    ),
   };
 }

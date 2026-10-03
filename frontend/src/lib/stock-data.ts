@@ -47,9 +47,78 @@ export type ValuationMethod = {
   intrinsicValue: number | null;
   currentPrice: number | null;
   gapRatio: number | null;
+  /**
+   * Margin of safety, workbook rule D6: `(IV − price) / IV`.
+   *
+   * Distinct from `gapRatio`, which divides by the price. The backend stores it
+   * so the UI no longer computes it; `null` means the model produced no positive
+   * IV, and the row's `flags` say which guard fired.
+   */
+  mos: number | null;
   verdict: string;
   calculationStatus: string;
+  flags: string[];
   stockType: string | null;
+};
+
+export type ValuationSummary = {
+  methodVerdict: string | null;
+  methodUndervaluedCount: number;
+  methodValidCount: number;
+  mosMethodCode: string | null;
+  mos: number | null;
+  mosVerdict: string | null;
+  mosThreshold: number | null;
+  currentPrice?: number | null;
+  tradingDate?: string | null;
+  methods?: ValuationMethod[];
+  stockType?: string | null;
+};
+
+export type ValuationFrequency = {
+  fundamental: {
+    snapshotId: string;
+    stockType: string | null;
+    methods: Array<{
+      methodCode: string;
+      intrinsicValue: number | null;
+      calculationStatus: string;
+    }>;
+  } | null;
+  daily: {
+    tradingDate: string;
+    currentPrice: number | null;
+    consensusVerdict: string | null;
+    basedMethodCode: string | null;
+    basedMos: number | null;
+    basedMosVerdict: string | null;
+    methods: ValuationMethod[];
+  } | null;
+};
+
+export type AnnualRatioMetric = {
+  periodEnd: string;
+  periodLabel: string;
+  metricCode: string;
+  value: number | null;
+  /**
+   * Unit of `value`: `IDR`, `IDR_PER_SHARE`, `RATIO`, `PERCENT`, `SHARES` or
+   * `YEARS`. Stored beside the value so a ratio can never be read as an amount.
+   */
+  unitCode: string;
+  calculationStatus: string;
+  flags: string[];
+};
+
+export type StockClassification = {
+  finalType: string | null;
+  systemRecommendation: string | null;
+  confidence: number | null;
+  ruleFlags: string[];
+};
+
+export type DataQuality = {
+  warnings: string[];
 };
 
 export type AnnualGrowthMetric = {
@@ -184,10 +253,15 @@ export type StockResearchData = {
   prices: StockPrice[];
   financialPeriods: FinancialPeriod[];
   valuationMethods: ValuationMethod[];
+  valuationSummary: ValuationSummary | null;
+  valuationFrequency: ValuationFrequency | null;
   annualGrowth: AnnualGrowthMetric[];
+  annualRatios: AnnualRatioMetric[];
   quarterlyQuality: QuarterlyQualityMetric[];
   dividends: DividendFact[];
   projection: ActiveProjection | null;
+  stockClassification: StockClassification | null;
+  dataQuality: DataQuality | null;
 };
 
 function getSupabaseClient() {
@@ -223,6 +297,15 @@ function asString(value: unknown, fallback = ""): string {
 
 function asNullableString(value: unknown): string | null {
   return typeof value === "string" && value.length > 0 ? value : null;
+}
+
+/**
+ * A JSONB flag column arrives as an array of strings. A non-array (or an array
+ * holding non-strings) yields an empty list rather than `null`, so callers can
+ * always ask `flags.includes(...)` without a guard.
+ */
+function asStringArray(value: unknown): string[] {
+  return asArray(value).filter((entry): entry is string => typeof entry === "string");
 }
 
 function asFiniteNumber(value: unknown): number | null {
@@ -326,10 +409,58 @@ function mapValuationMethod(value: unknown): ValuationMethod | null {
     intrinsicValue: asFiniteNumber(row.intrinsic_value),
     currentPrice: asFiniteNumber(row.current_price),
     gapRatio: asFiniteNumber(row.gap_ratio),
+    mos: asFiniteNumber(row.mos),
     verdict: asString(row.verdict, "NOT_APPLICABLE"),
     calculationStatus: asString(row.calculation_status, "UNAVAILABLE"),
+    flags: asStringArray(row.flags),
     stockType: asNullableString(row.stock_type),
   };
+}
+
+function mapValuationSummary(value: unknown): ValuationSummary | null {
+  const row = asObject(value);
+  if (!row) return null;
+  return {
+    methodVerdict: asNullableString(row.method_verdict),
+    methodUndervaluedCount: asFiniteNumber(row.method_undervalued_count) ?? 0,
+    methodValidCount: asFiniteNumber(row.method_valid_count) ?? 0,
+    mosMethodCode: asNullableString(row.mos_method_code),
+    mos: asFiniteNumber(row.mos),
+    mosVerdict: asNullableString(row.mos_verdict),
+    mosThreshold: asFiniteNumber(row.mos_threshold),
+  };
+}
+
+function mapAnnualRatioMetric(value: unknown): AnnualRatioMetric | null {
+  const row = asObject(value);
+  if (!row || typeof row.metric_code !== "string" || typeof row.period_end !== "string") return null;
+
+  return {
+    periodEnd: row.period_end,
+    periodLabel: asString(row.period_label, row.period_end),
+    metricCode: row.metric_code,
+    value: asFiniteNumber(row.value_numeric),
+    unitCode: asString(row.unit_code, "UNKNOWN"),
+    calculationStatus: asString(row.calculation_status, "UNAVAILABLE"),
+    flags: asStringArray(row.flags),
+  };
+}
+
+function mapStockClassification(value: unknown): StockClassification | null {
+  const row = asObject(value);
+  if (!row) return null;
+  return {
+    finalType: asNullableString(row.final_type),
+    systemRecommendation: asNullableString(row.system_recommendation),
+    confidence: asFiniteNumber(row.confidence),
+    ruleFlags: asStringArray(row.rule_flags),
+  };
+}
+
+function mapDataQuality(value: unknown): DataQuality | null {
+  const row = asObject(value);
+  if (!row) return null;
+  return { warnings: asStringArray(row.warnings) };
 }
 
 function mapStockResearchData(value: unknown): StockResearchData | null {
@@ -351,12 +482,24 @@ function mapStockResearchData(value: unknown): StockResearchData | null {
     financialPeriods: asArray(result?.financial_periods)
       .map(mapFinancialPeriod)
       .filter((period): period is FinancialPeriod => period !== null),
-    valuationMethods: asArray(result?.valuation_methods)
-      .map(mapValuationMethod)
+    valuationMethods: asArray(asObject(result?.valuation_frequency)?.daily
+      ? asObject(asObject(result?.valuation_frequency)?.daily)?.methods
+      : result?.valuation_methods)
+      .map((row) => {
+        const method = asObject(row);
+        return method && !("valuation_date" in method)
+          ? mapValuationMethod({ ...method, valuation_date: asObject(asObject(result?.valuation_frequency)?.daily)?.trading_date })
+          : mapValuationMethod(row);
+      })
       .filter((method): method is ValuationMethod => method !== null),
+    valuationSummary: mapValuationSummary(result?.valuation_summary),
+    valuationFrequency: mapValuationFrequency(result?.valuation_frequency),
     annualGrowth: asArray(result?.annual_growth)
       .map(mapAnnualGrowthMetric)
       .filter((metric): metric is AnnualGrowthMetric => metric !== null),
+    annualRatios: asArray(result?.annual_ratios)
+      .map(mapAnnualRatioMetric)
+      .filter((metric): metric is AnnualRatioMetric => metric !== null),
     quarterlyQuality: asArray(result?.quarterly_quality)
       .map(mapQuarterlyQualityMetric)
       .filter((metric): metric is QuarterlyQualityMetric => metric !== null),
@@ -364,6 +507,41 @@ function mapStockResearchData(value: unknown): StockResearchData | null {
       .map(mapDividendFact)
       .filter((fact): fact is DividendFact => fact !== null),
     projection: mapActiveProjection(result?.projection),
+    stockClassification: mapStockClassification(result?.stock_classification),
+    dataQuality: mapDataQuality(result?.data_quality),
+  };
+}
+
+function mapValuationFrequency(value: unknown): ValuationFrequency | null {
+  const result = asObject(value);
+  if (!result) return null;
+  const fundamentalRow = asObject(result.fundamental);
+  const dailyRow = asObject(result.daily);
+  const methods = (rows: unknown): ValuationMethod[] => asArray(rows)
+    .map(mapValuationMethod)
+    .filter((method): method is ValuationMethod => method !== null);
+  return {
+    fundamental: fundamentalRow ? {
+      snapshotId: asString(fundamentalRow.snapshot_id),
+      stockType: asNullableString(fundamentalRow.stock_type),
+      methods: asArray(fundamentalRow.methods).map((row) => {
+        const method = asObject(row);
+        return {
+          methodCode: asString(method?.method_code),
+          intrinsicValue: asFiniteNumber(method?.intrinsic_value),
+          calculationStatus: asString(method?.calculation_status),
+        };
+      }),
+    } : null,
+    daily: dailyRow ? {
+      tradingDate: asString(dailyRow.trading_date),
+      currentPrice: asFiniteNumber(dailyRow.current_price),
+      consensusVerdict: asNullableString(dailyRow.consensus_verdict),
+      basedMethodCode: asNullableString(dailyRow.based_method_code),
+      basedMos: asFiniteNumber(dailyRow.based_mos),
+      basedMosVerdict: asNullableString(dailyRow.based_mos_verdict),
+      methods: methods(dailyRow.methods),
+    } : null,
   };
 }
 
@@ -572,6 +750,43 @@ export async function getStockBacktestData(ticker: string): Promise<BacktestData
 
   if (error) throw new Error("Unable to load backtest data from Supabase.");
   return mapBacktestData(data);
+}
+
+export async function getStockValuationSummary(
+  ticker: string,
+): Promise<ValuationSummary | null> {
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase.rpc("get_stock_valuation_frequency", {
+    p_ticker: ticker.trim().toUpperCase(),
+  });
+
+  if (error) throw new Error("Unable to load valuation summary from Supabase.");
+  const frequency = mapValuationFrequency(data);
+  const daily = frequency?.daily;
+  if (!daily) {
+    // Additive rollout guard: before the first new snapshot/status is safely
+    // backfilled, keep the existing read-only database contract available.
+    const { data: legacy, error: legacyError } = await supabase.rpc("get_stock_valuation_summary", {
+      p_ticker: ticker.trim().toUpperCase(),
+    });
+    if (legacyError) throw new Error("Unable to load valuation summary from Supabase.");
+    return mapValuationSummary(legacy);
+  }
+  const validMethods = daily.methods.filter((method) => method.calculationStatus === "VALID" || method.calculationStatus === "APPROXIMATED");
+  const undervalued = validMethods.filter((method) => method.verdict === "UNDERVALUED").length;
+  return {
+    currentPrice: daily.currentPrice,
+    tradingDate: daily.tradingDate,
+    methods: daily.methods,
+    stockType: frequency?.fundamental?.stockType ?? null,
+    methodVerdict: daily.consensusVerdict,
+    methodUndervaluedCount: undervalued,
+    methodValidCount: validMethods.length,
+    mosMethodCode: daily.basedMethodCode,
+    mos: daily.basedMos,
+    mosVerdict: daily.basedMosVerdict,
+    mosThreshold: asFiniteNumber(asObject(data)?.daily && asObject(asObject(data)?.daily)?.mos_threshold),
+  };
 }
 
 export async function getTickerExists(ticker: string): Promise<boolean> {

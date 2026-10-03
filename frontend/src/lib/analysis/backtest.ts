@@ -1,16 +1,8 @@
-import type { BacktestCase, BacktestVerdict } from "@/data/mock-stock-details";
+import type { BacktestCase } from "@/data/mock-stock-details";
 
 export const backtestMethodology = {
   observationMonths: 12,
   horizonsMonths: [3, 6, 9, 12] as const,
-  /**
-   * One threshold for both classifications: up +20%, down -15%.
-   *
-   * Previously `OVERVALUED` used +15%/-10%, so the classification also decided
-   * the thresholds. Now the classification only picks the verdict **name**.
-   */
-  upsideThreshold: 0.2,
-  downsideThreshold: -0.15,
   valuationMethodCount: 5,
   classification: { methodUndervaluedMinimum: 3, mosMainThreshold: 0.3 },
 } as const;
@@ -77,41 +69,6 @@ function getObservationPath(testCase: BacktestCase) {
     .sort((left, right) => left.date.localeCompare(right.date));
 }
 
-/**
- * Verdict for a user-entered entry price, used only by the detail drawer's
- * "Your Entry Simulation" panel.
- *
- * The stored verdict is always shown as-is; this recomputes only for a price the
- * user typed, and it must follow the same rules as the backend so the simulation
- * cannot contradict the table:
- *
- *   * one threshold pair for both classifications (+20% / -15%);
- *   * neither touched -> `FLAT` (never `OBSERVE`);
- *   * up first (or same day) -> `WIN` / `REPRICE`;
- *   * down first -> `RECOVERED` / `CONFIRMED`.
- */
-export function calculateSimulatedVerdict(testCase: BacktestCase, entryPrice: number): BacktestVerdict {
-  const isUndervalued = classifyMethodsAbovePrice(testCase.methods, testCase.analysisPrice).classification === "UNDERVALUED";
-  const upsideTarget = entryPrice * (1 + backtestMethodology.upsideThreshold);
-  const downsideTarget = entryPrice * (1 + backtestMethodology.downsideThreshold);
-  let upsideDate: string | null = null;
-  let downsideDate: string | null = null;
-
-  for (const point of getObservationPath(testCase)) {
-    if (!upsideDate && point.high >= upsideTarget) upsideDate = point.date;
-    if (!downsideDate && point.low <= downsideTarget) downsideDate = point.date;
-    if (upsideDate || downsideDate) break;
-  }
-
-  if (!upsideDate && !downsideDate) return "FLAT";
-  // Down yang lebih dulu berarti tesis sempat salah; kalau up yang lebih dulu
-  // (atau hari yang sama), arah yang benar menang.
-  if (downsideDate && (!upsideDate || downsideDate < upsideDate)) {
-    return isUndervalued ? "RECOVERED" : "CONFIRMED";
-  }
-  return isUndervalued ? "WIN" : "REPRICE";
-}
-
 function rangeAtHorizon(testCase: BacktestCase, horizon: number, analysisPrice: number) {
   const points = getObservationPath(testCase).filter(
     (point) => monthsBetween(testCase.analysisDate, point.date) <= horizon,
@@ -124,12 +81,6 @@ function rangeAtHorizon(testCase: BacktestCase, horizon: number, analysisPrice: 
     highReturn: point.high / analysisPrice - 1,
     lowReturn: point.low / analysisPrice - 1,
   };
-}
-
-export function closeAtBacktestHorizon(testCase: BacktestCase, horizon: number) {
-  return getObservationPath(testCase)
-    .filter((point) => monthsBetween(testCase.analysisDate, point.date) <= horizon)
-    .at(-1)?.close ?? null;
 }
 
 export function calculateBacktestMetrics(testCase: BacktestCase, analysisPrice = testCase.analysisPrice) {

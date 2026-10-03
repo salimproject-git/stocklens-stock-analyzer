@@ -410,6 +410,195 @@ Dua catatan penting yang sudah terverifikasi terhadap workbook AUTO Q2 2026:
 
 Override manual (setara `B81`) didukung lewat `--manual-override "STALWART"`. Hasil aturan tetap disimpan, sehingga hasil aturan dan override bisa dibedakan.
 
+### 1.6.1 Rasio tahunan tersimpan (`calc_annual_ratios`)
+Sejak migrasi `0029`, rasio tahunan yang dulu dihitung ulang di browser punya rumah
+di database. Tujuannya: UI dan n8n membaca **angka yang sama persis**, bukan dua
+implementasi rumus yang bisa berbeda.
+
+| Metric code | Rumus | `unit_code` |
+|---|---|---|
+| `EPS` | `EARNINGS / shares` | `IDR_PER_SHARE` |
+| `BVPS` | `TOTAL_EQUITY / shares` | `IDR_PER_SHARE` |
+| `ROE` | `EARNINGS / TOTAL_EQUITY` | `RATIO` |
+| `GROSS_MARGIN` | `GROSS_PROFIT / REVENUE` | `RATIO` |
+| `NET_MARGIN` | `EARNINGS / REVENUE` | `RATIO` |
+| `TOTAL_ASSETS` | angka **laporan** provider | `IDR` |
+| `TOTAL_ASSETS_DERIVED` | `TOTAL_LIABILITIES + TOTAL_EQUITY` | `IDR` |
+| `REVENUE_CAGR_WINDOW` | `(last/first)^(1/(n-1)) − 1` | `RATIO` |
+| `EARNINGS_CAGR_WINDOW` | idem untuk `EARNINGS` | `RATIO` |
+
+**Sembilan metrik, satu baris per snapshot tahun**, sama seperti 18 metrik
+`calc_annual_growth_quality`. Jadi ROE 2022 tersimpan pada snapshot 2022, bukan
+hanya di tahun terakhir.
+
+**`unit_code` disimpan di setiap baris.** Ini yang mencegah konsumen (terutama AI)
+membaca `0.1087` sebagai nilai rupiah padahal itu margin. `unit_code` juga masuk
+ke dalam `input_snapshot` run, sehingga perubahan satuan membuat run baru.
+
+**`shares` = jumlah saham tahun terakhir yang dilaporkan, presisi penuh.**
+Ini mengikuti baris `Shares Outstanding [Juta]` di workbook, yang isinya rumus
+`=Proj_Shares` **di setiap kolom**. Artinya satu angka membagi seluruh tahun di
+tabel: EPS 2021 memakai jumlah saham terbaru, bukan jumlah saham 2021 sendiri.
+`Proj_Shares` sendiri = `IF(SharesThisYear > 0, SharesThisYear, SharesFallback)`,
+dengan `SharesFallback` = tahun terakhir yang melaporkan jumlah saham.
+
+Dua hal yang **tidak** boleh dilakukan, keduanya sudah terukur:
+
+| Kesalahan | Akibat |
+|---|---|
+| Membagi tiap tahun dengan jumlah saham tahun itu sendiri | Hanya **29 dari 70** sel EPS/BVPS di lima workbook yang cocok. ITMG 2021 EPS jadi `6139,41` padahal workbook menulis `6010,73`. |
+| Membulatkan jumlah saham ke juta | Hanya **49 dari 70** sel yang cocok (ITMG `0/14`, BIRD `7/14`). |
+
+Karena itu `derive_projection_scenario.annual_share_count` **tidak** dipakai di
+sini: fungsi itu membulatkan ke juta karena lembar proyeksi butuh angka yang rapi.
+Aturan rasio tahunan ditulis langsung dan diuji oleh
+`tests/test_workbook_share_basis.py`, yang membandingkan ke **lima workbook asli**
+dan menuntut **70/70** sel cocok.
+
+Jumlah saham dihitung **sekali per run** dari seluruh histori annual, lalu
+diberikan ke setiap snapshot. Kalau dihitung per snapshot, snapshot tahun paling
+awal akan memakai jumlah saham tahun itu sendiri - itulah bug yang membuat ITMG
+2021 meleset.
+
+Bila jumlah saham tidak ditemukan sama sekali, baris ditandai
+`OUTSTANDING_SHARES_MISSING` — bukan menghentikan seluruh run.
+
+**`TOTAL_ASSETS` menyimpan dua angka.** Keputusan S1: angka laporan adalah nilai
+resmi, dan rekonstruksi `liabilities + equity` disimpan di sebelahnya sebagai
+`TOTAL_ASSETS_DERIVED` untuk audit. Keduanya dibandingkan; bila berbeda, baris
+`TOTAL_ASSETS` ditandai `TOTAL_ASSETS_RECONCILIATION_MISMATCH` alih-alih
+disamarkan. Hasil pengukuran: identitas persis di **139 dari 142** baris annual
+kanonis; ARII, INKP, dan ITMG 2019 meleset tepat **1 rupiah** dari nilai ratusan
+triliun (pembulatan sisi provider). Tiga baris itu kini terdeteksi otomatis.
+
+**Flag yang mungkin muncul**
+
+| Flag | Arti |
+|---|---|
+| `SHARES_CARRIED_FORWARD` | jumlah saham diambil dari tahun sebelumnya (BIRD 2025) |
+| `OUTSTANDING_SHARES_MISSING` | tidak ada jumlah saham sama sekali; EPS/BVPS kosong |
+| `TOTAL_ASSETS_DERIVED_FROM_IDENTITY` | nilai berasal dari rekonstruksi, bukan laporan |
+| `TOTAL_ASSETS_RECONCILIATION_MISMATCH` | laporan dan rekonstruksi berbeda |
+| `NEGATIVE_BASE` | CAGR ditolak karena salah satu ujung ≤ 0 (ARII, GOLD) |
+| `DENOMINATOR_ZERO` / `NEGATIVE_DENOMINATOR` | pembagian ditolak, bukan menghasilkan null tanpa alasan |
+| `CAGR_PERIOD_ZERO` | jendela hanya satu tahun, tidak ada langkah year-over-year |
+| `SERIES_INSUFFICIENT` | periode annual tidak tersedia |
+
+**Menjalankan:** tidak ada perintah baru. `populate_growth_quality.py` menulis
+tabel ini bersamaan dengan tabel growth, jadi urutan kerja di §3.5 dan §4.4 tidak
+berubah.
+
+**Versi metodologi.** Perubahan rumus menaikkan
+`QUARTERLY_GROWTH_QUALITY` dari `1.0.0` ke **`1.1.0`**. Aturannya: jangan menimpa
+versi lama; naikkan versi bila rumus berubah. Baris `1.1.0` didaftarkan otomatis
+oleh `populate_growth_quality.py` dari
+`calculation_methodology_registry.growth_quality_methodology_seed()`, sehingga
+hash-nya selalu bisa direproduksi dari kode. Run lama tetap menunjuk `1.0.0` dan
+artinya tidak berubah.
+
+Kalau definisi lokal diubah **tanpa** menaikkan versi, loader berhenti dengan
+`GROWTH_QUALITY_METHODOLOGY_REGISTRY_DRIFT`. Itu sinyal untuk menaikkan versi,
+bukan untuk menimpa baris registry.
+
+```powershell
+python .\supabase\populate_growth_quality.py --ticker TICKER
+python .\supabase\populate_growth_quality.py --ticker TICKER --apply
+```
+
+**Verifikasi cepat** (jalankan di SQL Editor):
+
+```sql
+select metric_code, unit_code, count(*) as rows,
+       count(*) filter (where calculation_status = 'VALID') as valid_rows
+from public.calc_annual_ratios
+group by metric_code, unit_code
+order by metric_code;
+```
+
+Setiap metric code harus mengembalikan **142 baris** (20 ticker; GOLD dan WIFI
+punya 8 tahun). Bila ada yang kurang, run terakhir belum mencakup semua ticker.
+
+### 1.6.2 Margin of safety tersimpan (`calc_valuation_methods.mos`)
+
+Sejak migrasi `0030`, `calc_valuation_methods` punya kolom `mos`. Sebelumnya MoS
+dihitung di browser (`computeMos`), sehingga n8n tidak bisa melihatnya dan UI bisa
+berbeda dari konsumen lain.
+
+**Ini bukan `gap_ratio`.** Keduanya dari input yang sama tetapi penyebutnya beda:
+
+| Kolom | Rumus | AUTO DDM |
+|---|---|---|
+| `gap_ratio` | `(IV − harga) / harga` | `−0,5739` |
+| `mos` | `(IV − harga) / IV` (aturan D6) | `−1,3467` |
+
+Aturan D6 hanya terdefinisi untuk IV positif, jadi dua kasus ditolak dengan flag
+masing-masing:
+
+| Keadaan | Hasil | Flag |
+|---|---|---|
+| `IV > 0` | nilai disimpan | — |
+| `IV = 0` | `NULL` | `MOS_DENOMINATOR_ZERO` |
+| `IV < 0` | `NULL` | `MOS_NOT_APPLICABLE` |
+
+Kasus IV negatif ditolak karena penyebut negatif membalik tanda seluruh rasio.
+Peter Lynch GEMA (`IV −22`, harga `93`) akan melaporkan `+522%` — terbaca sebagai
+diskon besar padahal model justru menilai perusahaan jauh **di bawah** harganya.
+`calc_backtest_methods.mos` sudah memakai aturan yang sama; sekarang kedua tabel
+sepakat.
+
+**Backfill** mengisi baris lama dari `intrinsic_value` dan `current_price` yang
+sudah ada di baris itu sendiri, jadi tidak ada nilai yang dikarang. Flag
+ditambahkan (`||`), tidak menimpa, sehingga flag provenance lama tetap utuh.
+
+```sql
+select method_code, round(intrinsic_value,2) as iv, round(gap_ratio,4) as gap,
+       round(mos,4) as mos, flags
+from public.calc_valuation_methods v
+join public.instruments i on i.id = v.instrument_id
+where i.ticker = 'GEMA'
+order by method_code;
+```
+
+
+### 1.6.3 Payload riset: bagian baru untuk UI dan n8n
+
+Sejak migrasi `0031`, `get_stock_research_data` membawa empat bagian baru. UI dan
+n8n membacanya dari **satu pintu** yang sama; backtest tetap di
+`get_stock_backtest` (keputusan S4), jadi n8n memanggilnya terpisah seperti
+sekarang.
+
+| Bagian | Untuk apa |
+|---|---|
+| `annual_ratios` | EPS, BVPS, ROE, dua margin, dua aset, dua CAGR jendela — tiap baris punya `unit_code`, `calculation_status`, `flags` |
+| `valuation_methods[].mos` | margin of safety aturan D6, di samping `gap_ratio` |
+| `stock_classification` | tipe saham final, rekomendasi sistem, confidence, rule flags |
+| `data_quality.warnings` | peringatan yang tidak boleh dirata-ratakan diam-diam |
+
+**`unit_code` wajib dibaca, jangan diabaikan.** `0.1087` dengan
+`unit_code = RATIO` berarti margin kotor 10,9%, bukan 0,1087 rupiah. Ini risiko
+terbesar saat menyerahkan payload ke AI.
+
+**`annual_ratios` memuat baris yang ditolak.** Berbeda dari `annual_growth` yang
+hanya berisi `VALID`, bagian ini menyertakan baris `UNAVAILABLE` /
+`NOT_CALCULABLE` beserta alasannya di `flags`. Artinya: "tahun ini tidak
+tersedia" berbeda dari "tahun ini tidak ada". Jangan menyaringnya di konsumen.
+
+Contoh pembacaan satu tahun:
+
+```sql
+select jsonb_pretty(
+  jsonb_build_object(
+    'annual_ratios', (select jsonb_agg(r) from jsonb_array_elements(payload->'annual_ratios') r
+                      where r->>'period_label' = '2025'),
+    'mos', (select jsonb_agg(jsonb_build_object('method', m->>'method_code', 'mos', m->>'mos'))
+            from jsonb_array_elements(payload->'valuation_methods') m),
+    'classification', payload->'stock_classification',
+    'warnings', payload->'data_quality'->'warnings'
+  )
+)
+from (select public.get_stock_research_data('ITMG') as payload) t;
+```
+
 ### 1.7 Perbedaan yang diketahui terhadap workbook
 
 Perbedaan berikut **diharapkan** dan terdokumentasi, bukan bug:
@@ -442,6 +631,7 @@ Beberapa ticker punya data sumber yang tidak lengkap. Ini ditangani secara ekspl
 | Hanya `ASSET PLAY` yang cocok (score 10) | GOLD | Score ladder workbook tidak punya cabang untuk score 10, sehingga hasilnya `UNCLASSIFIED`. Karena engine valuasi dan reference table memodelkan kondisi ini sebagai `ASSET PLAY`, tipe tersebut dipetakan ke `ASSET PLAY` saat valuasi. Hasil classifier yang tersimpan tetap `UNCLASSIFIED` apa adanya. |
 | Tidak ada rule yang cocok sama sekali | INDF | Semua enam rule `False`, jadi `UNCLASSIFIED` tanpa dasar tipe apa pun. Ini **tidak** dipetakan ke `ASSET PLAY` — valuasi akan memakai metodologi berbasis aset yang tidak pernah dipilih classifier. `calculate_valuation.py` menolak dengan `CLASSIFICATION_UNCLASSIFIED_NO_RULE_MATCHED` dan menyarankan `--stock-type` eksplisit bila valuasi memang diinginkan. |
 | COGS 2019 kosong di workbook | AUTO (dan pola serupa di ticker lain) | Canonical memakai `GROSS_PROFIT` sebenarnya, sehingga `GPM Range` tidak membengkak. Efeknya `CLASSIFICATION_CYCLICAL` bisa berbeda dari workbook (lihat 1.7), tapi `FINAL TYPE` tidak terpengaruh. |
+| `total_assets` (laporan) meleset 1 rupiah dari `liabilities + equity` | ARII, INKP, ITMG (2019) | Identitas neraca persis di **139 dari 142** baris annual kanonis; tiga sisanya berbeda tepat 1 IDR (≈ 0,0000000000001% dari nilai). Ini pembulatan di sisi provider, bukan data rusak. Kedua angka disimpan (`TOTAL_ASSETS` resmi, `TOTAL_ASSETS_DERIVED` audit) dan selisihnya ditandai `TOTAL_ASSETS_RECONCILIATION_MISMATCH`, sehingga kasus seperti ini terdeteksi otomatis alih-alih diam-diam dianggap sama. |
 
 `eps_long` yang `UNAVAILABLE` adalah konsekuensi langsung dari kuirk kedua. Klasifikasi tetap dapat dijalankan selama tipe akhirnya tidak memerlukan input tersebut; rule yang tidak bisa dievaluasi menghasilkan `None` dan dilaporkan lewat flag `CLASSIFIER_INPUT_MISSING`.
 

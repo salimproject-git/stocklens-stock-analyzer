@@ -7,6 +7,9 @@ urutan pengerjaan sebelum satu baris kode backtest ditulis.
 Rujukan aturan: `Template/Stock Analyzer [Dev].xlsm` (sheet `Helper`, `Backtest_Result`,
 `DB_ANALYSIS`, `SUMMARY`), makro `BuildHistoricalSnapshot`, dan rumus kolom `Backtest_Result`.
 
+Rujukan terkait: `docs/CONSENSUS_ARCHITECTURE.md` (aturan consensus: mana yang disimpan,
+mana yang dihitung) dan `docs/BACKEND_SINGLE_SOURCE_OF_TRUTH.md` (framework umum).
+
 ---
 
 ## 1. Apa yang sebenarnya dikerjakan workbook (terverifikasi)

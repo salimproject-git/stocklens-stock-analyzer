@@ -33,7 +33,7 @@ class AutoLoaderMappingTests(unittest.TestCase):
         expected_annual_fields = {
             'revenue', 'cost_of_revenue', 'interest_expense_non_operating', 'earnings',
             'operating_cash_flow', 'gross_profit', 'current_assets', 'current_liabilities',
-            'total_liabilities', 'total_equity',
+            'total_liabilities', 'total_equity', 'total_assets',
         }
         expected = expected_annual_fields | {'outstanding_shares'}
 
@@ -42,6 +42,11 @@ class AutoLoaderMappingTests(unittest.TestCase):
         self.assertEqual({plan['source_field'] for plan in plans}, expected)
         self.assertIn('gross_profit', {plan['source_field'] for plan in plans})
         self.assertNotIn('eps', {plan['source_field'] for plan in plans})
+        # `total_assets` is loaded so the *reported* figure has a canonical home
+        # (decision S1). `operating_pnl` stays out: the workbook template has no
+        # Operating Profit row and nothing consumes it (decision S2).
+        self.assertIn('total_assets', {plan['source_field'] for plan in plans})
+        self.assertNotIn('operating_pnl', {plan['source_field'] for plan in plans})
         self.assertTrue(
             all(plan['unit_code'] == 'SHARES' for plan in plans if plan['source_field'] == 'outstanding_shares')
         )
@@ -52,7 +57,7 @@ class AutoLoaderMappingTests(unittest.TestCase):
 
         rows, _ = annual.validate_source(payload, 'AUTO')
 
-        self.assertEqual(len(annual.make_fact_plans(rows)), 7 * 11)
+        self.assertEqual(len(annual.make_fact_plans(rows)), 7 * 12)
 
     def test_quarterly_validation_keeps_raw_fields_but_plans_only_approved_fields(self) -> None:
         date_index = quarterly.load_date_index(ROOT / 'Data' / 'Raw', 'AUTO')

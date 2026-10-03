@@ -8,11 +8,16 @@ import { valuationMethodLabel } from "@/lib/valuation-methods";
  * Turn stored backtest rows into the `BacktestCase[]` shape the tab already
  * renders.
  *
- * The verdicts are **displayed as stored**. `calculateSimulatedVerdict` in
- * `@/lib/analysis/backtest` is deliberately NOT used here: the stored verdict is
- * the workbook formula (docs section 5.4.1) and the frontend version disagrees
- * on three branches (D4). Recomputing in the browser would resurrect exactly the
- * drift the backend verdict removed.
+ * The verdicts are **displayed as stored**: the stored verdict is the workbook
+ * formula (docs section 5.4.1). The browser-side recomputation was removed with
+ * the entry-price simulation (it disagreed on three branches, D4), so nothing in
+ * the UI can resurrect the drift the backend verdict removed.
+ *
+ * The consensus badge is passed through for the same reason. The stored column
+ * has three states (`UNDERVALUED`, `OVERVALUED`, `N/A`) while a two-branch
+ * browser rule can only ever produce two, because the browser does not know the
+ * "at least three valid methods" threshold. Recomputing it displayed the wrong
+ * badge on 44 stored cases (docs/CONSENSUS_ARCHITECTURE.md section 2.3).
  */
 
 /** Quarter format: stored `2022-Q1` -> displayed `2022 Q1`. */
@@ -117,6 +122,9 @@ export function buildBacktestCase(
     mosMain: testCase.mosMain,
     mosPeter: testCase.mosPeter,
     mosWeight: testCase.mosWeight,
+    consensus: testCase.consensus,
+    consensusUndervalued: testCase.consensusUndervalued,
+    consensusValid: testCase.consensusValid,
     peakMonth: testCase.peakMonth,
     troughMonth: testCase.troughMonth,
     stored: {

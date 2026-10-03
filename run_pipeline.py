@@ -141,6 +141,7 @@ STEPS: tuple[dict[str, Any], ...] = (
             'supabase/calculate_valuation.py',
             '--ticker', '{ticker}',
             '--risk-free-from-reference',
+            '--frequency-snapshot',
             '--apply',
         ],
         'needs_run_id': None,
@@ -158,6 +159,31 @@ STEPS: tuple[dict[str, Any], ...] = (
 )
 
 STEP_NAMES: tuple[str, ...] = tuple(str(step['name']) for step in STEPS)
+PIPELINE_STEP_CHOICES = STEP_NAMES + ('daily-status',)
+
+PIPELINE_MODE_STEPS: dict[str, tuple[str, ...]] = {
+    # Rebuild reads existing raw objects from Storage via the canonical loaders.
+    # It must never run the API-capable ingest step as an implicit fallback.
+    'rebuild': (
+        'load-identity', 'load-annual', 'load-quarterly', 'load-dividend',
+        'load-prices', 'growth-quality', 'projection', 'classification',
+        'valuation', 'daily-status',
+    ),
+    'fundamental': (
+        'load-identity', 'load-annual', 'load-quarterly', 'load-dividend', 'load-prices',
+        'growth-quality', 'projection', 'classification', 'valuation', 'daily-status',
+    ),
+    'daily': ('load-prices', 'daily-status'),
+    'backtest': ('backtest',),
+}
+
+MODE_EXTRA_STEPS: dict[str, dict[str, Any]] = {
+    'daily-status': {
+        'name': 'daily-status',
+        'args': ['supabase/calculate_daily_valuation.py', '--ticker', '{ticker}', '--apply'],
+        'needs_run_id': None,
+    },
+}
 
 
 def check_local_raw(ticker: str) -> list[str]:
@@ -192,6 +218,36 @@ def require_local_raw(ticker: str) -> None:
         '  (requires SECTORS_API_KEY). To download it locally first instead:\n'
         f'    python .\\scripts\\data_pipeline\\01_download_sectors.py {ticker} --task all'
     )
+
+
+def require_storage_raw(ticker: str) -> None:
+    """Fail closed unless all existing raw Storage families have registered files."""
+    from raw_storage_source import BUCKET, RawStorageSource
+
+    source = RawStorageSource(ticker)
+    families = {
+        'info': ('company_report_info.json',),
+        'annual': ('company_report_annual.json',),
+        'dividend': ('company_report_dividend.json',),
+        'quarterly': ('quarterly_financial_dates.json',),
+        'daily': (),
+    }
+    missing: list[str] = []
+    for family, required_names in families.items():
+        names = source.names(family)
+        if not names:
+            missing.append(family)
+            continue
+        for name in required_names:
+            if name not in names:
+                missing.append(f'{family}/{name}')
+    if missing:
+        raise CalculationError(
+            'STORAGE_RAW_PREFLIGHT_FAILED (no API fallback): '
+            + ', '.join(missing)
+            + f'; bucket={BUCKET}; ticker={ticker}'
+        )
+    print(f'Storage preflight OK: ticker={ticker}; families={len(families)}; no Sectors API fallback.')
 
 
 def resolve_ingestion_run_id(db: SupabaseRest, symbol: str, family: str) -> str:
@@ -271,13 +327,17 @@ def main(argv: Sequence[str] | None = None) -> int:
     )
     parser.add_argument('ticker', help='IDX ticker, e.g. SIDO')
     parser.add_argument(
+        '--mode', choices=tuple(PIPELINE_MODE_STEPS), default='rebuild',
+        help='Pipeline frequency: rebuild, fundamental, daily, or backtest.',
+    )
+    parser.add_argument(
         '--only',
-        choices=STEP_NAMES,
+        choices=PIPELINE_STEP_CHOICES,
         help='Run a single step by name.',
     )
     parser.add_argument(
         '--from-step',
-        choices=STEP_NAMES,
+        choices=PIPELINE_STEP_CHOICES,
         help='Start at this step, skipping earlier ones (resume after a failure).',
     )
     parser.add_argument(
@@ -305,8 +365,15 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     if args.only:
         selected = [step for step in STEPS if step['name'] == args.only]
+        if args.only in MODE_EXTRA_STEPS:
+            selected.append(MODE_EXTRA_STEPS[args.only])
     else:
-        selected = list(STEPS)
+        names = PIPELINE_MODE_STEPS[args.mode]
+        selected = [
+            next((step for step in STEPS if step['name'] == name), MODE_EXTRA_STEPS.get(name))
+            for name in names
+        ]
+        selected = [step for step in selected if step is not None]
         if args.skip_raw or args.offline:
             selected = [
                 step for step in selected
@@ -318,6 +385,9 @@ def main(argv: Sequence[str] | None = None) -> int:
                 if step['name'] == args.from_step
             )
             selected = selected[start:]
+
+    if args.mode in ('rebuild', 'fundamental') and not args.dry_run:
+        require_storage_raw(ticker)
 
     # Decide the raw path before announcing the step list, so what is printed is
     # what actually runs.

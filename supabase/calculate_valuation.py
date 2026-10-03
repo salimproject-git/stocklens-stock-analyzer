@@ -27,6 +27,7 @@ from valuation_engine import (  # noqa: E402
     DEFAULT_YEARS_COMPARE,
     STOCK_TYPES,
     ValuationError,
+    calculate_daily_valuation_status,
     calculate_valuation_snapshot,
     decimal_text,
     decimal_value,
@@ -181,9 +182,18 @@ def resolve_risk_free_rate(db: SupabaseRest, rate_code: str = REFERENCE_RATE_COD
 def _persist_batch(db: SupabaseRest, table: str, rows: list[dict[str, Any]]) -> None:
     if not rows:
         return
-    conflict = 'calculation_run_id,instrument_id,as_of_financial_period_id,metric_code'
-    if table == METHOD_TABLE:
-        conflict = 'calculation_run_id,instrument_id,as_of_financial_period_id,method_code'
+    conflict_by_table = {
+        INPUT_TABLE: 'calculation_run_id,instrument_id,as_of_financial_period_id,metric_code',
+        METHOD_TABLE: 'calculation_run_id,instrument_id,as_of_financial_period_id,method_code',
+        'calc_valuation_fundamental_snapshots': 'calculation_run_id,instrument_id',
+        'calc_valuation_fundamental_methods': 'snapshot_id,method_code',
+        'calc_valuation_daily_status': 'calculation_run_id,instrument_id',
+        'calc_valuation_daily_methods': 'daily_status_id,method_code',
+    }
+    try:
+        conflict = conflict_by_table[table]
+    except KeyError as error:
+        raise CalculationError('VALUATION_TABLE_CONFLICT_TARGET_UNDEFINED:' + table) from error
     for offset in range(0, len(rows), 250):
         db.request(
             'POST', table,
@@ -201,16 +211,16 @@ def _write_run_status(db: SupabaseRest, run_id: str, status: str, error: str | N
 
 
 def _store(db: SupabaseRest, result: Mapping[str, Any], instrument_id: str, methodology_id: str) -> str:
-    run_snapshot = copy.deepcopy(dict(result['input_snapshot']))
+    run_snapshot = copy.deepcopy(dict(result.get('fundamental_input_snapshot') or result['input_snapshot']))
     run_snapshot.update({
         'reference_version': REFERENCE_VERSION,
         'code_version': CODE_VERSION,
     })
     run_contract = calculation_contract(
-        calculation_type='VALUATION_CURRENT',
+        calculation_type='VALUATION_FUNDAMENTAL',
         methodology_version_id=methodology_id,
         code_version=CODE_VERSION,
-        source_cutoff_date=str(result['valuation_date']),
+        source_cutoff_date=str(result['historical_price_cutoff']),
         source_ingestion_run_id=None,
         scope_type='INSTRUMENT',
         scope_id=instrument_id,
@@ -221,7 +231,18 @@ def _store(db: SupabaseRest, result: Mapping[str, Any], instrument_id: str, meth
         'select': 'id,status',
     })
     if existing and existing[0]['status'] == 'SUCCEEDED':
-        return str(existing[0]['id'])
+        existing_run_id = str(existing[0]['id'])
+        snapshots = db.get_all('calc_valuation_fundamental_snapshots', {
+            'calculation_run_id': 'eq.' + existing_run_id,
+            'instrument_id': 'eq.' + instrument_id,
+            'select': 'id',
+        })
+        if len(snapshots) == 1:
+            methods = db.get_all('calc_valuation_fundamental_methods', {
+                'snapshot_id': 'eq.' + str(snapshots[0]['id']), 'select': 'id',
+            })
+            if len(methods) == len(result['methods']):
+                return existing_run_id
     if existing:
         run_id = str(existing[0]['id'])
         db.request('PATCH', 'calculation_runs', params={'id': 'eq.' + run_id}, payload={
@@ -245,63 +266,231 @@ def _store(db: SupabaseRest, result: Mapping[str, Any], instrument_id: str, meth
 
     as_of_id = str(result['as_of_financial_period_id'])
     scenario_id = result.get('projection_scenario_id')
-    common = {
+    snapshot_rows = [{
         'calculation_run_id': run_id,
         'methodology_version_id': methodology_id,
         'instrument_id': instrument_id,
         'as_of_financial_period_id': as_of_id,
         'projection_scenario_id': scenario_id,
-        'valuation_date': result['valuation_date'],
-    }
-    input_rows = [
-        {
-            **common,
-            'metric_code': row['metric_code'],
-            'value_numeric': decimal_text(row['value_numeric']),
-            'value_text': row.get('value_text'),
-            'unit_code': row['unit_code'],
-            'calculation_status': row['calculation_status'],
-            'flags': row['flags'],
-            'details': _json_value(row['details']),
-        }
-        for row in result['inputs']
-    ]
-    method_rows = [
-        {
-            **common,
+        'snapshot_date': result['snapshot_date'],
+        'historical_price_cutoff': result['historical_price_cutoff'],
+        'stock_type': result['stock_type'],
+        'years_available': result['years_available'],
+        'years_compare': result['years_compare'],
+        'reference_version': REFERENCE_VERSION,
+        'code_version': CODE_VERSION,
+        'input_snapshot': _json_value(run_snapshot),
+        'input_hash': run_contract['input_hash'],
+        'idempotency_key': run_contract['idempotency_key'],
+    }]
+
+    try:
+        _persist_batch(db, 'calc_valuation_fundamental_snapshots', snapshot_rows)
+        stored_snapshots = db.get_all('calc_valuation_fundamental_snapshots', {
+            'calculation_run_id': 'eq.' + run_id,
+            'instrument_id': 'eq.' + instrument_id,
+            'select': 'id',
+        })
+        if len(stored_snapshots) != 1:
+            raise CalculationError('VALUATION_FUNDAMENTAL_SNAPSHOT_VERIFY_FAILED')
+        snapshot_id = str(stored_snapshots[0]['id'])
+        method_rows = [{
+            'snapshot_id': snapshot_id,
+            'instrument_id': instrument_id,
+            'methodology_version_id': methodology_id,
+            'as_of_financial_period_id': as_of_id,
             'method_code': row['method_code'],
             'method_name': row['method_name'],
             'stock_type': row['stock_type'],
-            'years_available': row['years_available'],
-            'years_compare': row['years_compare'],
             'intrinsic_value': decimal_text(row['intrinsic_value']),
-            'current_price': decimal_text(row['current_price']),
-            'gap_ratio': decimal_text(row['gap_ratio']),
-            'verdict': row['verdict'],
             'calculation_status': row['calculation_status'],
             'flags': row['flags'],
             'details': _json_value(row['details']),
-        }
-        for row in result['methods']
-    ]
-
-    try:
-        _persist_batch(db, INPUT_TABLE, input_rows)
-        _persist_batch(db, METHOD_TABLE, method_rows)
-        for table, expected in ((INPUT_TABLE, len(input_rows)), (METHOD_TABLE, len(method_rows))):
-            stored = _pages(db, table, {
-                'calculation_run_id': 'eq.' + run_id,
-                'instrument_id': 'eq.' + instrument_id,
-                'select': 'id',
-            })
-            if len(stored) != expected:
-                raise CalculationError(f'VALUATION_VERIFY_COUNT_MISMATCH:{table}:{len(stored)}:{expected}')
+        } for row in result['methods']]
+        _persist_batch(db, 'calc_valuation_fundamental_methods', method_rows)
+        stored_methods = db.get_all('calc_valuation_fundamental_methods', {
+            'snapshot_id': 'eq.' + snapshot_id, 'select': 'id',
+        })
+        if len(stored_methods) != len(method_rows):
+            raise CalculationError('VALUATION_FUNDAMENTAL_METHOD_VERIFY_FAILED')
         _write_run_status(db, run_id, 'SUCCEEDED')
     except Exception as error:
         try:
             _write_run_status(db, run_id, 'PARTIAL', str(error)[:1000])
         except Exception:
             pass
+        raise
+    return run_id
+
+
+def _store_legacy(db: SupabaseRest, result: Mapping[str, Any], instrument_id: str, methodology_id: str) -> str:
+    """Preserve the existing writer contract for explicit legacy comparisons."""
+    price = decimal_value(result.get('current_price'))
+    legacy = dict(result)
+    legacy_methods = []
+    for method in result['methods']:
+        row = dict(method)
+        intrinsic = decimal_value(row.get('intrinsic_value'))
+        row['current_price'] = price
+        row['gap_ratio'] = None if intrinsic is None or price is None or price == 0 else (intrinsic-price)/price
+        row['mos'] = None if intrinsic is None or intrinsic <= 0 or price is None else (intrinsic-price)/intrinsic
+        row['verdict'] = 'NOT_APPLICABLE' if intrinsic is None or intrinsic <= 0 or price is None else ('UNDERVALUED' if price < intrinsic else 'OVERVALUED')
+        legacy_methods.append(row)
+    legacy['methods'] = legacy_methods
+    return _store_legacy_rows(db, legacy, instrument_id, methodology_id)
+
+
+def _store_legacy_rows(db: SupabaseRest, result: Mapping[str, Any], instrument_id: str, methodology_id: str) -> str:
+    """Legacy persistence path retained only for non-frequency compatibility."""
+    run_snapshot = copy.deepcopy(dict(result['input_snapshot']))
+    run_snapshot.update({'reference_version': REFERENCE_VERSION, 'code_version': CODE_VERSION})
+    run_contract = calculation_contract(
+        calculation_type='VALUATION_CURRENT', methodology_version_id=methodology_id,
+        code_version=CODE_VERSION, source_cutoff_date=str(result['valuation_date']),
+        source_ingestion_run_id=None, scope_type='INSTRUMENT', scope_id=instrument_id,
+        input_snapshot=run_snapshot,
+    )
+    existing = db.get_all('calculation_runs', {'idempotency_key': 'eq.'+run_contract['idempotency_key'], 'select':'id,status'})
+    if existing and existing[0]['status'] == 'SUCCEEDED': return str(existing[0]['id'])
+    if existing:
+        run_id = str(existing[0]['id'])
+        db.request('PATCH','calculation_runs',params={'id':'eq.'+run_id},payload={'status':'RUNNING','error_message':None,'completed_at':None})
+    else:
+        created = db.request('POST','calculation_runs',payload={**run_contract,'status':'RUNNING','scope_type':'INSTRUMENT','scope_id':instrument_id,'methodology_version_id':methodology_id},headers={'Prefer':'return=representation'})
+        if not isinstance(created,list) or len(created)!=1: raise CalculationError('VALUATION_RUN_CREATE_FAILED')
+        run_id = str(created[0]['id'])
+    common = {'calculation_run_id':run_id,'methodology_version_id':methodology_id,'instrument_id':instrument_id,'as_of_financial_period_id':str(result['as_of_financial_period_id']),'projection_scenario_id':result.get('projection_scenario_id'),'valuation_date':result['valuation_date']}
+    input_rows = [{**common,'metric_code':r['metric_code'],'value_numeric':decimal_text(r['value_numeric']),'value_text':r.get('value_text'),'unit_code':r['unit_code'],'calculation_status':r['calculation_status'],'flags':r['flags'],'details':_json_value(r['details'])} for r in result['inputs']]
+    method_rows = [{**common,'method_code':r['method_code'],'method_name':r['method_name'],'stock_type':r['stock_type'],'years_available':r['years_available'],'years_compare':r['years_compare'],'intrinsic_value':decimal_text(r['intrinsic_value']),'current_price':decimal_text(r['current_price']),'gap_ratio':decimal_text(r['gap_ratio']),'mos':decimal_text(r['mos']),'verdict':r['verdict'],'calculation_status':r['calculation_status'],'flags':r['flags'],'details':_json_value(r['details'])} for r in result['methods']]
+    _persist_batch(db, INPUT_TABLE, input_rows); _persist_batch(db, METHOD_TABLE, method_rows)
+    for table, expected in ((INPUT_TABLE, len(input_rows)), (METHOD_TABLE, len(method_rows))):
+        stored = _pages(db, table, {'calculation_run_id': 'eq.' + run_id, 'instrument_id': 'eq.' + instrument_id, 'select': 'id'})
+        if len(stored) != expected:
+            raise CalculationError(f'VALUATION_VERIFY_COUNT_MISMATCH:{table}:{len(stored)}:{expected}')
+    _write_run_status(db, run_id, 'SUCCEEDED')
+    return run_id
+
+
+def calculate_and_store_daily_status(db: SupabaseRest, ticker: str) -> str:
+    instruments = db.get_all('instruments', {
+        'ticker': 'eq.' + ticker, 'exchange_code': 'eq.IDX', 'select': 'id,ticker',
+    })
+    if len(instruments) != 1:
+        raise CalculationError('INSTRUMENT_NOT_FOUND_OR_NOT_UNIQUE')
+    instrument_id = str(instruments[0]['id'])
+    snapshots = db.get_all('calc_valuation_fundamental_snapshots', {
+        'instrument_id': 'eq.' + instrument_id,
+        'select': 'id,calculation_run_id,methodology_version_id,input_hash,stock_type',
+        'order': 'snapshot_date.desc,created_at.desc', 'limit': '1',
+    })
+    if len(snapshots) != 1:
+        raise CalculationError('FUNDAMENTAL_SNAPSHOT_NOT_FOUND')
+    snapshot = snapshots[0]
+    if not snapshot.get('methodology_version_id'):
+        raise CalculationError('FUNDAMENTAL_METHODOLOGY_REFERENCE_MISSING')
+    quotes = db.get_all('prices_daily', {
+        'instrument_id': 'eq.' + instrument_id,
+        'select': 'trading_date,close_price',
+        'order': 'trading_date.desc', 'limit': '1',
+    })
+    if len(quotes) != 1 or quotes[0].get('close_price') is None:
+        raise CalculationError('DAILY_PRICE_NOT_FOUND')
+    quote = quotes[0]
+    methods = db.get_all('calc_valuation_fundamental_methods', {
+        'snapshot_id': 'eq.' + str(snapshot['id']),
+        'select': 'method_code,method_name,stock_type,intrinsic_value,calculation_status,flags,details',
+        'order': 'method_code.asc',
+    })
+    preferences = db.get_all('calculation_parameters', {
+        'parameter_code': 'in.(iv_consensus_min_methods,mos_entry_threshold_frontend)',
+        'resolution_status': 'eq.RESOLVED',
+        'select': 'parameter_code,parameter_version,parameter_value',
+        'order': 'parameter_version.desc',
+    })
+    params: dict[str, Any] = {}
+    for row in preferences:
+        params.setdefault(row['parameter_code'], row.get('parameter_value'))
+    min_methods = int(params.get('iv_consensus_min_methods', 3))
+    mos_threshold = params.get('mos_entry_threshold_frontend', '0.30')
+    stock_type = str(snapshot.get('stock_type') or '')
+    preferred = 'TYPE_SECTOR_WEIGHTED' if stock_type.upper() in ('STALWART', 'FAST GROWER') else 'PETER_LYNCH'
+    preferred_row = next((row for row in methods if row.get('method_code') == preferred), None)
+    if not preferred_row or decimal_value(preferred_row.get('intrinsic_value')) is None or decimal_value(preferred_row.get('intrinsic_value')) <= 0:
+        preferred = 'PETER_LYNCH' if preferred == 'TYPE_SECTOR_WEIGHTED' else 'TYPE_SECTOR_WEIGHTED'
+    daily = calculate_daily_valuation_status(
+        methods, current_price=quote['close_price'],
+        minimum_consensus_methods=min_methods, mos_threshold=mos_threshold,
+        preferred_method_code=preferred, valuation_date=str(quote['trading_date']),
+    )
+    methodology_id = str(snapshot['methodology_version_id'])
+    daily_snapshot = {
+        'snapshot_id': snapshot['id'],
+        'snapshot_input_hash': snapshot['input_hash'],
+        'trading_date': quote['trading_date'],
+        'current_price': str(quote['close_price']),
+        'consensus_minimum': min_methods,
+        'mos_threshold': _json_value(mos_threshold),
+        'preferred_method_code': preferred,
+        'code_version': CODE_VERSION,
+        'reference_version': REFERENCE_VERSION,
+    }
+    contract = calculation_contract(
+        calculation_type='VALUATION_DAILY_STATUS',
+        methodology_version_id=methodology_id,
+        code_version=CODE_VERSION,
+        source_cutoff_date=str(quote['trading_date']),
+        source_ingestion_run_id=None,
+        scope_type='INSTRUMENT', scope_id=instrument_id,
+        input_snapshot=daily_snapshot,
+    )
+    existing = db.get_all('calculation_runs', {
+        'idempotency_key': 'eq.' + contract['idempotency_key'], 'select': 'id,status',
+    })
+    if existing and existing[0]['status'] == 'SUCCEEDED':
+        return str(existing[0]['id'])
+    created = db.request('POST', 'calculation_runs', payload={
+        **contract, 'status': 'RUNNING', 'scope_type': 'INSTRUMENT',
+        'scope_id': instrument_id, 'methodology_version_id': methodology_id,
+    }, headers={'Prefer': 'return=representation'})
+    if not isinstance(created, list) or len(created) != 1:
+        # A prior non-successful idempotency key is resumed, never duplicated.
+        if existing:
+            run_id = str(existing[0]['id'])
+            db.request('PATCH', 'calculation_runs', params={'id': 'eq.' + run_id}, payload={
+                'status': 'RUNNING', 'error_message': None, 'completed_at': None,
+            })
+        else:
+            raise CalculationError('DAILY_STATUS_RUN_CREATE_FAILED')
+    else:
+        run_id = str(created[0]['id'])
+    summary = [{
+        'calculation_run_id': run_id, 'methodology_version_id': methodology_id,
+        'snapshot_id': snapshot['id'], 'instrument_id': instrument_id,
+        'trading_date': quote['trading_date'], 'current_price': str(quote['close_price']),
+        'input_snapshot': daily_snapshot, 'input_hash': contract['input_hash'],
+        'idempotency_key': contract['idempotency_key'],
+        'consensus_verdict': daily['consensus_verdict'],
+        'valid_method_count': daily['valid_method_count'],
+        'undervalued_method_count': daily['undervalued_method_count'],
+        'based_method_code': daily['based_method_code'],
+        'based_mos': decimal_text(daily['based_mos']),
+        'based_mos_verdict': daily['based_mos_verdict'],
+    }]
+    try:
+        _persist_batch(db, 'calc_valuation_daily_status', summary)
+        status_rows = db.get_all('calc_valuation_daily_status', {
+            'calculation_run_id': 'eq.' + run_id, 'select': 'id',
+        })
+        if len(status_rows) != 1:
+            raise CalculationError('DAILY_STATUS_VERIFY_FAILED')
+        daily_id = str(status_rows[0]['id'])
+        daily_rows = [{**row, 'daily_status_id': daily_id, 'snapshot_id': snapshot['id'],
+                       'instrument_id': instrument_id}
+                      for row in daily['methods']]
+        _persist_batch(db, 'calc_valuation_daily_methods', daily_rows)
+        _write_run_status(db, run_id, 'SUCCEEDED')
+    except Exception as error:
+        _write_run_status(db, run_id, 'PARTIAL', str(error)[:1000])
         raise
     return run_id
 
@@ -379,11 +568,13 @@ def calculate_live(
     prices = _pages(db, 'prices_daily', {
         'instrument_id': 'eq.' + instrument_id,
         'select': 'trading_date,close_price',
+        'trading_date': 'lte.' + scenario_as_of_date,
         'order': 'trading_date.asc',
     })
-    valuation_date = valuation_date or max((str(row['trading_date']) for row in prices), default='')
-    if not valuation_date:
-        raise CalculationError('PRICE_HISTORY_MISSING')
+    # Intrinsic valuation uses only the annual-period-end history required by
+    # PER/PBV, bounded at the projection financial cutoff. Current quotes are
+    # deliberately read by calculate_daily_valuation.py, not by this engine.
+    valuation_date = valuation_date or scenario_as_of_date
     periods = [row for row in periods if str(row.get('period_end') or '') <= scenario_as_of_date]
     period_ids = [str(row['id']) for row in periods]
     facts = []
@@ -411,6 +602,8 @@ def calculate_live(
         'select': 'stock_type,max_der,min_cr,min_icr',
     })
     methodology_id = _required_methodology_id(db)
+    if not (risk_free_rate and risk_free_source):
+        risk_free_rate, risk_free_source = resolve_risk_free_rate(db)
     valuation_parameters = _methodology_parameters(db)
     effective_compare = None if years_compare is None else int(years_compare)
     result = calculate_valuation_snapshot(
@@ -431,6 +624,7 @@ def calculate_live(
         type_weights=type_weights[0] if type_weights else None,
         type_thresholds=type_thresholds[0] if type_thresholds else None,
         valuation_parameters=valuation_parameters,
+        include_daily_status=False,
     )
     return result, instrument_id, methodology_id
 
@@ -534,6 +728,7 @@ def main(argv: list[str] | None = None) -> int:
         help='Resolve --risk-free-rate and --risk-free-source from public.risk_free_rate_reference.',
     )
     parser.add_argument('--apply', action='store_true', help='Persist valuation snapshot to Supabase.')
+    parser.add_argument('--frequency-snapshot', action='store_true', help='Persist intrinsic-only immutable snapshot; daily comparisons are a separate command.')
     args = parser.parse_args(argv)
     if args.risk_free_from_reference and (args.risk_free_rate or args.risk_free_source):
         parser.error('--risk-free-from-reference cannot be combined with --risk-free-rate/--risk-free-source.')
@@ -543,7 +738,7 @@ def main(argv: list[str] | None = None) -> int:
     db = SupabaseRest(os.getenv('SUPABASE_URL', ''), os.getenv('SUPABASE_SERVICE_ROLE_KEY', ''))
     risk_free_rate = args.risk_free_rate
     risk_free_source = args.risk_free_source
-    if args.risk_free_from_reference:
+    if args.risk_free_from_reference or args.frequency_snapshot:
         risk_free_rate, risk_free_source = resolve_risk_free_rate(db)
         print(f'Risk-free rate resolved from reference table: {risk_free_rate} ({risk_free_source})')
     result, instrument_id, methodology_id = calculate_live(
@@ -565,7 +760,7 @@ def main(argv: list[str] | None = None) -> int:
     if not args.apply:
         print('DRY RUN: no Supabase rows were written.')
         return 0
-    run_id = _store(db, result, instrument_id, methodology_id)
+    run_id = _store(db, result, instrument_id, methodology_id) if args.frequency_snapshot else _store_legacy(db, result, instrument_id, methodology_id)
     print(f'Persisted and verified: run_id={run_id}; inputs={len(result["inputs"])}; methods={len(result["methods"])}')
     return 0
 
