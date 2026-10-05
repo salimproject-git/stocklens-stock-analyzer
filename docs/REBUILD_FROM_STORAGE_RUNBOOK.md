@@ -23,7 +23,7 @@ python .\run_pipeline.py AUTO --mode rebuild --dry-run
 python .\run_pipeline.py AUTO --mode rebuild --offline --dry-run
 ```
 
-The rebuild implementation must validate Storage coverage before execution. Do not use `--offline` to bypass missing-object checks. After reviewing the dry run and obtaining an approved maintenance window, execute one ticker at a time:
+The rebuild implementation must validate Storage coverage before execution. Do not use `--offline` to bypass missing-object checks. After reviewing the dry run and obtaining an approved maintenance window, execute one ticker at a time. The `projection-reuse` step compares all forecast values and relevant metadata to the existing active scenario; mismatch stops without incrementing a scenario version or mutating the active scenario.
 
 ```powershell
 python .\run_pipeline.py AUTO --mode rebuild --offline
@@ -42,7 +42,7 @@ python .\run_pipeline.py AUTO --mode backtest --dry-run
 python .\run_pipeline.py AUTO --mode backtest
 ```
 
-`daily` must not run intrinsic valuation, growth, projection, classification, or backtest. A page view only invokes bounded read RPCs.
+`daily` must not run intrinsic valuation, growth, projection, classification, or backtest. A page view only invokes bounded read RPCs. Rebuild uses `--reuse-equivalent-active`: it must prove exact projected-value equivalence and reuse the existing active scenario without mutation, otherwise stop and investigate rather than auto-versioning it.
 
 ## Reconciliation and validation
 

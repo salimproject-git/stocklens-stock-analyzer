@@ -133,6 +133,39 @@ class BacktestNoBrowserRecomputationTests(unittest.TestCase):
         ):
             self.assertIn(needle, self.adapter, f"{needle} missing from the adapter")
 
+    def test_detail_drawer_renders_all_stored_method_intrinsic_values(self) -> None:
+        """Method IVs are already in the RPC payload and must be visible in detail."""
+        self.assertIn('aria-label="Intrinsic value by method"', self.tab)
+        self.assertIn("methods.map((method)", self.tab)
+        self.assertIn("price(method.intrinsicValue)", self.tab)
+        self.assertIn("method.calculationStatus", self.tab)
+        self.assertIn("method.flags.map((flag)", self.tab)
+        self.assertIn("method.details.reason", self.tab)
+        for method_code in (
+            "PETER_LYNCH",
+            "TYPE_SECTOR_WEIGHTED",
+            "MEAN_REVERSION_PBV",
+            "DDM",
+            "DISCOUNTED_EARNINGS",
+        ):
+            self.assertIn(method_code, self.tab)
+
+    def test_detail_view_looks_up_intrinsic_values_by_stored_method_code(self) -> None:
+        self.assertIn("testCase.methods.find((item) => item.methodCode === methodCode)", self.tab)
+        for method_code in (
+            "PETER_LYNCH",
+            "TYPE_SECTOR_WEIGHTED",
+            "MEAN_REVERSION_PBV",
+            "DDM",
+            "DISCOUNTED_EARNINGS",
+        ):
+            self.assertIn(f'methodValue(item, "{method_code}")', self.tab)
+
+    def test_adapter_preserves_method_status_and_provenance_flags(self) -> None:
+        self.assertIn("calculationStatus: method.calculationStatus", self.adapter)
+        self.assertIn("flags: method.flags", self.adapter)
+        self.assertIn("details: method.details", self.adapter)
+
     def test_sample_data_stores_its_consensus_too(self) -> None:
         """The sample dataset feeds the same reader, so it stores literals as well.
 

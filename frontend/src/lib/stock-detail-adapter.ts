@@ -3,6 +3,7 @@ import "server-only";
 import type { BacktestData, StockResearchData, FinancialPeriod, ValuationMethod, StockPrice, AnnualRatioMetric, QuarterlyQualityMetric, ValuationSummary } from "@/lib/stock-data";
 import type { BacktestCase, EvidenceOutcomeBreakdown, StockDetail } from "@/data/mock-stock-details";
 import { toMonthIndex, toMonthLabel } from "@/utils/dates";
+import { formatRupiah } from "@/utils/currency";
 import { sortValuationMethods, valuationMethodLabel, type ValuationMethodCode } from "@/lib/valuation-methods";
 import { buildBacktestCase } from "@/lib/backtest-adapter";
 import {
@@ -844,6 +845,19 @@ function buildDividendCallout({
 function buildGrowthSummary(data: StockResearchData): StockDetail["growthSummary"] {
   const revenueCagrShort = findAnnualMetric(data, "GROWTH_REVENUE_CAGR_SHORT").value;
   const epsCagrShort = findAnnualMetric(data, "GROWTH_EPS_CAGR_SHORT").value;
+  const latestAnnualPeriod = data.financialPeriods
+    .filter((period) => period.periodType === "ANNUAL")
+    .sort((left, right) => left.periodEnd.localeCompare(right.periodEnd))
+    .at(-1);
+  const previousThreeYearPeriod = data.financialPeriods
+    .filter((period) => period.periodType === "ANNUAL")
+    .sort((left, right) => left.periodEnd.localeCompare(right.periodEnd))
+    .find((period) => Number(period.periodLabel) === Number(latestAnnualPeriod?.periodLabel) - 3);
+  const latestEarnings = factValue(latestAnnualPeriod, "EARNINGS");
+  const startingEarnings = factValue(previousThreeYearPeriod, "EARNINGS");
+  const netIncomeCagr = latestEarnings != null && startingEarnings != null && startingEarnings > 0 && latestEarnings > 0
+    ? (latestEarnings / startingEarnings) ** (1 / 3) - 1
+    : null;
 
   const metrics: StockDetail["growthSummary"]["metrics"] = [
     {
@@ -854,9 +868,11 @@ function buildGrowthSummary(data: StockResearchData): StockDetail["growthSummary
     },
     {
       label: "Net Income Growth (3Y CAGR)",
-      value: UNAVAILABLE,
-      badge: "Stable",
-      subtext: "Net income CAGR has not been calculated yet",
+      value: formatCagr(netIncomeCagr),
+      badge: badgeFromGrowth(netIncomeCagr),
+      subtext: previousThreeYearPeriod && latestAnnualPeriod
+        ? `Calculated from ${previousThreeYearPeriod.periodLabel}–${latestAnnualPeriod.periodLabel} net income`
+        : "Requires positive net income across the three-year period",
     },
     {
       label: "EPS Growth (3Y CAGR)",
@@ -1002,45 +1018,63 @@ function buildValuationMetrics(
   data: StockResearchData,
   currentPrice: number | null,
 ): StockDetail["currentValuation"]["metrics"] {
+  const notAvailable = "N/A";
   // EPS and BVPS are the stored annual ratios for the latest year, so the
   // Valuation tab and the Financials tab cannot disagree. They used to be
   // recomputed here from `EARNINGS / shares` with a per-year share count, which
   // is a different (and non-template) divisor.
-  const latestRatio = (metricCode: string): number | null => {
+  const latestRatio = (metricCode: string): { value: number | null; periodLabel: string } => {
     const rows = data.annualRatios.filter((row) => row.metricCode === metricCode);
     const latest = rows.at(-1);
-    return latest?.value ?? null;
+    return {
+      value: latest?.calculationStatus === "VALID" ? latest.value : null,
+      periodLabel: latest?.periodLabel ?? notAvailable,
+    };
   };
-  const eps = latestRatio("EPS");
-  const bvps = latestRatio("BVPS");
+  const epsMetric = latestRatio("EPS");
+  const bvpsMetric = latestRatio("BVPS");
+  const roeMetric = latestRatio("ROE");
+  const earningsGrowthMetric = latestRatio("EARNINGS_CAGR_WINDOW");
+  const dividendYieldRows = data.annualGrowth.filter((row) => row.metricCode === "DIVIDEND_YIELD");
+  const latestDividendYield = dividendYieldRows.at(-1);
+  const eps = epsMetric.value;
+  const bvps = bvpsMetric.value;
 
   const multiple = (numerator: number | null, denominator: number | null) =>
     numerator == null || denominator == null || denominator <= 0
-      ? UNAVAILABLE
+      ? notAvailable
       : `${(numerator / denominator).toFixed(2).replace(".", ",")}x`;
-
-  // The share-count note is read from the stored flags rather than inferred, so
-  // the UI reports the same approximation the backend recorded.
-  const sharesAreCarried = data.annualRatios.some(
-    (row) => row.metricCode === "EPS" && row.flags.includes("SHARES_CARRIED_FORWARD"),
-  );
-  const sharesNote = sharesAreCarried
-    ? " (latest year did not report shares; the newest reported count is used)"
-    : "";
 
   return [
     {
       label: "EPS (TTM)",
-      value: eps ?? UNAVAILABLE,
-      note: `Earnings / outstanding shares${sharesNote}`,
+      value: eps ?? notAvailable,
+      note: "Earnings / outstanding shares",
     },
     {
       label: "BVPS",
-      value: bvps ?? UNAVAILABLE,
-      note: `Total equity / outstanding shares${sharesNote}`,
+      value: bvps ?? notAvailable,
+      note: "Total equity / outstanding shares",
     },
     { label: "P/E Ratio", value: multiple(currentPrice, eps), note: "Price / EPS" },
     { label: "P/BV Ratio", value: multiple(currentPrice, bvps), note: "Price / BVPS" },
+    {
+      label: "ROE",
+      value: roeMetric.value == null ? notAvailable : `${(roeMetric.value * 100).toFixed(2).replace(".", ",")}%`,
+      note: roeMetric.periodLabel,
+    },
+    {
+      label: "Earnings Growth (CAGR)",
+      value: earningsGrowthMetric.value == null ? notAvailable : formatCagr(earningsGrowthMetric.value),
+      note: earningsGrowthMetric.periodLabel,
+    },
+    {
+      label: "Dividend Yield",
+      value: latestDividendYield?.calculationStatus === "VALID" && latestDividendYield.value != null
+        ? `${(latestDividendYield.value * 100).toFixed(2).replace(".", ",")}%`
+        : notAvailable,
+      note: latestDividendYield?.periodLabel ?? notAvailable,
+    },
   ];
 }
 
@@ -1141,6 +1175,26 @@ export function buildStockDetail(
       description: methodDisplayName(m.methodCode),
     };
   });
+  const consensusMethods = methods.filter((method) => method.status !== "SKIPPED");
+  const undervaluedMethodCount = consensusMethods.filter(
+    (method) => method.status === "UNDERVALUED",
+  ).length;
+  const comparableMethods = methods.filter(
+    (method) => method.intrinsicValue !== 0 && method.status !== "SKIPPED",
+  );
+  const intrinsicValues = comparableMethods.map((method) => method.intrinsicValue);
+  const undervaluedCount = comparableMethods.filter((method) => method.status === "UNDERVALUED").length;
+  const valuationReadouts = [
+    comparableMethods.length > 0
+      ? `${undervaluedCount} of ${comparableMethods.length} valid methods indicate Undervalued`
+      : "Undervalued methods: N/A (no valid valuation methods)",
+    intrinsicValues.length > 0
+      ? `Highest intrinsic value: ${formatRupiah(Math.max(...intrinsicValues))}`
+      : "Highest intrinsic value: N/A",
+    intrinsicValues.length > 0
+      ? `Lowest intrinsic value: ${formatRupiah(Math.min(...intrinsicValues))}`
+      : "Lowest intrinsic value: N/A",
+  ];
 
   return {
     ticker: data.instrument.ticker,
@@ -1157,6 +1211,9 @@ export function buildStockDetail(
     mos,
     stockCharacter: stockType,
     stockCharacterDesc: stockType !== UNAVAILABLE ? "Stock type classification from the database" : UNAVAILABLE,
+    undervaluedMethods: consensusMethods.length > 0
+      ? `${undervaluedMethodCount}/${consensusMethods.length}`
+      : UNAVAILABLE,
     evidenceWinRates,
     researchSummary: mainMethod
       ? `${data.instrument.ticker} was evaluated using the ${methodDisplayName(mainMethod.methodCode)} valuation model based on the latest database data.`
@@ -1195,7 +1252,7 @@ export function buildStockDetail(
         takeaway: mainMethod
           ? "Comparison of the current price against the intrinsic value estimates from the valuation methods stored in the database."
           : "No stored valuation result for this ticker.",
-        readouts: [],
+        readouts: valuationReadouts,
       },
     },
     financialHealth: buildFinancialHealth(data),

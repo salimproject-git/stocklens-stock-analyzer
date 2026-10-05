@@ -159,14 +159,14 @@ STEPS: tuple[dict[str, Any], ...] = (
 )
 
 STEP_NAMES: tuple[str, ...] = tuple(str(step['name']) for step in STEPS)
-PIPELINE_STEP_CHOICES = STEP_NAMES + ('daily-status',)
+PIPELINE_STEP_CHOICES = STEP_NAMES + ('daily-status', 'projection-reuse')
 
 PIPELINE_MODE_STEPS: dict[str, tuple[str, ...]] = {
     # Rebuild reads existing raw objects from Storage via the canonical loaders.
     # It must never run the API-capable ingest step as an implicit fallback.
     'rebuild': (
         'load-identity', 'load-annual', 'load-quarterly', 'load-dividend',
-        'load-prices', 'growth-quality', 'projection', 'classification',
+        'load-prices', 'growth-quality', 'projection-reuse', 'classification',
         'valuation', 'daily-status',
     ),
     'fundamental': (
@@ -178,6 +178,14 @@ PIPELINE_MODE_STEPS: dict[str, tuple[str, ...]] = {
 }
 
 MODE_EXTRA_STEPS: dict[str, dict[str, Any]] = {
+    'projection-reuse': {
+        'name': 'projection-reuse',
+        'args': [
+            'supabase/derive_projection_scenario.py', '{ticker}', '--apply',
+            '--reuse-equivalent-active',
+        ],
+        'needs_run_id': None,
+    },
     'daily-status': {
         'name': 'daily-status',
         'args': ['supabase/calculate_daily_valuation.py', '--ticker', '{ticker}', '--apply'],

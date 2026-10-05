@@ -2,7 +2,7 @@
 
 ## Pipeline modes
 
-`python run_pipeline.py TICKER --mode rebuild` loads existing raw source families into canonical tables, recalculates dependent fundamental outputs and snapshots, then loads daily prices and writes daily status. It deliberately does **not** upload or ingest missing raw data as a hidden API fallback. Missing Storage objects must be reported and resolved explicitly.
+`python run_pipeline.py TICKER --mode rebuild` loads existing raw source families into canonical tables, recalculates dependent fundamental outputs and snapshots, then loads daily prices and writes daily status. For an existing active projection, rebuild derives a candidate and only reuses the active scenario if every stored numeric forecast value, unit, display value/source kind, and base metadata match; reuse is read-only and preserves the workbook scenario's existing hash/provenance. A mismatch fails closed. It deliberately does **not** upload or ingest missing raw data as a hidden API fallback. Missing Storage objects must be reported and resolved explicitly.
 
 `--mode fundamental` loads identity and fundamental raw families, recalculates growth/quality, projection, classification, and intrinsic values, then refreshes daily status. `--mode daily` loads daily prices and invokes only the daily comparison engine. `--mode backtest` invokes only `run_backtest.py`; it is independent of page views and routine daily-price ingestion. `rebuild` is an explicit operator action, not a scheduled daily action.
 
@@ -26,7 +26,7 @@ The new tables are additive; legacy valuation rows and RPCs remain available for
 
 ## Validation
 
-See `D:\Stock Analyzer\docs\REBUILD_FROM_STORAGE_RUNBOOK.md` for commands and the complete acceptance checklist. No rebuild is considered safe until Storage coverage, dry-run write sets, before/after snapshots for AUTO/GEMA/BIRD/ITMG, row/run/idempotency checks, and RPC security checks all pass.
+See `D:\Stock Analyzer\docs\REBUILD_FROM_STORAGE_RUNBOOK.md` for commands and the complete acceptance checklist. The 2026-10-03 canary/rebuild evidence and four-ticker reconciliation are recorded in `D:\Stock Analyzer\docs\VALUATION_FREQUENCY_AUDIT.md` and the local backup manifest under `D:\Stock Analyzer\backups\valuation_frequency_20261003\`.
 
 ## Safe rollout compatibility
 

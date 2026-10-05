@@ -448,26 +448,26 @@ def calculate_and_store_daily_status(db: SupabaseRest, ticker: str) -> str:
     })
     if existing and existing[0]['status'] == 'SUCCEEDED':
         return str(existing[0]['id'])
-    created = db.request('POST', 'calculation_runs', payload={
-        **contract, 'status': 'RUNNING', 'scope_type': 'INSTRUMENT',
-        'scope_id': instrument_id, 'methodology_version_id': methodology_id,
-    }, headers={'Prefer': 'return=representation'})
-    if not isinstance(created, list) or len(created) != 1:
-        # A prior non-successful idempotency key is resumed, never duplicated.
-        if existing:
-            run_id = str(existing[0]['id'])
-            db.request('PATCH', 'calculation_runs', params={'id': 'eq.' + run_id}, payload={
-                'status': 'RUNNING', 'error_message': None, 'completed_at': None,
-            })
-        else:
-            raise CalculationError('DAILY_STATUS_RUN_CREATE_FAILED')
+    if existing:
+        # Resume the deterministic run after a partial write. The daily status
+        # header/method rows are upserted by their existing unique keys below.
+        run_id = str(existing[0]['id'])
+        db.request('PATCH', 'calculation_runs', params={'id': 'eq.' + run_id}, payload={
+            'status': 'RUNNING', 'error_message': None, 'completed_at': None,
+        })
     else:
+        created = db.request('POST', 'calculation_runs', payload={
+            **contract, 'status': 'RUNNING', 'scope_type': 'INSTRUMENT',
+            'scope_id': instrument_id, 'methodology_version_id': methodology_id,
+        }, headers={'Prefer': 'return=representation'})
+        if not isinstance(created, list) or len(created) != 1:
+            raise CalculationError('DAILY_STATUS_RUN_CREATE_FAILED')
         run_id = str(created[0]['id'])
     summary = [{
         'calculation_run_id': run_id, 'methodology_version_id': methodology_id,
         'snapshot_id': snapshot['id'], 'instrument_id': instrument_id,
         'trading_date': quote['trading_date'], 'current_price': str(quote['close_price']),
-        'input_snapshot': daily_snapshot, 'input_hash': contract['input_hash'],
+        'input_snapshot': _json_value(daily_snapshot), 'input_hash': contract['input_hash'],
         'idempotency_key': contract['idempotency_key'],
         'consensus_verdict': daily['consensus_verdict'],
         'valid_method_count': daily['valid_method_count'],
@@ -484,9 +484,16 @@ def calculate_and_store_daily_status(db: SupabaseRest, ticker: str) -> str:
         if len(status_rows) != 1:
             raise CalculationError('DAILY_STATUS_VERIFY_FAILED')
         daily_id = str(status_rows[0]['id'])
-        daily_rows = [{**row, 'daily_status_id': daily_id, 'snapshot_id': snapshot['id'],
-                       'instrument_id': instrument_id}
-                      for row in daily['methods']]
+        daily_rows = [{
+            **row,
+            'intrinsic_value': decimal_text(row.get('intrinsic_value')),
+            'current_price': decimal_text(row.get('current_price')),
+            'gap_ratio': decimal_text(row.get('gap_ratio')),
+            'mos': decimal_text(row.get('mos')),
+            'daily_status_id': daily_id,
+            'snapshot_id': snapshot['id'],
+            'instrument_id': instrument_id,
+        } for row in daily['methods']]
         _persist_batch(db, 'calc_valuation_daily_methods', daily_rows)
         _write_run_status(db, run_id, 'SUCCEEDED')
     except Exception as error:

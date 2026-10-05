@@ -16,8 +16,10 @@ export function CurrentValuationCard({
   // saying "no stored valuation result" would be wrong for a company that has
   // five stored methods and one undefined ratio.
   const hasMethods = valuation.methods.length > 0;
-  const hasMethodVerdict =
-    valuation.methodVerdict === "UNDERVALUED" || valuation.methodVerdict === "OVERVALUED";
+  const mainMethod = valuation.methods.find(
+    (method) => method.methodCode === valuation.mainMethodCode,
+  );
+  const hasMainMethod = mainMethod != null;
   const hasComparison =
     valuation.currentPrice != null && valuation.intrinsicValue != null && valuation.intrinsicValue !== 0;
 
@@ -29,13 +31,15 @@ export function CurrentValuationCard({
   const formattedMos =
     valuation.mos != null ? valuation.mos.toFixed(1).replace(".", ",") : null;
 
-  const verdictText = !hasMethods
+  const verdictText = !hasMainMethod
     ? "No stored valuation result in the database for this ticker."
     : !hasValuation
       ? "Margin of safety is not available because the main method's intrinsic value is zero or negative."
-      : valuation.methodVerdict === "UNDERVALUED"
-        ? "Most valuation methods indicate the stock is trading below its estimated value"
-        : "Most valuation methods indicate the stock is trading above its estimated value";
+      : mainMethod.status === "UNDERVALUED"
+        ? `The main valuation method (${mainMethod.method}) indicates the stock is trading below its estimated value.`
+        : mainMethod.status === "OVERVALUED"
+          ? `The main valuation method (${mainMethod.method}) indicates the stock is trading above its estimated value.`
+          : `The main valuation method (${mainMethod.method}) did not produce a usable valuation.`;
 
   const mosUndervalued = valuation.mosVerdict === "UNDERVALUED";
   const hasMosVerdict = valuation.mosVerdict === "UNDERVALUED" || valuation.mosVerdict === "OVERVALUED";
@@ -68,12 +72,12 @@ export function CurrentValuationCard({
     </div>
 
     <div className="mt-3">
-      {hasMethodVerdict ? (
+      {hasMainMethod ? (
         <StatusBadge
-          tone={summaryVerdictTone(valuation.methodVerdict)}
+          tone={methodStatusTone(mainMethod.status)}
           className="text-xs"
         >
-          {valuation.methodVerdict}
+          {mainMethod.status}
         </StatusBadge>
       ) : (
         <UnavailableBadge />
@@ -169,10 +173,10 @@ function verdictTone(verdict: StockDetail["currentValuation"]["verdict"]) {
   return "info" as const;
 }
 
-function summaryVerdictTone(verdict: StockDetail["currentValuation"]["methodVerdict"]) {
-  if (verdict === "UNDERVALUED") return "undervalued" as const;
-  if (verdict === "OVERVALUED") return "overvalued" as const;
-  return "info" as const;
+function methodStatusTone(status: StockDetail["currentValuation"]["methods"][number]["status"]) {
+  if (status === "UNDERVALUED") return "undervalued" as const;
+  if (status === "OVERVALUED") return "overvalued" as const;
+  return "skipped" as const;
 }
 
 

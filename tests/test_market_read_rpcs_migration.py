@@ -303,6 +303,8 @@ class BacktestRpcMigrationTests(unittest.TestCase):
                     "roetrend", "yield", "ocfni"):
             self.assertIn(f"'{key}'", self.lower)
 
+
+
     def test_columns_without_a_rule_are_explicitly_null(self) -> None:
         # Inventing a rule for these would fabricate numbers, so they must be
         # null on purpose and the migration must say why.
@@ -322,6 +324,40 @@ class BacktestRpcMigrationTests(unittest.TestCase):
         add = self.lower.index("add column if not exists trough_month")
         grant = self.lower.index("peak_month, trough_month,")
         self.assertLess(add, grant)
+
+class BacktestMethodDetailsMigrationTests(unittest.TestCase):
+    """Contract checks for additive exposure of stored method details."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.path = ROOT / "supabase" / "migrations" / "0036_backtest_method_details_rpc.sql"
+        cls.sql = cls.path.read_text(encoding="utf-8")
+        cls.lower = cls.sql.lower()
+
+    def test_migration_is_transactional_and_read_only(self) -> None:
+        self.assertRegex(self.lower, r"(?m)^begin;")
+        self.assertRegex(self.lower, r"(?m)^commit;")
+        self.assertNotRegex(
+            self.lower,
+            r"\b(insert\s+into|update\s+public\.|delete\s+from|truncate|drop\s+table)\b",
+        )
+
+    def test_only_the_method_details_column_is_granted_to_reader(self) -> None:
+        self.assertIn(
+            "grant select (details) on table public.calc_backtest_methods to stocklens_market_reader",
+            self.lower,
+        )
+        self.assertIn("'details', m.details", self.lower)
+        self.assertIn("stocklens_backtest_method_details_grant_missing", self.lower)
+
+    def test_rpc_keeps_its_read_only_security_contract_and_browser_acl(self) -> None:
+        self.assertIn("create or replace function public.get_stock_backtest(p_ticker text)", self.lower)
+        self.assertIn("security definer", self.lower)
+        self.assertIn("set search_path = ''", self.lower)
+        self.assertIn("has_table_privilege('anon', 'public.calc_backtest_methods', 'select')", self.lower)
+        self.assertIn("has_table_privilege('authenticated', 'public.calc_backtest_methods', 'select')", self.lower)
+        self.assertIn("stocklens_backtest_method_table_must_remain_private", self.lower)
+
 
 
 class ActiveProjectionRpcMigrationTests(unittest.TestCase):

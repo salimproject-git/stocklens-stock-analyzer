@@ -169,6 +169,60 @@ The safest compatible first schema change is additive separated fundamental and 
 
 Implementation-specific note: legacy `calculate_valuation.py` behavior is retained as the default CLI path for compatibility and comparison; the new orchestrated fundamental mode explicitly passes `--frequency-snapshot`. That mode excludes current quote-derived fields from new method rows/hashes and persists separated tables; daily status has its own orchestrator step and `calculation_type`. This opt-in is a transitional safety decision because existing consumers and persisted legacy run contracts must continue working while the additive reader/reconciliation is deployed. Frontend reads the new frequency RPC first and has an explicit temporary legacy-RPC fallback while the new tables are empty. The fallback is a known temporary deviation from the final browser formula-ownership target; remove it after the verified migration/backfill and reconciliation.
 
-Post-migration live state (2026-10-03): the new bounded RPC executed successfully via service-role for all four tickers and returned the correct selected ticker with `fundamental=null`, `daily=null`. The four new tables have zero rows; legacy `calc_valuation_methods` remains at 120, `calculation_runs` at 224 SUCCEEDED, and duplicate idempotency keys remain zero. Raw-table SELECT is false for both browser roles on all four tables; RPC EXECUTE is granted to anon/authenticated/service_role. No rebuild/backfill was performed.
+Post-migration live state before rebuild (2026-10-03): the new bounded RPC executed successfully via service-role for all four tickers and returned the correct selected ticker with `fundamental=null`, `daily=null`. The four new tables had zero rows; legacy `calc_valuation_methods` had 120 rows, `calculation_runs` had 224 SUCCEEDED, and duplicate idempotency keys were zero.
 
-Validation status at handoff: 452 Python tests passed; `tsc --noEmit`, `npm run build`, and `py_compile` passed. Targeted `git diff --check` on task implementation files passed. Repository-wide `git diff --check` is blocked by pre-existing dirty content in `D:\Stock Analyzer\docs\BACKEND_SINGLE_SOURCE_OF_TRUTH.md` (extra blank line at EOF); this unrelated user change was not modified. Required full loader dry-runs, immutable complete result exports, rebuild, and before/after reconciliation for AUTO/GEMA/BIRD/ITMG are still outstanding; task acceptance is therefore incomplete.
+## Execution follow-up (2026-10-03)
+
+The owner confirmed checkpoint `c8ec0ad237f6e5ba0bdfcbb80629c67906c1b8e9` was pushed to `origin/main`; working tree was clean at the start of the run.
+
+### Verified safety artifacts
+
+Baseline/backup artifacts are in `D:\Stock Analyzer\backups\valuation_frequency_20261003\` (local, intentionally untracked):
+
+- `AUTO.json`, `GEMA.json`, `BIRD.json`, `ITMG.json`: full public RPC payloads for `get_stock_research_data`, legacy valuation summary, new valuation-frequency RPC, and backtest.
+- `tables\`: 21 paginated service-role table exports and SHA-256 manifest; 81,319 rows in the pre-run snapshot. All files were reread and verified against manifest row counts and hashes.
+- `storage_objects_manifest.json` and per-ticker `*_provenance.json`: enumerated object counts/checksums and registered ingestion-file provenance. All required core families were present; all recorded files had accepted status and SHA-256.
+- `AUTO_derived_projection.json`: dry-run projection output; no write.
+- `after_AUTO\`, `after_GEMA\`, `after_BIRD\`, `after_ITMG\`: post-run RPC outputs. `post_rebuild\`: paginated table exports after all four runs.
+- `reconciliation.json`: machine-readable field-by-field before/after comparison.
+
+### Loader and pipeline outcome
+
+- Quarterly loader dry-run: each ticker had 26 periods and 260 facts, with 0 new periods, 0 new facts, and 0 conflicts.
+- Read-only preflight for annual/dividend/daily: AUTO/GEMA/BIRD/ITMG all had 0 new canonical rows and 0 conflicts. Daily coverage: AUTO 1,619 dates; GEMA 1,610; BIRD 1,608; ITMG 1,610; every source close matched canonical rows.
+- Rebuild modes ran sequentially for AUTO, GEMA, BIRD, ITMG. No upload or raw-ingest step ran; the raw loader source was Supabase Storage. Annual/quarterly/dividend/daily canonical writers all reported 0 inserts and 0 conflicts. Existing active projections were reused only after exact projected numeric values, display values, units/source-kind, metric set, and base metadata matched; the saved workbook scenario/hash/DPR/provenance were not mutated.
+- AUTO initially stopped at active projection conflict as a safety guard. Added explicit `--reuse-equivalent-active` verification and corresponding tests. The derived DPR differed from saved workbook assumption (0.237726 vs 0.24), but all 10 stored projection metric values/display values/unit/source kinds matched. The active workbook scenario was reused read-only; no version bump and no active scenario write was made.
+- The first AUTO daily writer attempt exposed Decimal JSON serialization, left one `PARTIAL` run/header but no daily-method rows, and did not alter old results. Fixed Decimal serialization and deterministic PARTIAL-run recovery. Subsequent rebuild succeeded and reused the same daily idempotency key/run. Final live state has 236 calculation runs, 0 duplicate keys, and no PARTIAL runs.
+- Backtest was not invoked by rebuild. The existing historical backtest payload remained exactly identical for every ticker.
+
+### Reconciliation
+
+For each ticker, all five method intrinsic values, quote/date, per-method gap/MoS/verdict, consensus verdict and counts, Based Method/Based MoS, annual growth, annual ratios, quarterly quality, stock classification, projection values, and all backtest rows matched the pre-run baseline. Floating-point differences in a small number of daily MoS values were < `1e-10` from independent Decimal/float serialization paths; classifications and outcomes were unchanged. There were no unexplained regressions.
+
+Row-count differences were limited to intended additive calculations: new valuation tables contain 4 fundamental snapshots, 20 fundamental methods, 4 daily status rows, and 20 daily method rows. Classification has 36 additional rows (9 metrics × 4 idempotent new classification runs). `calculation_runs` increased from 224 to 236 (3 new successful run types per ticker: classification, fundamental valuation, daily status). Canonical table counts, projection scenarios/values, annual/quarterly growth/ratio counts, legacy valuation tables, and backtest table counts were unchanged.
+
+### Validation follow-up
+
+- Final `python -m unittest discover -s tests -v`: **455 tests passed**.
+- `python -m py_compile` on changed pipeline/valuation/projection Python modules: passed.
+- `frontend`: `npx tsc --noEmit --pretty false` and `npm run build`: passed.
+- Daily and backtest mode dry-runs still contain only their respective dedicated steps.
+- Live check: all four new raw calculation tables have RLS enabled and deny browser-role SELECT; new frequency RPC is executable and returned populated snapshot/daily results for the four tickers after canary runs.
+- Task-scoped `git diff --check`: passed. The prior unrelated repository-wide trailing blank-line issue in `D:\Stock Analyzer\docs\BACKEND_SINGLE_SOURCE_OF_TRUTH.md` was pre-existing; this file was not modified by the refactor. The pushed checkpoint was not amended by this agent.
+
+This follow-up supersedes the pre-execution handoff note above; the initial four-ticker rebuild/reconciliation passed. The additional ticker rollout below extends those results. Preserve `D:\Stock Analyzer\backups\valuation_frequency_20261003\` as the run evidence; do not commit it unless the repository's backup policy explicitly requires checking in operational exports.
+
+## Additional ticker rollout (2026-10-03)
+
+Following the initial four-ticker run, rebuild was requested for the remaining available ticker set. Inventory found 20 IDX instruments. The active projection/provenance checks, quarterly dry-run, annual/dividend/daily no-write preflight, and classifier preview were performed before executing more tickers.
+
+- 18 tickers have a new fundamental snapshot and daily status: `AUTO GEMA BIRD ITMG ARII DSSA ERAA INDS INKP IPOL JSMR AMRT MIDI UNTR PTBA SIDO WIFI TLKM`.
+- `DSSA` was built from its latest available stored quarter, 2026-Q1. Storage had no Q2 2026 quarterly object for DSSA, so the run did not invent or request missing Q2 data.
+- `INDF` was intentionally not run through valuation: all six classifier type flags were 0 and `CLASSIFICATION_FINAL_TYPE` was `UNCLASSIFIED`. Its `rebuild` attempt safely stopped at valuation after writing the classifier result/run; no new fundamental snapshot or daily status was produced. The legacy valuation remains available. A product/classifier decision is required before valuing it with an explicit type.
+- `GOLD` was not rebuilt: classifier final type is `UNCLASSIFIED` although `CLASSIFICATION_ASSET_PLAY=1`. This classification-rule/stock-type mapping needs review. No manual valuation type was invented.
+- `ERAA` had one transient Storage listing HTTP 520 at preflight; execution stopped before writes. A later read-only retry succeeded, after which the rebuild passed.
+- Other incomplete local raw families were not treated as evidence gaps for these specific ticker preflights; every rebuilt ticker passed Storage, provenance, canonical write-set preflight and active projection equivalence.
+
+The extended pre/post RPC exports and the baselines are under `D:\Stock Analyzer\backups\valuation_frequency_20261003\expanded_baseline`, `expanded_after`, and `final_after`. `reconciliation_all_tickers.json` records method/value/status, daily comparison, growth/ratios/classification/projection and backtest comparisons: all 18 rebuilt tickers pass; INDF/GOLD were checked and are marked blocked/unclassified, with no falsely asserted reconciliation to new snapshot outputs. Final counts: `calc_valuation_fundamental_snapshots` 18, `calc_valuation_fundamental_methods` 90, `calc_valuation_daily_status` 18, `calc_valuation_daily_methods` 90, legacy `calc_valuation_methods` 120, `calc_metrics_classification` 351, and `calculation_runs` 279. All 279 runs are SUCCEEDED, with 0 PARTIAL, 0 FAILED, and 0 duplicate idempotency keys. Final paginated export contains 21 tables / 81,761 rows.
+
+After adding/reviewing the remaining batch, final Python suite remained 455 passed; TypeScript check and Next.js production build passed. Do not claim all 20 instruments have new snapshots: INDF and GOLD still require the unresolved classification decision.

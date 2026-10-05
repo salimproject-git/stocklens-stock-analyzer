@@ -8,13 +8,7 @@ import { VALUATION_LENS_CARDS } from '@/data/valuation-lenses'
 import { UnavailableBadge } from '@/components/ui/unavailable-badge'
 import { ChartEmptyState } from '@/components/ui/chart-empty-state'
 
-const toneClass: Record<string, string> = { 'EPS (TTM)': 'text-white', BVPS: 'text-white', 'P/E Ratio': 'text-[#3ef0a9]', 'P/BV Ratio': 'text-[#3ef0a9]', 'PEG Ratio': 'text-[#3ef0a9]', 'Dividend Yield': 'text-[#d8f4e7]' }
-
-function formatChangePercent(value: number | null) {
-  if (value == null || !Number.isFinite(value)) return 'N/A today';
-  const sign = value > 0 ? '+' : '';
-  return `${sign}${new Intl.NumberFormat('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value)}% today`;
-}
+const toneClass: Record<string, string> = { 'EPS (TTM)': 'text-white', BVPS: 'text-white', 'P/E Ratio': 'text-[#3ef0a9]', 'P/BV Ratio': 'text-[#3ef0a9]', 'PEG Ratio': 'text-[#3ef0a9]', 'Dividend Yield': 'text-[#d8f4e7]', ROE: 'text-[#d8f4e7]', 'Earnings Growth (CAGR)': 'text-[#d8f4e7]' }
 
 function methodStatusTone(status: ValuationMethodStatus) {
   if (status === "UNDERVALUED") return "undervalued" as const;
@@ -56,7 +50,6 @@ export function ValuationTabContent({ stock }: { stock: StockDetail }) {
     </header>
     <SectionCard icon={<SectionIcon kind='current' />} title='Current Valuation' subtitle='Key valuation metrics based on the latest available data.' className='p-5 md:p-6'>
       <div className='grid grid-cols-1 gap-px overflow-hidden rounded-xl border border-white/[0.08] bg-white/[0.08] sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7'>
-        <div className='min-w-0 bg-[#081523] px-4 py-4'><div className='text-[11px] font-medium text-[#aebbd0]'>Current Price</div><div className='mt-5 whitespace-nowrap text-[22px] font-semibold text-[#3ef0a9]'>{formatRupiah(valuation.currentPrice)}</div><div className='mt-1.5 text-[11px] text-[#8090a7]'>{formatChangePercent(stock.changePercent)}</div></div>
         {valuation.metrics.map(card => <div key={card.label} className='min-w-0 bg-[#081523] px-4 py-4'><div className='text-[11px] font-medium text-[#aebbd0]'>{card.label}</div><div className={`mt-5 whitespace-nowrap text-[22px] font-semibold ${toneClass[card.label] ?? 'text-white'}`}>{typeof card.value === 'number' ? formatRupiah(card.value) : card.value}</div><div className='mt-1.5 text-[11px] text-[#8090a7]'>{card.note}</div></div>)}
       </div>
     </SectionCard>

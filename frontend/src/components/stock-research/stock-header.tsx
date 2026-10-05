@@ -1,6 +1,7 @@
 import React from "react";
 import { StockDetail } from "@/data/mock-stock-details";
 import { formatRupiah as formatCurrencyRupiah } from "@/utils/currency";
+import { toDayLabel } from "@/utils/dates";
 
 export function StockHeader({ stock }: { stock: StockDetail }) {
   return (
@@ -54,7 +55,7 @@ export function StockHeader({ stock }: { stock: StockDetail }) {
             {formatRupiah(stock.price)}
           </div>
           <div className="mt-1 text-xs text-[#8f9db1]">
-            As of {stock.updatedAt}
+            Last updated: {toDayLabel(stock.updatedAt) ?? "Not available"}
           </div>
         </div>
 

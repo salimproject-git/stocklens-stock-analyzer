@@ -792,6 +792,15 @@ PARAMETERS_CLASSIFIER: tuple[tuple[str, str, Any, str, str, str, str], ...] = (
         'Sector membership for the defensive Stalwart branch.',
     ),
     (
+        'classifier_infrastructure_sectors',
+        METHOD_STOCK_TYPE_CLASSIFIER,
+        ['Infrastructure', 'Telecommunications'],
+        'text_enum',
+        RESOLUTION_RESOLVED,
+        'MetricsClassification!B80 IsInfrastructure',
+        'Sector membership for the Layer 2 infrastructure fallback.',
+    ),
+    (
         'classifier_confidence_level',
         METHOD_STOCK_TYPE_CLASSIFIER,
         None,

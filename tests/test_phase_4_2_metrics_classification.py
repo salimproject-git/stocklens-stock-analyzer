@@ -156,11 +156,20 @@ class ClassificationRuleTests(unittest.TestCase):
         self.assertEqual(by_code['CLASSIFICATION_CYCLICAL']['value_numeric'], '1')
         self.assertEqual(
             by_code['CLASSIFICATION_SYSTEM_RECOMMENDATION']['classification_code'],
-            'UNCLASSIFIED',
+            'STALWART',
         )
 
-    def test_asset_play_score_falls_through_system_rec_ifs(self) -> None:
+    def test_asset_play_score_wins_before_sector_fallback(self) -> None:
+        growth_rows = [dict(row) for row in self.growth_rows]
+        for row in growth_rows:
+            if row['metric_code'] in {
+                'GROWTH_REVENUE_CAGR_LONG', 'GROWTH_REVENUE_COV',
+                'QUALITY_REVENUE_MOMENTUM', 'GROWTH_EPS_CAGR_LONG',
+            }:
+                row['value_numeric'] = '0'
+                row['calculation_status'] = 'VALID'
         rows = self.classify(
+            growth_rows=growth_rows,
             sector='Technology',
             projected_net_income='1',
             payout_ratio='0',
@@ -173,6 +182,87 @@ class ClassificationRuleTests(unittest.TestCase):
         )
         by_code = {row['metric_code']: row for row in rows}
         self.assertEqual(by_code['CLASSIFICATION_ASSET_PLAY']['value_numeric'], '1')
+        self.assertEqual(
+            by_code['CLASSIFICATION_SYSTEM_RECOMMENDATION']['classification_code'],
+            'ASSET PLAY',
+        )
+
+    def test_higher_cyclical_score_wins_over_asset_play_score(self) -> None:
+        rows = self.classify(
+            sector='Consumer Cyclicals',
+            projected_net_income='1',
+            payout_ratio='0',
+            historical_roe_average='0.1',
+            projected_pbv='0.7',
+            pbv_percentile='0.1',
+            projected_pe='10',
+            projected_peg='1',
+            historical_dividend_yield='0.01',
+        )
+        by_code = {row['metric_code']: row for row in rows}
+        self.assertEqual(by_code['CLASSIFICATION_ASSET_PLAY']['value_numeric'], '1')
+        self.assertEqual(
+            by_code['CLASSIFICATION_SYSTEM_RECOMMENDATION']['classification_code'],
+            'CYCLICAL',
+        )
+
+    def test_layer_two_infrastructure_fallback_uses_roe_pbv_and_cov(self) -> None:
+        growth_rows = [dict(row) for row in self.growth_rows]
+        for row in growth_rows:
+            if row['metric_code'] == 'GROWTH_REVENUE_CAGR_LONG':
+                row['value_numeric'] = '0.05'
+                row['calculation_status'] = 'VALID'
+            elif row['metric_code'] in {
+                'GROWTH_REVENUE_COV', 'QUALITY_REVENUE_MOMENTUM',
+                'GROWTH_EPS_CAGR_LONG',
+            }:
+                row['value_numeric'] = '0'
+                row['calculation_status'] = 'VALID'
+        rows = self.classify(
+            growth_rows=growth_rows,
+            sector='Infrastructure',
+            projected_net_income='1',
+            payout_ratio='0',
+            historical_roe_average='0.1',
+            gpm_stability='0',
+            projected_pbv='1.2',
+            pbv_percentile='0.5',
+            projected_pe='10',
+            projected_peg='1',
+            historical_dividend_yield='0.01',
+        )
+        by_code = {row['metric_code']: row for row in rows}
+        self.assertEqual(
+            by_code['CLASSIFICATION_SYSTEM_RECOMMENDATION']['classification_code'],
+            'STALWART',
+        )
+
+    def test_layer_two_unhandled_sector_remains_unclassified(self) -> None:
+        growth_rows = [dict(row) for row in self.growth_rows]
+        for row in growth_rows:
+            if row['metric_code'] == 'GROWTH_REVENUE_CAGR_LONG':
+                row['value_numeric'] = '0.05'
+                row['calculation_status'] = 'VALID'
+            elif row['metric_code'] in {
+                'GROWTH_REVENUE_COV', 'QUALITY_REVENUE_MOMENTUM',
+                'GROWTH_EPS_CAGR_LONG',
+            }:
+                row['value_numeric'] = '0'
+                row['calculation_status'] = 'VALID'
+        rows = self.classify(
+            growth_rows=growth_rows,
+            sector='Unknown Sector',
+            projected_net_income='1',
+            payout_ratio='0',
+            historical_roe_average='0.1',
+            gpm_stability='0',
+            projected_pbv='1.2',
+            pbv_percentile='0.5',
+            projected_pe='10',
+            projected_peg='1',
+            historical_dividend_yield='0.01',
+        )
+        by_code = {row['metric_code']: row for row in rows}
         self.assertEqual(
             by_code['CLASSIFICATION_SYSTEM_RECOMMENDATION']['classification_code'],
             'UNCLASSIFIED',

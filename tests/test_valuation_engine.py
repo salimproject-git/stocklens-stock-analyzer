@@ -328,6 +328,19 @@ class ValuationFrequencyTests(unittest.TestCase):
         self.assertNotEqual(first['methods'][0]['gap_ratio'], second['methods'][0]['gap_ratio'])
         self.assertEqual(first['based_method_code'], 'PETER_LYNCH')
 
+    def test_daily_method_rows_are_json_safe_decimal_strings(self) -> None:
+        import json
+
+        result = calculate_daily_valuation_status(
+            [{'method_code': 'PETER_LYNCH', 'intrinsic_value': '120', 'calculation_status': 'VALID'}],
+            current_price='90', preferred_method_code='PETER_LYNCH',
+        )
+        row = result['methods'][0]
+        row = {key: str(value) if isinstance(value, Decimal) else value for key, value in row.items()}
+        json.dumps(row, allow_nan=False)
+        self.assertEqual(row['intrinsic_value'], '120')
+        self.assertEqual(row['gap_ratio'], '0.3333333333333333333333333333')
+
 
 if __name__ == '__main__':
     unittest.main()

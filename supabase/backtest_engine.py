@@ -180,7 +180,7 @@ METHOD_CODE = 'BACKTEST_HISTORICAL'
 #: ulang pada tanggal kasus, bukan disalin dari snapshot terbaru. Versi lama
 #: tetap hidup supaya baris dengan flag `STOCK_TYPE_LATEST_SNAPSHOT` masih bisa
 #: direproduksi.
-METHOD_VERSION = '1.4.0'
+METHOD_VERSION = '1.7.0'
 
 #: Batas window harga relatif terhadap tanggal analisis, dalam bulan.
 WINDOW_HORIZONS_MONTHS = (3, 6, 9, 12)
@@ -1674,7 +1674,13 @@ def backtest_methodology_seed() -> dict[str, Any]:
         'on each case analysis date over the point-in-time cut of periods, facts and '
         'prices, with the growth window recomputed for that case and the case own '
         'projection scenario; the resulting type selects the reference type weights '
-        'and thresholds for that case only.'
+        'and thresholds for that case only. The winning score 10 is ASSET PLAY; '
+        'only UNCLASSIFIED results fall through Layer 1 sector fallback and then '
+        'Layer 2 infrastructure/sector fallback; '
+        'infrastructure is cyclical when revenue CoV >= 0.35, historical ROE < 0.08, '
+        'or forward PBV < 1, otherwise stalwart. Projection flow run-rate follows '
+        'the workbook SUM behavior: missing flow cells are ignored in the sum, '
+        'while annualisation uses the as-of quarter number as denominator.'
     )
     parameter_spec: dict[str, Any] = {
         'horizons_months': ['3', '6', '9', '12'],
@@ -1729,6 +1735,11 @@ def backtest_methodology_seed() -> dict[str, Any]:
         'stock_type_growth_window': 'annual_growth_recomputed_for_the_case_window',
         'stock_type_scenario': 'case_own_projection_scenario_with_projected_shares',
         'stock_type_reference_selection': 'type_weights_and_thresholds_of_the_case_type',
+        'stock_type_unclassified_layer_1': 'score_10_asset_play_then_cyclical_stalwart_financial_fast_grower_by_sector',
+        'stock_type_unclassified_layer_2': 'infrastructure_conditions_then_sector_fallback',
+        'infrastructure_cyclical_revenue_cov_min': '0.35',
+        'infrastructure_cyclical_roe_max': '0.08',
+        'infrastructure_cyclical_forward_pbv_max': '1',
     }
     formula_hash = sha256_text(formula_text)
     parameter_hash = sha256_json(parameter_spec)

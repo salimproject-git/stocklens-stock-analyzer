@@ -3,13 +3,7 @@ import { StockDetail } from "@/data/mock-stock-details";
 import { formatRupiah } from "@/utils/currency";
 import { EVIDENCE_RATE_UNAVAILABLE } from "@/lib/analysis";
 import { valuationMethodLabel } from "@/lib/valuation-methods";
-import { toDayLabel } from "@/utils/dates";
 export function KeyMetricSummary({ stock }: { stock: StockDetail }) {
-  // The card states *when* the price was last refreshed instead of a daily
-  // change: the database stores point-in-time closes, so a "% today" figure
-  // would imply an intraday feed the pipeline does not have.
-  const lastDataLabel = `Last updated: ${toDayLabel(stock.updatedAt) ?? "Not available"}`;
-
   // The label follows the row that actually supplies the headline figures, not
   // the stock type's preferred rule: when that rule values the company at or
   // below zero the headline comes from the other rule, and naming the wrong one
@@ -27,17 +21,7 @@ export function KeyMetricSummary({ stock }: { stock: StockDetail }) {
 
   return (
     <section className="mb-6 grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-5">
-      {/* 1. Current Price */}
-      <KeyMetricCard
-        label="Current Price"
-        value={formatRupiah(stock.price)}
-        subtext={lastDataLabel}
-        subtextTone="slate"
-        icon={<TrendingUpIcon className="h-4 w-4" />}
-        iconTone="green"
-      />
-
-      {/* 2. Intrinsic Value */}
+      {/* 1. Intrinsic Value */}
       <KeyMetricCard
         label="Intrinsic Value"
         value={formatRupiah(stock.intrinsicValue)}
@@ -48,7 +32,7 @@ export function KeyMetricSummary({ stock }: { stock: StockDetail }) {
         iconTone="blue"
       />
 
-      {/* 3. Margin of Safety */}
+      {/* 2. Margin of Safety */}
       <KeyMetricCard
         label="Margin of Safety"
         value={mos != null ? `${mos.toFixed(1).replace(".", ",")}%` : "Not available"}
@@ -59,7 +43,7 @@ export function KeyMetricSummary({ stock }: { stock: StockDetail }) {
         iconTone={mosTone === "red" ? "gold" : "green"}
       />
 
-      {/* 4. Stock Character */}
+      {/* 3. Stock Character */}
       <KeyMetricCard
         label="Stock Character"
         value={stock.stockCharacter}
@@ -67,6 +51,16 @@ export function KeyMetricSummary({ stock }: { stock: StockDetail }) {
         subtextTone="slate"
         icon={<ActivityIcon className="h-4 w-4" />}
         iconTone="blue"
+      />
+
+      {/* 4. Undervalued Methods */}
+      <KeyMetricCard
+        label="Undervalued Methods"
+        value={stock.undervaluedMethods}
+        subtext="Active methods indicating undervalued"
+        subtextTone="slate"
+        icon={<LayersIcon className="h-4 w-4" />}
+        iconTone="gold"
       />
 
       {/* 5. Historical Evidence */}
@@ -214,24 +208,6 @@ function KeyMetricCard({
   );
 }
 
-function TrendingUpIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-      aria-hidden="true"
-    >
-      <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
-      <polyline points="17 6 23 6 23 12" />
-    </svg>
-  );
-}
-
 function DatabaseIcon({ className }: { className?: string }) {
   return (
     <svg
@@ -301,6 +277,15 @@ function BarChartIcon({ className }: { className?: string }) {
       <line x1="12" y1="20" x2="12" y2="10" />
       <line x1="18" y1="20" x2="18" y2="4" />
       <line x1="6" y1="20" x2="6" y2="16" />
+    </svg>
+  );
+}
+
+function LayersIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
+      <path d="m12 3 9 5-9 5-9-5 9-5Z" />
+      <path d="m3 12 9 5 9-5M3 16l9 5 9-5" />
     </svg>
   );
 }

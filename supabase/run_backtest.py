@@ -121,7 +121,7 @@ CLASSIFICATION_ASSET_PLAY_CODE = 'CLASSIFICATION_ASSET_PLAY'
 
 #: Versi skema sidik input tipe saham. Dinaikkan bila isi sidik berubah, supaya
 #: cache lama tidak dianggap cocok oleh sidik dengan arti yang berbeda.
-STOCK_TYPE_FINGERPRINT_VERSION = 'stock-type-input-v1'
+STOCK_TYPE_FINGERPRINT_VERSION = 'stock-type-input-v3'
 
 #: Parameter classifier yang dibaca dari registry dan ikut masuk sidik input.
 #: Kalau salah satu ambang berubah, sidiknya berubah dan tipenya dihitung ulang.
@@ -131,6 +131,7 @@ CLASSIFIER_PARAMETER_CODES = (
     'classifier_energy_override',
     'classifier_cyclical_sectors',
     'classifier_consumer_defensive_sectors',
+    'classifier_infrastructure_sectors',
 )
 
 
@@ -434,7 +435,7 @@ def _stock_type_fingerprint(
     menggeser tipe ikut terdeteksi:
 
     * **parameter classifier** (ambang, tangga skor, override Energy, daftar
-      sektor) - perubahan satu ambang saja sudah mengubah tipe;
+      sektor Layer 1 dan Layer 2) - perubahan satu ambang saja sudah mengubah tipe;
     * **periode** yang dipotong pada tanggal kasus (`id`, `period_end`);
     * **fakta** yang dipotong, **termasuk `revision_key` dan nilainya** - inilah
       yang membuat revisi laporan (mis. restatement laba) menggugurkan cache,

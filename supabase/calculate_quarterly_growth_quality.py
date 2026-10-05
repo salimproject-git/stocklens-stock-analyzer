@@ -709,6 +709,7 @@ def classify_metrics_classification(
     score_ladder = resolved_parameter('classifier_score_ladder')
     cyclical_sectors = resolved_parameter('classifier_cyclical_sectors')
     defensive_sectors = resolved_parameter('classifier_consumer_defensive_sectors')
+    infrastructure_sectors = resolved_parameter('classifier_infrastructure_sectors')
     energy_override = str(resolved_parameter('classifier_energy_override'))
     # The registered classifier blob is not yet versioned against the owner
     # formulas supplied for this implementation.
@@ -742,6 +743,10 @@ def classify_metrics_classification(
     financial_sector = _contains_sector(sector_text, 'Financials')
     defensive_sector = any(_contains_sector(sector_text, item) for item in defensive_sectors)
     cyclical_sector = any(_contains_sector(sector_text, item) for item in cyclical_sectors)
+    infrastructure_sector = any(
+        _contains_sector(sector_text, item) for item in infrastructure_sectors
+    )
+    technology_sector = _contains_sector(sector_text, 'Technology')
 
     slow = (
         None if revenue_long is None or payout is None
@@ -894,16 +899,42 @@ def classify_metrics_classification(
         ]
         if matching:
             winning_score, winning_type = max(matching)
-            # The Excel IFS has branches for scores 100/80/60/40/20, but not
-            # score 10 (ASSET PLAY). Preserve its literal fall-through result.
-            system_recommendation = (
-                'UNCLASSIFIED' if winning_score == int(score_ladder['ASSET PLAY'])
-                else winning_type
-            )
+            # Layer 1 explicitly maps score 10 to ASSET PLAY. Sector fallback
+            # layers are only for cases where no scored rule matched.
+            system_recommendation = winning_type
         elif any(value is None for value in rule_values.values()):
             system_recommendation = None
         else:
             system_recommendation = 'UNCLASSIFIED'
+
+    # Layer 1 sector fallback is only used when the scored rules (or the
+    # workbook's missing score-10 ASSET PLAY branch) remain UNCLASSIFIED.
+    if system_recommendation == 'UNCLASSIFIED':
+        if cyclical_sector:
+            system_recommendation = 'CYCLICAL'
+        elif defensive_sector or financial_sector:
+            system_recommendation = 'STALWART'
+        elif technology_sector:
+            system_recommendation = 'FAST GROWER'
+
+    # Layer 2 is the final safety net for sectors that Layer 1 could not
+    # resolve. Keep the workbook's IFS ordering: infrastructure first.
+    if system_recommendation == 'UNCLASSIFIED':
+        if infrastructure_sector:
+            if (
+                (revenue_cov is not None and revenue_cov >= Decimal('0.35'))
+                or (roe_average is not None and roe_average < Decimal('0.08'))
+                or (pbv is not None and pbv < Decimal('1'))
+            ):
+                system_recommendation = 'CYCLICAL'
+            else:
+                system_recommendation = 'STALWART'
+        elif defensive_sector or financial_sector:
+            system_recommendation = 'STALWART'
+        elif cyclical_sector:
+            system_recommendation = 'CYCLICAL'
+        elif technology_sector:
+            system_recommendation = 'FAST GROWER'
 
     rows.append(result_row(
         identity=identity,

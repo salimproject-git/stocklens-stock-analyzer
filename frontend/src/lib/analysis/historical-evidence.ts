@@ -84,10 +84,7 @@ function buildBreakdown(
     winRate: formatEvidenceRate(wins, undervalued),
     riskRate: formatEvidenceRate(RISK, undervalued),
     flatRate: formatEvidenceRate(FLAT, undervalued),
-    // FLAT is usually zero. A bare `0%` would then read as "nothing was
-    // inconclusive", while `0 of 0` says "no case was flagged at all" — a very
-    // different statement, so the two are told apart.
-    flatSuffix: undervalued > 0 ? "" : " · 0 of 0",
+    flatSuffix: "",
   };
 }
 

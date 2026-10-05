@@ -39,6 +39,7 @@ from derive_projection_scenario import (  # noqa: E402
     resolve_base_quarter,
     to_display,
     trimmean,
+    verify_active_projection_equivalent,
 )
 
 
@@ -384,6 +385,37 @@ class DerivedProjectionScenarioTests(unittest.TestCase):
         for metric in ('REVENUE', 'EARNINGS', 'OPERATING_CASH_FLOW'):
             self.assertIn(metric, emitted)
 
+    def test_flow_metric_blank_earlier_quarter_matches_workbook_sum(self) -> None:
+        """Excel SUM ignores missing Q1 flow cells but keeps the Q2 denominator."""
+        quarter_periods = [
+            _period('q1', 'QUARTER', '2026-Q1', '2026-03-31'),
+            _period('q2', 'QUARTER', '2026-Q2', '2026-06-30'),
+        ]
+        raw_facts: list[dict[str, object]] = []
+        for period_id, label in (('q1', '2026-Q1'), ('q2', '2026-Q2')):
+            values = dict(AUTO_ACTUALS[label])
+            if period_id == 'q1':
+                values.pop('INTEREST_EXPENSE_NON_OPERATING')
+            raw_facts.extend(_facts_for(period_id, values))
+        raw_facts.extend(self._annual_facts())
+        index = index_facts(raw_facts)
+
+        scenario = build_scenario(
+            ticker='TEST',
+            instrument={'ticker': 'TEST'},
+            annual_periods=self.annual_periods,
+            quarter_periods=quarter_periods,
+            index=index,
+            dividend_rows=self.dividends,
+        )
+        interest = next(
+            p for p in scenario['projections']
+            if p['metric_code'] == 'INTEREST_EXPENSE_NON_OPERATING'
+        )
+        # Workbook: SUM(blank, Q2) * 4 / 2 == Q2 * 2.
+        expected = to_display(Decimal(AUTO_ACTUALS['2026-Q2']['INTEREST_EXPENSE_NON_OPERATING']) * 2)
+        self.assertEqual(interest['source_display_value'], str(expected))
+
     def test_no_usable_facts_still_reports_incomplete_quarter(self) -> None:
         with self.assertRaises(CalculationError) as ctx:
             resolve_base_quarter(self.quarter_periods, {})
@@ -457,6 +489,69 @@ class DerivedProjectionScenarioTests(unittest.TestCase):
             scenario_code='DERIVED_2026_Q2',
             scenario_version=1,
         )
+
+    def test_equivalent_active_projection_is_reused_without_mutation(self) -> None:
+        class FakeDb:
+            def get_all(self, table, params):
+                if table == 'projection_values':
+                    return [{
+                        'metric_code': 'REVENUE', 'value_numeric': '2000000000000',
+                        'unit_code': 'IDR', 'source_display_value': '2000',
+                        'source_kind': 'WORKBOOK_FORMULA_OUTPUT',
+                    }]
+                if table == 'projection_scenarios':
+                    return [{
+                        'instrument_id': 'instrument-1',
+                        'as_of_financial_period_id': 'period-q2',
+                        'projection_year': 2026, 'as_of_quarter': 2,
+                        'years_available': 7,
+                    }]
+                raise AssertionError(table)
+
+        scenario = {
+            'scenario_id': 'scenario-1', 'projections': [{
+                'metric_code': 'REVENUE', 'value_numeric': '2000000000000',
+                'unit_code': 'IDR', 'source_display_value': '2000',
+                'source_kind': 'WORKBOOK_FORMULA_OUTPUT',
+            }],
+            'projection_year': 2026, 'as_of_quarter': 2,
+            'years_available': 7,
+        }
+        active = {'id': 'scenario-1'}
+        self.assertEqual(
+            verify_active_projection_equivalent(
+                FakeDb(), instrument_id='instrument-1',
+                scenario=scenario, active_scenario=active,
+            ),
+            'scenario-1',
+        )
+
+    def test_non_equivalent_active_projection_fails_closed(self) -> None:
+        class FakeDb:
+            def get_all(self, table, params):
+                if table == 'projection_values':
+                    return [{
+                        'metric_code': 'REVENUE', 'value_numeric': '1999000000000',
+                        'unit_code': 'IDR', 'source_display_value': '1999',
+                        'source_kind': 'WORKBOOK_FORMULA_OUTPUT',
+                    }]
+                raise AssertionError('base metadata must not be read after a value mismatch')
+
+        scenario = {
+            'scenario_id': 'scenario-1', 'projections': [{
+                'metric_code': 'REVENUE', 'value_numeric': '2000000000000',
+                'unit_code': 'IDR', 'source_display_value': '2000',
+                'source_kind': 'WORKBOOK_FORMULA_OUTPUT',
+            }],
+            'projection_year': 2026, 'as_of_quarter': 2,
+            'years_available': 7,
+        }
+        with self.assertRaises(CalculationError) as ctx:
+            verify_active_projection_equivalent(
+                FakeDb(), instrument_id='instrument-1',
+                scenario=scenario, active_scenario={'id': 'scenario-1'},
+            )
+        self.assertIn('ACTIVE_PROJECTION_NOT_EQUIVALENT', str(ctx.exception))
 
     def test_bumping_the_scenario_version_is_refused_while_old_one_is_active(self) -> None:
         # A v2 alongside an ACTIVE v1 would also break the single-scenario rule.

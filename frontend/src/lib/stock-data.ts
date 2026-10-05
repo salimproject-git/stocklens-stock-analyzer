@@ -177,6 +177,8 @@ export type BacktestMethod = {
   mos: number | null;
   verdict: string;
   calculationStatus: string;
+  flags: string[];
+  details: Record<string, unknown>;
 };
 
 /**
@@ -632,6 +634,8 @@ function mapBacktestMethod(value: unknown): BacktestMethod | null {
     mos: asFiniteNumber(row.mos),
     verdict: asString(row.verdict, "NOT_APPLICABLE"),
     calculationStatus: asString(row.calculation_status, "UNAVAILABLE"),
+    flags: asArray(row.flags).filter((flag): flag is string => typeof flag === "string"),
+    details: asObject(row.details) ?? {},
   };
 }
 

@@ -328,8 +328,9 @@ def build_scenario(
     as_of_quarter = quarter_number(base_end)
     projection_year = int(base_end[:4])
 
-    # Complete quarters of the base year, ascending. Only quarters whose facts
-    # are loaded take part, so the annualised run-rate never mixes missing data.
+    # Reported quarters of the base year, ascending. The workbook's SUM-based
+    # run-rate ignores blank flow cells; the denominator is still the as-of
+    # quarter number (not the count of nonblank facts).
     year_quarters: list[Mapping[str, Any]] = []
     for period in sorted(quarter_periods, key=lambda row: str(row.get('period_end') or '')):
         end = str(period.get('period_end') or '')
@@ -341,7 +342,7 @@ def build_scenario(
 
     if not year_quarters:
         raise CalculationError('BASE_YEAR_QUARTERS_MISSING')
-    quarter_count = len(year_quarters)
+    quarter_count = as_of_quarter
 
     projections: list[dict[str, Any]] = []
     for metric in FLOW_METRICS:
@@ -353,7 +354,10 @@ def build_scenario(
         for period in year_quarters:
             amount = fact_amount(index, str(period['id']), metric)
             if amount is None:
-                raise CalculationError(f'BASE_QUARTER_FACT_MISSING: {metric}')
+                # Excel SUM(Q1:Qn) ignores blank cells. In particular, do not
+                # treat a metric first reported in Q2 as a fatal Q1 omission.
+                # Keep the quarter-number denominator to match SUM(Q1:Qn)*4/n.
+                continue
             total += amount
         display = to_display(total * 4 / quarter_count)
         if metric in NEGATED_METRICS:
@@ -501,6 +505,55 @@ def ensure_single_active_scenario(
         )
 
 
+def verify_active_projection_equivalent(
+    db: SupabaseRest,
+    *,
+    instrument_id: str,
+    scenario: Mapping[str, Any],
+    active_scenario: Mapping[str, Any],
+) -> str:
+    """Return an active scenario ID only when every forecast value matches.
+
+    This preserves the workbook scenario's stored provenance/DPR/hash. It never
+    updates the active scenario; any numerical or unit/display difference fails
+    closed so the operator can choose a new methodology/version explicitly.
+    """
+    existing_values = db.get_all('projection_values', {
+        'scenario_id': 'eq.' + str(active_scenario['id']),
+        'select': 'metric_code,value_numeric,unit_code,source_display_value,source_kind',
+    })
+    from store_projection_scenario import build_projection_rows
+
+    proposed_values = build_projection_rows(scenario, scenario_id=str(active_scenario['id']))
+    old_by_code = {str(row['metric_code']): row for row in existing_values}
+    new_by_code = {str(row['metric_code']): row for row in proposed_values}
+    if set(old_by_code) != set(new_by_code):
+        raise CalculationError('ACTIVE_PROJECTION_NOT_EQUIVALENT: metric set differs')
+    for code in sorted(old_by_code):
+        old = old_by_code[code]
+        new = new_by_code[code]
+        if (
+            str(old.get('value_numeric')) != str(new.get('value_numeric'))
+            or str(old.get('unit_code')) != str(new.get('unit_code'))
+            or str(old.get('source_display_value')) != str(new.get('source_display_value'))
+            or str(old.get('source_kind')) != str(new.get('source_kind'))
+        ):
+            raise CalculationError('ACTIVE_PROJECTION_NOT_EQUIVALENT: ' + code)
+    base = db.get_all('projection_scenarios', {
+        'id': 'eq.' + str(active_scenario['id']),
+        'select': 'instrument_id,as_of_financial_period_id,projection_year,as_of_quarter,years_available',
+    })
+    if len(base) != 1 or str(base[0].get('instrument_id')) != instrument_id:
+        raise CalculationError('ACTIVE_PROJECTION_IDENTITY_MISMATCH')
+    if (
+        int(base[0].get('projection_year') or 0) != int(scenario['projection_year'])
+        or int(base[0].get('as_of_quarter') or 0) != int(scenario['as_of_quarter'])
+        or int(base[0].get('years_available') or 0) != int(scenario['years_available'])
+    ):
+        raise CalculationError('ACTIVE_PROJECTION_BASE_NOT_EQUIVALENT')
+    return str(active_scenario['id'])
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('ticker', help='IDX ticker, e.g. AMRT')
@@ -521,6 +574,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         '--apply',
         action='store_true',
         help='Also persist through store_projection_scenario.py (validated path).',
+    )
+    parser.add_argument(
+        '--reuse-equivalent-active', action='store_true',
+        help='Reuse an existing active scenario read-only only if all projected values match exactly.',
     )
     args = parser.parse_args(argv)
 
@@ -582,9 +639,16 @@ def main(argv: Sequence[str] | None = None) -> int:
         print('DRY RUN: no Supabase rows were written.')
         return 0
 
-    # Guard before writing: a second ACTIVE scenario for the same ticker would
-    # break calculate_valuation.py, which requires exactly one.
+    # A clean rebuild may encounter an owner-supplied active workbook scenario.
+    # Reuse it only by explicit request and only after strict value comparison.
     existing_active = fetch_active_scenarios(db, str(instrument['id']))
+    if args.reuse_equivalent_active and len(existing_active) == 1:
+        reused_id = verify_active_projection_equivalent(
+            db, instrument_id=str(instrument['id']), scenario=scenario,
+            active_scenario=existing_active[0],
+        )
+        print(f'Reused equivalent ACTIVE projection read-only: scenario_id={reused_id}')
+        return 0
     ensure_single_active_scenario(
         existing_active,
         scenario_code=str(scenario['scenario_code']),

@@ -110,6 +110,8 @@ export type StockDetail = {
     /** `(WIN + RECOVERED) / Undervalued` for the `MoS Main >= 30%` rule. */
     mos: string;
   };
+  /** Active valuation methods that indicate undervaluation, as a compact `x/y` string. */
+  undervaluedMethods: string;
   researchSummary: string;
   methodologyUrl: string;
   companyProfile: {
@@ -528,7 +530,14 @@ export type BacktestCase = {
   };
   verdict: BacktestVerdict;
   verdictMos: BacktestVerdict;
-  methods: { method: string; methodCode?: string; intrinsicValue: number | null }[];
+  methods: {
+    method: string;
+    methodCode?: string;
+    intrinsicValue: number | null;
+    calculationStatus?: string;
+    flags?: string[];
+    details?: Record<string, unknown>;
+  }[];
   context: {
     revenueYoY: number | null;
     netIncomeYoY: number | null;
@@ -633,6 +642,7 @@ export const mockStockDetails: Record<string, StockDetail> = {
     stockCharacter: "Cyclical",
     stockCharacterDesc: "Tends to follow economic cycles",
     evidenceWinRates: { method: "100%", mos: "100%" },
+    undervaluedMethods: "3/5",
     researchSummary:
       "AUTO is currently below the estimated intrinsic value used by the analysis engine. Historical backtests show how similar valuation conditions have performed in previous periods.",
     methodologyUrl: "#",

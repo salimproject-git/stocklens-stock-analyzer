@@ -6,14 +6,12 @@ const statusTone: Record<string, string> = {
   MATCH: "border-[#1fcf86]/45 bg-[#0d2b22] text-[#3ef0a9]",
   MISMATCH: "border-[#d66f65]/50 bg-[#2b1614] text-[#ff8b82]",
   DB_MISSING: "border-[#8f9db1]/35 bg-[#1a2332]/70 text-[#9aa9bf]",
-  NOT_EXPOSED: "border-[#d6a24d]/45 bg-[#2b2212]/70 text-[#f4d18b]",
 };
 
 const statusLabel: Record<string, string> = {
   MATCH: "COCOK",
   MISMATCH: "BEDA",
   DB_MISSING: "TABEL KOSONG",
-  NOT_EXPOSED: "ADA, TIDAK DIEKSPOS",
 };
 
 /**
@@ -58,11 +56,6 @@ export function SampleComparisonCard({ comparison }: { comparison?: SampleCompar
           {comparison.missingCount > 0 && (
             <span className="rounded-md border border-[#8f9db1]/35 bg-[#1a2332]/70 px-2 py-1 text-[#9aa9bf]">
               {comparison.missingCount} kosong
-            </span>
-          )}
-          {comparison.notExposedCount > 0 && (
-            <span className="rounded-md border border-[#d6a24d]/45 bg-[#2b2212]/70 px-2 py-1 text-[#f4d18b]">
-              {comparison.notExposedCount} tidak diekspos
             </span>
           )}
         </span>

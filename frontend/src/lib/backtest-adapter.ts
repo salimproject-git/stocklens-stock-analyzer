@@ -147,6 +147,9 @@ export function buildBacktestCase(
       method: valuationMethodLabel(method.methodCode),
       methodCode: method.methodCode,
       intrinsicValue: method.intrinsicValue,
+      calculationStatus: method.calculationStatus,
+      flags: method.flags,
+      details: method.details,
     })),
     context: {
       revenueYoY: testCase.context.revenueYoY,
