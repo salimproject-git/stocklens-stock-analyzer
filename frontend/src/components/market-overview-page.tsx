@@ -1,8 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import Link from "next/link";
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import type { MarketOverviewStock } from "@/lib/stock-types";
 import type { MarketOverviewData } from "@/lib/stock-data";
 import {
@@ -11,8 +10,15 @@ import {
   parseMarketPageSize,
   type MarketPageSize,
 } from "@/lib/market-page-size";
+import {
+  MARKET_SORT_OPTIONS,
+  MARKET_STOCK_TYPE_OPTIONS,
+  type MarketFilterSelection,
+  type MarketSort,
+  type MarketStockType,
+} from "@/lib/market-filters";
+import { DisclaimerFooter } from "./stock-research/disclaimer-footer";
 import { formatRupiah as formatCurrencyRupiah } from "@/utils/currency";
-import { UnavailableBadge } from "@/components/ui/unavailable-badge";
 
 type ViewMode = "grid" | "list";
 
@@ -21,9 +27,16 @@ const SIDEBAR_WIDTH = 240;
 type MarketOverviewPageProps = {
   initialData: MarketOverviewData;
   currentPage: number;
+  sectors: string[];
+  filters: MarketFilterSelection;
 };
 
-export function MarketOverviewPage({ initialData, currentPage }: MarketOverviewPageProps) {
+export function MarketOverviewPage({
+  initialData,
+  currentPage,
+  sectors,
+  filters,
+}: MarketOverviewPageProps) {
   const router = useRouter();
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
   // Seeded from the server so the picker reflects `?size=` on first paint, and
@@ -32,6 +45,11 @@ export function MarketOverviewPage({ initialData, currentPage }: MarketOverviewP
   const [pageSize, setPageSize] = useState<MarketPageSize>(() =>
     parseMarketPageSize(initialData.pageSize),
   );
+  // Screener state is owned by the URL, not by this component: the server does
+  // the filtering, so every facet change is a navigation. The values are read
+  // back from the props on the next render, which keeps the controls honest even
+  // if the RPC rejects a value.
+  const [isPending, startTransition] = useTransition();
 
   // Derived from the *returned* page size rather than a hardcoded constant, so
   // the page count cannot drift when the size changes.
@@ -42,7 +60,7 @@ export function MarketOverviewPage({ initialData, currentPage }: MarketOverviewP
   const showingCount = visibleStocks.length;
 
   const handlePageChange = (page: number) => {
-    router.push(buildMarketHref(page, pageSize));
+    router.push(buildMarketHref(page, pageSize, filters));
   };
 
   const handlePageSizeChange = (nextSize: MarketPageSize) => {
@@ -50,7 +68,19 @@ export function MarketOverviewPage({ initialData, currentPage }: MarketOverviewP
     // Reset to page 1: page 3 of 5-per-page may not exist at 20-per-page, and
     // the server clamps out-of-range pages, so staying put would silently
     // renumber the view.
-    router.push(buildMarketHref(1, nextSize));
+    router.push(buildMarketHref(1, nextSize, filters));
+  };
+
+  /**
+   * Every facet change resets to page 1. Narrowing the screener shrinks the
+   * result set, so the current page number may no longer exist; the server
+   * clamps it too, but resetting here keeps the URL honest about what is shown.
+   */
+  const applyFilters = (patch: Partial<MarketFilterSelection>) => {
+    const next = { ...filters, ...patch };
+    startTransition(() => {
+      router.push(buildMarketHref(1, pageSize, next));
+    });
   };
 
   return (
@@ -63,6 +93,10 @@ export function MarketOverviewPage({ initialData, currentPage }: MarketOverviewP
         onViewModeChange={setViewMode}
         pageSize={pageSize}
         onPageSizeChange={handlePageSizeChange}
+        sectors={sectors}
+        filters={filters}
+        onFilterChange={applyFilters}
+        isPending={isPending}
       />
       <StockCollection
         stocks={visibleStocks}
@@ -74,13 +108,29 @@ export function MarketOverviewPage({ initialData, currentPage }: MarketOverviewP
         totalPages={totalPages}
         onPageChange={handlePageChange}
       />
+      {/* This page surfaces derived signals (Signal, MoS, historical win rate),
+          so the same "analysis, not advice" notice the research page carries
+          belongs here too. */}
+      <DisclaimerFooter />
     </>
   );
 }
 
-/** Keeps `page` and `size` together so neither is dropped when the other changes. */
-function buildMarketHref(page: number, size: MarketPageSize) {
-  return `/market?page=${page}&size=${size}`;
+/**
+ * Keeps every facet together so changing one never drops the others. Empty
+ * facets are omitted rather than sent as `sector=`, so the URL stays readable
+ * and the default view has no query noise.
+ */
+function buildMarketHref(
+  page: number,
+  size: MarketPageSize,
+  filters: MarketFilterSelection,
+) {
+  const params = new URLSearchParams({ page: String(page), size: String(size) });
+  if (filters.sector) params.set("sector", filters.sector);
+  if (filters.stockType) params.set("type", filters.stockType);
+  if (filters.sort !== "ticker") params.set("sort", filters.sort);
+  return `/market?${params.toString()}`;
 }
 
 function Sidebar() {
@@ -171,6 +221,10 @@ function Toolbar({
   onViewModeChange,
   pageSize,
   onPageSizeChange,
+  sectors,
+  filters,
+  onFilterChange,
+  isPending,
 }: {
   showingCount: number;
   totalCount: number;
@@ -178,25 +232,70 @@ function Toolbar({
   onViewModeChange: (mode: ViewMode) => void;
   pageSize: MarketPageSize;
   onPageSizeChange: (size: MarketPageSize) => void;
+  sectors: string[];
+  filters: MarketFilterSelection;
+  onFilterChange: (patch: Partial<MarketFilterSelection>) => void;
+  isPending: boolean;
 }) {
   return (
     <section className="mt-4 flex flex-wrap items-center justify-between gap-4">
       <p className="flex shrink-0 flex-wrap items-center gap-x-1.5 whitespace-nowrap text-[13px] text-[#ced7e5]">
         <span>Showing</span>
-        <PageSizeSelect pageSize={pageSize} onPageSizeChange={onPageSizeChange} />
+        <span className="font-semibold text-white">{showingCount}</span>
         <span>of {totalCount} stocks</span>
-        {/* Only on a short last page: the dropdown states the chosen page size,
-            so without this the sentence would overstate what is on screen. */}
-        {showingCount < pageSize ? (
-          <span className="text-[#8f9db1]">({showingCount} on this page)</span>
+        {/* The page size is stated as a separate "per page" setting. Writing it
+            as "Showing 8 of 4 stocks" (page size vs. filtered total) reads as a
+            contradiction as soon as a filter narrows the set below one page. */}
+        <span className="text-[#8f9db1]">·</span>
+        <PageSizeSelect pageSize={pageSize} onPageSizeChange={onPageSizeChange} />
+        <span className="text-[#8f9db1]">per page</span>
+        {/* A screener that narrows silently looks broken when a filter is on, so
+            the state is stated next to the count it produced. */}
+        {filters.sector ? (
+          <span className="text-[#f4d18b]">· {filters.sector}</span>
         ) : null}
+        {filters.stockType ? (
+          <span className="text-[#f4d18b]">· {filters.stockType}</span>
+        ) : null}
+        {isPending ? <span className="text-[#8f9db1]">· updating…</span> : null}
       </p>
       <div className="flex min-w-0 flex-wrap items-center justify-end gap-2">
-        <FilterPill label="All Sectors" />
-        <FilterPill label="All Stock Type" size="wide" />
-        <FilterPill label="Syariah" />
+        <ScreenerSelect
+          label="All Sectors"
+          value={filters.sector}
+          widthClass="w-[168px]"
+          options={[
+            { value: "", label: "All Sectors" },
+            ...sectors.map((sector) => ({ value: sector, label: sector })),
+          ]}
+          onChange={(value) => onFilterChange({ sector: value })}
+        />
+        <ScreenerSelect
+          label="All Stock Type"
+          value={filters.stockType}
+          widthClass="w-[158px]"
+          options={[
+            { value: "", label: "All Stock Type" },
+            ...MARKET_STOCK_TYPE_OPTIONS.map((type) => ({
+              value: type,
+              label: titleCase(type),
+            })),
+          ]}
+          onChange={(value) =>
+            onFilterChange({ stockType: value as MarketStockType | "" })
+          }
+        />
         <span className="shrink-0 whitespace-nowrap text-xs text-[#bcc8d8]">Sort by</span>
-        <FilterPill label="Market Cap (Largest)" size="xwide" />
+        <ScreenerSelect
+          label="Sort by"
+          value={filters.sort}
+          widthClass="w-[184px]"
+          options={MARKET_SORT_OPTIONS.map((option) => ({
+            value: option.value,
+            label: option.label,
+          }))}
+          onChange={(value) => onFilterChange({ sort: value as MarketSort })}
+        />
         <ViewToggle viewMode={viewMode} onViewModeChange={onViewModeChange} />
         <button
           type="button"
@@ -207,6 +306,15 @@ function Toolbar({
       </div>
     </section>
   );
+}
+
+/** `FAST GROWER` -> `Fast Grower`, for a label that reads as prose. */
+function titleCase(value: string) {
+  return value
+    .toLowerCase()
+    .split(" ")
+    .map((word) => (word ? word[0].toUpperCase() + word.slice(1) : word))
+    .join(" ");
 }
 
 /**
@@ -246,27 +354,45 @@ function PageSizeSelect({
   );
 }
 
-function FilterPill({
+/**
+ * A screener facet.
+ *
+ * This replaces the previous static pill, which looked like a dropdown but was
+ * a `<button>` with no handler — the label could never change and the filter
+ * could never apply. A native `<select>` is used for the same reason the page
+ * size picker uses one: it already handles keyboard navigation, focus, and the
+ * mobile picker sheet, which a custom listbox would have to reimplement.
+ */
+function ScreenerSelect({
   label,
-  size = "md",
+  value,
+  options,
+  onChange,
+  widthClass,
 }: {
   label: string;
-  size?: "md" | "wide" | "xwide";
+  value: string;
+  options: { value: string; label: string }[];
+  onChange: (value: string) => void;
+  widthClass: string;
 }) {
-  const widthClass =
-    size === "xwide" ? "w-[172px]" : size === "wide" ? "w-[134px]" : "w-[122px]";
   return (
-    <button
-      type="button"
-      className={[
-        "shrink-0 flex h-9 items-center justify-between rounded-xl border border-white/10 bg-[#091322]/80 px-3 !text-xs text-[#d9e1ed] shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] transition hover:border-white/16 hover:bg-[#0c1728]",
-        widthClass,
-      ].join(" ")}
-      style={{ fontSize: 12 }}
-    >
-      <span className="truncate">{label}</span>
-      <ChevronDownIcon className="ml-3 h-3.5 w-3.5 shrink-0 text-[#8f9db1]" />
-    </button>
+    <span className={["relative inline-flex shrink-0 items-center", widthClass].join(" ")}>
+      <select
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        aria-label={label}
+        title={label}
+        className="h-9 w-full cursor-pointer appearance-none truncate rounded-xl border border-white/10 bg-[#091322]/80 py-0 pl-3 pr-8 text-xs text-[#d9e1ed] shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] outline-none transition hover:border-white/16 hover:bg-[#0c1728] focus-visible:border-[#f2bb5c]/70 focus-visible:ring-1 focus-visible:ring-[#f2bb5c]/40"
+      >
+        {options.map((option) => (
+          <option key={option.value} value={option.value} className="bg-[#091322] text-[#d9e1ed]">
+            {option.label}
+          </option>
+        ))}
+      </select>
+      <ChevronDownIcon className="pointer-events-none absolute right-2.5 h-3.5 w-3.5 shrink-0 text-[#8f9db1]" />
+    </span>
   );
 }
 
@@ -337,25 +463,39 @@ function StockCollection({
   );
 }
 
-/** Verdict pill colours, shared by the grid card and the list table. */
-function verdictToneClass(verdict: MarketOverviewStock["verdict"]) {
-  if (verdict === "Undervalued") return "border-[#1fcf86]/35 bg-[#0d2b22] text-[#3ef0a9]";
-  if (verdict === "Overvalued") return "border-[#ff4b5f]/30 bg-[#32161e] text-[#ff5f73]";
-  if (verdict === "Not available") return "border-[#8f9db1]/30 bg-[#1a2332]/60 text-[#9aa9bf]";
-  return "border-[#c79d51]/35 bg-[#2f2717] text-[#f1c56d]";
+/** Signal pill colours, shared by the grid card and the list table. */
+function signalToneClass(signal: MarketOverviewStock["signal"]) {
+  if (signal === "Undervalued") return "border-[#1fcf86]/35 bg-[#0d2b22] text-[#3ef0a9]";
+  if (signal === "Overvalued") return "border-[#ff4b5f]/30 bg-[#32161e] text-[#ff5f73]";
+  if (signal === "Mixed") return "border-[#c79d51]/35 bg-[#2f2717] text-[#f1c56d]";
+  return "border-[#8f9db1]/30 bg-[#1a2332]/60 text-[#9aa9bf]";
 }
 
 function isPositiveMove(stock: MarketOverviewStock) {
   return (stock.change ?? 0) >= 0;
 }
 
+function mosToneClass(value: number | null) {
+  if (value == null || !Number.isFinite(value) || value === 0) return "text-[#9aa9bf]";
+  return value > 0 ? "text-[#49f3ae]" : "text-[#ff5967]";
+}
+
+/** The sparkline shows monthly closes for the last year, not today's move. */
+function oneYearTrendTone(points: number[]) {
+  if (points.length < 2) return "#8f9db1";
+  const first = points[0];
+  const latest = points[points.length - 1];
+  if (latest > first) return "#2de49d";
+  if (latest < first) return "#ff485f";
+  return "#8f9db1";
+}
+
 function StockCard({ stock }: { stock: MarketOverviewStock }) {
   const router = useRouter();
 
-  const isPositive = isPositiveMove(stock);
-  const priceTone = isPositive ? "text-[#49f3ae]" : "text-[#ff5967]";
-  const sparklineTone = isPositive ? "#2de49d" : "#ff485f";
-  const verdictTone = verdictToneClass(stock.verdict);
+  const mosTone = mosToneClass(stock.mos);
+  const sparklineTone = oneYearTrendTone(stock.sparkline);
+  const signalTone = signalToneClass(stock.signal);
 
   const handleCardClick = () => {
     router.push(`/market/${stock.ticker}`);
@@ -416,8 +556,8 @@ function StockCard({ stock }: { stock: MarketOverviewStock }) {
         </div>
 
         <div className="mt-2.5 flex flex-wrap gap-2">
-          <TagChip label={stock.sector} tone="blue" />
-          <TagChip label={stock.stockType} tone="slate" />
+          <TagChip label={stock.sector === "Not available" ? "N/A" : stock.sector} tone="blue" />
+          <TagChip label={stock.stockType === "Not available" ? "N/A" : stock.stockType} tone="slate" />
         </div>
 
         <div
@@ -439,47 +579,59 @@ function StockCard({ stock }: { stock: MarketOverviewStock }) {
         </div>
 
         <div className="mt-4 grid grid-cols-2 overflow-hidden rounded-2xl border border-white/8 bg-[#07111c]/72">
-          <div className="col-span-2">
-            <MetricBlock label="Valuation">
+          <MetricBlock label="Signal" className="border-r border-b border-white/8">
+            {stock.signal === "Not available" ? (
+              <span className="text-[16px] font-semibold text-white">N/A</span>
+            ) : (
               <span
                 className={[
                   "inline-flex rounded-[10px] border px-3 py-2 text-[13px] font-semibold",
-                  verdictTone,
+                  signalTone,
                 ].join(" ")}
               >
-                {stock.verdict}
+                {stock.signal}
               </span>
-            </MetricBlock>
-          </div>
-
-          <MetricBlock label="MoS">
-            {stock.mos != null ? (
-              <span className={["text-[16px] font-semibold", priceTone].join(" ")}>
-                {formatSignedPercent(stock.mos)}
-              </span>
-            ) : (
-              <UnavailableBadge />
             )}
           </MetricBlock>
 
-          <MetricBlock label="Historical Evidence">
-            {stock.evidenceWins != null && stock.evidenceTotal != null ? (
-              <>
-                <div className="text-[16px] font-semibold text-white">
-                  {stock.evidenceWins} / {stock.evidenceTotal}
-                </div>
-                <div className="mt-0.5 text-[11px] text-[#a4afbf]">
-                  successful cases
-                </div>
-              </>
+          <MetricBlock label="Win Rate" className="border-b border-white/8">
+            {stock.winRatePercent != null && stock.winRateCases != null ? (
+              <div className="flex flex-col items-start">
+                <span className="text-[16px] font-semibold text-white">
+                  {formatMarketPercent(stock.winRatePercent)}
+                </span>
+                <span className="mt-0.5 text-[11px] font-normal text-[#a4afbf]">
+                  ({stock.winRateCases} {stock.winRateCases === 1 ? "Case" : "Cases"})
+                </span>
+              </div>
             ) : (
-              <UnavailableBadge />
+              <span className="text-[16px] font-semibold text-white">N/A</span>
+            )}
+          </MetricBlock>
+
+          <MetricBlock label="MoS" className="border-r border-white/8">
+            {stock.mos != null ? (
+              <span className={["text-[16px] font-semibold", mosTone].join(" ")}>
+                {formatMarketPercent(stock.mos)}
+              </span>
+            ) : (
+              <span className="text-[16px] font-semibold text-white">N/A</span>
+            )}
+          </MetricBlock>
+
+          <MetricBlock label="Valuation Methods">
+            {stock.methodUndervalued != null && stock.methodValid != null ? (
+              <div className="text-[16px] font-semibold text-white">
+                {stock.methodUndervalued} / {stock.methodValid}
+              </div>
+            ) : (
+              <span className="text-[16px] font-semibold text-white">N/A</span>
             )}
           </MetricBlock>
         </div>
 
         <div className="mt-3.5 flex items-center justify-between gap-4 text-[12px] text-[#9eabbe]">
-          <span>Updated {stock.updatedAt ?? "Not available"}</span>
+          <span>Updated {stock.updatedAt ?? "N/A"}</span>
 
           <span className="flex items-center gap-1.5 text-[12px] font-semibold text-[#efbf63] transition group-hover:text-[#ffd88a]">
             View Analysis
@@ -520,9 +672,10 @@ function StockTable({ stocks }: { stocks: MarketOverviewStock[] }) {
             <th className="whitespace-nowrap px-4 py-3 font-semibold">Stock Type</th>
             <th className="whitespace-nowrap px-4 py-3 font-semibold">Price</th>
             <th className="whitespace-nowrap px-4 py-3 font-semibold">1Y Trend</th>
-            <th className="whitespace-nowrap px-4 py-3 font-semibold">Valuation</th>
+            <th className="whitespace-nowrap px-4 py-3 font-semibold">Signal</th>
+            <th className="whitespace-nowrap px-4 py-3 font-semibold">Win Rate</th>
             <th className="whitespace-nowrap px-4 py-3 font-semibold">MoS</th>
-            <th className="whitespace-nowrap px-4 py-3 font-semibold">Historical Evidence</th>
+            <th className="whitespace-nowrap px-4 py-3 font-semibold">Valuation Methods</th>
             <th className="whitespace-nowrap px-4 py-3 font-semibold">Updated</th>
           </tr>
         </thead>
@@ -546,11 +699,11 @@ function StockTable({ stocks }: { stocks: MarketOverviewStock[] }) {
               </td>
 
               <td className="whitespace-nowrap px-4 py-3 align-middle">
-                <TagChip label={stock.sector} tone="blue" />
+                <TagChip label={stock.sector === "Not available" ? "N/A" : stock.sector} tone="blue" />
               </td>
 
               <td className="whitespace-nowrap px-4 py-3 align-middle">
-                <TagChip label={stock.stockType} tone="slate" />
+                <TagChip label={stock.stockType === "Not available" ? "N/A" : stock.stockType} tone="slate" />
               </td>
 
               <td className="whitespace-nowrap px-4 py-3 align-middle">
@@ -568,19 +721,36 @@ function StockTable({ stocks }: { stocks: MarketOverviewStock[] }) {
                 <Sparkline
                   className="max-w-[170px]"
                   points={stock.sparkline}
-                  stroke={isPositiveMove(stock) ? "#2de49d" : "#ff485f"}
+                  stroke={oneYearTrendTone(stock.sparkline)}
                 />
               </td>
 
               <td className="whitespace-nowrap px-4 py-3 align-middle">
-                <span
-                  className={[
-                    "inline-flex rounded-[10px] border px-2.5 py-1 text-[11px] font-semibold",
-                    verdictToneClass(stock.verdict),
-                  ].join(" ")}
-                >
-                  {stock.verdict}
-                </span>
+                {stock.signal === "Not available" ? (
+                  <span className="text-[13px] font-semibold text-white">N/A</span>
+                ) : (
+                  <span
+                    className={[
+                      "inline-flex rounded-[10px] border px-2.5 py-1 text-[11px] font-semibold",
+                      signalToneClass(stock.signal),
+                    ].join(" ")}
+                  >
+                    {stock.signal}
+                  </span>
+                )}
+              </td>
+
+              <td className="whitespace-nowrap px-4 py-3 align-middle">
+                {stock.winRatePercent != null && stock.winRateCases != null ? (
+                  <span className="flex flex-col items-start text-[13px] font-semibold text-white">
+                    <span>{formatMarketPercent(stock.winRatePercent)}</span>
+                    <span className="mt-0.5 text-[10px] font-normal text-[#a4afbf]">
+                      ({stock.winRateCases} {stock.winRateCases === 1 ? "Case" : "Cases"})
+                    </span>
+                  </span>
+                ) : (
+                  <span className="text-[13px] font-semibold text-white">N/A</span>
+                )}
               </td>
 
               <td className="whitespace-nowrap px-4 py-3 align-middle">
@@ -588,28 +758,28 @@ function StockTable({ stocks }: { stocks: MarketOverviewStock[] }) {
                   <span
                     className={[
                       "text-[13px] font-semibold",
-                      isPositiveMove(stock) ? "text-[#49f3ae]" : "text-[#ff5967]",
+                      mosToneClass(stock.mos),
                     ].join(" ")}
                   >
-                    {formatSignedPercent(stock.mos)}
+                    {formatMarketPercent(stock.mos)}
                   </span>
                 ) : (
-                  <UnavailableBadge />
+                  <span className="text-[13px] font-semibold text-white">N/A</span>
                 )}
               </td>
 
               <td className="whitespace-nowrap px-4 py-3 align-middle">
-                {stock.evidenceWins != null && stock.evidenceTotal != null ? (
+                {stock.methodUndervalued != null && stock.methodValid != null ? (
                   <span className="text-[13px] font-semibold text-white">
-                    {stock.evidenceWins} / {stock.evidenceTotal}
+                    {stock.methodUndervalued} / {stock.methodValid}
                   </span>
                 ) : (
-                  <UnavailableBadge />
+                  <span className="text-[13px] font-semibold text-white">N/A</span>
                 )}
               </td>
 
               <td className="whitespace-nowrap px-4 py-3 align-middle text-[11px] text-[#9eabbe]">
-                {stock.updatedAt ?? "Not available"}
+                {stock.updatedAt ?? "N/A"}
               </td>
             </tr>
           ))}
@@ -622,12 +792,14 @@ function StockTable({ stocks }: { stocks: MarketOverviewStock[] }) {
 function MetricBlock({
   label,
   children,
+  className = "border-r border-white/8 last:border-r-0",
 }: {
   label: string;
   children: React.ReactNode;
+  className?: string;
 }) {
   return (
-    <div className="border-r border-white/8 px-3 py-2.5 last:border-r-0">
+    <div className={["px-3 py-2.5", className].join(" ")}>
       <div className="text-[11px] text-[#8e9bb0]">{label}</div>
       <div className="mt-1.5">{children}</div>
     </div>
@@ -769,7 +941,7 @@ function Sparkline({
   if (points.length < 2) {
     return (
       <div className={["flex min-w-0 w-full items-end justify-end gap-3", className ?? ""].join(" ")}>
-        <span className="text-[11px] text-[#8f9db1]">Not available</span>
+        <span className="text-[16px] font-semibold text-white">N/A</span>
       </div>
     );
   }
@@ -824,11 +996,10 @@ function formatRupiah(value: number | null) {
   return formatCurrencyRupiah(value);
 }
 
-function formatSignedPercent(value: number | null) {
+function formatMarketPercent(value: number | null) {
   if (value == null || !Number.isFinite(value)) return "N/A";
-  const sign = value > 0 ? "" : "";
-  return `${sign}${new Intl.NumberFormat("id-ID", {
-    minimumFractionDigits: 1,
+  return `${new Intl.NumberFormat("id-ID", {
+    minimumFractionDigits: 0,
     maximumFractionDigits: 1,
   }).format(value)}%`;
 }

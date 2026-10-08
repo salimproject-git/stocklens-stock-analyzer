@@ -1,5 +1,5 @@
-import React from "react";
-import { StockDetail } from "@/data/mock-stock-details";
+﻿import React from "react";
+import { StockDetail } from "@/data/stock-detail-types";
 import { ResearchSummaryCard } from "@/components/stock-research/research-summary-card";
 import { CompanyProfileCard } from "@/components/stock-research/company-profile-card";
 import { PriceChartCard } from "@/components/stock-research/price-chart-card";
@@ -11,19 +11,19 @@ import { DividendConsistencyCard } from "@/components/stock-research/dividend-co
 export function OverviewTabContent({ stock }: { stock: StockDetail }) {
   return (
     <div className="space-y-6">
-      {/* Row 1 — Research Summary */}
+      {/* Row 1 â€” Research Summary */}
       <ResearchSummaryCard
         summaryText={stock.researchSummary}
         methodologyUrl={stock.methodologyUrl}
       />
 
-      {/* Row 2 — Company Profile + Price Chart */}
+      {/* Row 2 â€” Company Profile + Price Chart */}
       <div className="grid gap-6 lg:grid-cols-2">
         <CompanyProfileCard profile={stock.companyProfile} />
         <PriceChartCard chartData={stock.priceChart} />
       </div>
 
-      {/* Row 3 — Current Valuation + Historical Evidence */}
+      {/* Row 3 â€” Current Valuation + Historical Evidence */}
       <div className="grid gap-6 lg:grid-cols-2">
         <CurrentValuationCard valuation={stock.currentValuation} />
         <HistoricalEvidencePreviewCard
@@ -31,11 +31,10 @@ export function OverviewTabContent({ stock }: { stock: StockDetail }) {
         />
       </div>
 
-      {/* Row 4 — Growth Summary + Dividend Consistency */}
+      {/* Row 4 â€” Growth Summary + Dividend Consistency */}
       <div className="grid gap-6 lg:grid-cols-2">
         <GrowthSummaryCard
           growth={stock.growthSummary}
-          validator={stock.thesisValidator}
         />
 
         <DividendConsistencyCard

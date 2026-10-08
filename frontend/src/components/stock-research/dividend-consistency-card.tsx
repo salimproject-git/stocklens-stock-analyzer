@@ -1,5 +1,5 @@
-import React from "react";
-import { StockDetail } from "@/data/mock-stock-details";
+﻿import React from "react";
+import { StockDetail } from "@/data/stock-detail-types";
 import { SectionCard } from "@/components/ui/section-card";
 import { formatRupiahValue } from "@/utils/currency";
 
@@ -18,11 +18,14 @@ export function DividendConsistencyCard({
     <SectionCard
       icon={<CoinsIcon className="h-4 w-4" />}
       title="Dividend Consistency"
-      subtitle="Latest Projection · 2026"
+      subtitle="Latest Projection Â· 2026"
       actionSlot={
-        <span className="text-xs font-semibold text-[#f4d18b]">
-          Valuation
-        </span>
+        <a
+          href="#valuation"
+          className="text-xs font-semibold text-[#f4d18b] transition hover:text-[#ffd68a]"
+        >
+          View Valuation →
+        </a>
       }
     >
       <div className="grid grid-cols-3 gap-2.5">
@@ -30,7 +33,7 @@ export function DividendConsistencyCard({
           <div className="text-[11px] text-[#8e9bb0]">Dividend Yield</div>
 
           <div className="mt-1 font-semibold text-[#3ef0a9]">
-            {yieldRow?.p2026 ?? "—"}
+            {yieldRow?.p2026 ?? "â€”"}
           </div>
         </div>
 
@@ -38,7 +41,7 @@ export function DividendConsistencyCard({
           <div className="text-[11px] text-[#8e9bb0]">DPR</div>
 
           <div className="mt-1 font-semibold text-white">
-            {dprRow?.p2026 ?? "—"}
+            {dprRow?.p2026 ?? "â€”"}
           </div>
         </div>
 
@@ -46,14 +49,14 @@ export function DividendConsistencyCard({
           <div className="text-[11px] text-[#8e9bb0]">DPS</div>
 
           <div className="mt-1 font-semibold text-white">
-            {dpsRow?.p2026 ? formatRupiahValue(dpsRow.p2026) : "—"}
+            {dpsRow?.p2026 ? formatRupiahValue(dpsRow.p2026) : "â€”"}
           </div>
         </div>
       </div>
 
       <div className="mt-3 flex items-start gap-2.5 rounded-xl border border-[#d6a24d]/40 bg-[#2b2212]/80 p-3 text-[11px] leading-relaxed text-[#f4d18b]">
         <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-[#d6a24d]/50 bg-[#f2bb5c]/20 text-xs">
-          💰
+          ðŸ’°
         </span>
 
         <span>{dividend.callout}</span>
@@ -78,3 +81,4 @@ function CoinsIcon({ className }: { className?: string }) {
     </svg>
   );
 }
+

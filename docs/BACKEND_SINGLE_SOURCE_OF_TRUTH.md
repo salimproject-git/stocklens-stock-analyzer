@@ -119,6 +119,32 @@ sisanya karena `ANNUAL_FIELDS` di
 `supabase/load_annual_financials_to_supabase.py` memetakan hanya field yang
 dibutuhkan, dan `tests/test_auto_loader_mapping.py` mengunci daftar itu.
 
+#### 3.1.1 Field yang bergantung sektor (keputusan S3)
+
+Provider **menghilangkan key** (bukan mengirim `null`) untuk baris yang tidak
+dimiliki sebuah sektor. Bank `BRIS` tidak melaporkan `inventories`,
+`current_assets`, `capital_expenditure`, maupun `non_current_liabilities`;
+23 ticker non-finansial di `Data/Raw` melaporkan keempatnya. Karena itu
+`load_annual_financials_to_supabase.py` memisahkan:
+
+| Konstanta | Isi | Perlakuan |
+|---|---|---|
+| `REQUIRED_SOURCE_FIELDS` | 29 field yang provider laporkan untuk semua emiten | key wajib ada; kalau hilang → `ANNUAL_SOURCE_MISSING_FIELD` |
+| `SECTOR_DEPENDENT_SOURCE_FIELDS` | `inventories`, `current_assets`, `capital_expenditure`, `non_current_liabilities` | key boleh tidak ada; fakta kanonis ditulis `value_numeric=null`, `quality_status='MISSING'` |
+| `RAW_MONETARY_FIELDS` | gabungan keduanya | dokumentasi kontrak penuh |
+
+Sebelum keputusan ini BRIS gagal dengan `ANNUAL_SOURCE_MISSING_FIELD: row 1
+missing inventories` — ticker bank pertama yang pernah masuk pipeline, jadi
+asumsi "semua emiten punya neraca yang sama" belum pernah diuji.
+
+Loader kuartalan memakai `realized_capital_goods_investment` sebagai **alias
+capex** untuk bank. Perbandingan key-nya (`QUARTERLY_FIELD_MISMATCH`) tetap
+strict dan hanya mentoleransi tepat satu pertukaran itu
+(`capital_expenditure` hilang + `realized_capital_goods_investment` muncul);
+field baru tak dikenal tetap gagal keras.
+
+Test: `tests/test_sector_agnostic_loaders.py`.
+
 ### 3.2 Yang dihitung di frontend (harus dipindah)
 
 Semua di `frontend/src/lib/stock-detail-adapter.ts` kecuali yang disebut lain.

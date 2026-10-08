@@ -27,8 +27,13 @@ Steps
 10. ``populate_metrics_classification.py --apply``
 11. ``calculate_valuation.py --risk-free-from-reference --apply``
     No ``--stock-type``: the classifier from step 10 supplies it.
-12. ``run_backtest.py --ticker TICKER --apply`` (Fase 1: case list + price
-    metrics only; valuation and verdict are later phases)
+12. ``run_backtest.py --ticker TICKER --apply``
+    Reads the canonical financial periods and prices the earlier steps just
+    refreshed, and writes only ``calc_backtest_cases`` / ``calc_backtest_methods``
+    - never ``calc_valuation_*``. Running it last therefore cannot change a
+    valuation result; it only fills the Backtest tab and the market card's Win
+    Rate. It is the final step of ``--mode rebuild`` and ``--mode fundamental``;
+    ``--mode daily`` deliberately excludes it (see docs/PIPELINE_OPERATIONS_SCHEDULE.md).
 
 Flags
 -----
@@ -164,16 +169,29 @@ PIPELINE_STEP_CHOICES = STEP_NAMES + ('daily-status', 'projection-reuse')
 PIPELINE_MODE_STEPS: dict[str, tuple[str, ...]] = {
     # Rebuild reads existing raw objects from Storage via the canonical loaders.
     # It must never run the API-capable ingest step as an implicit fallback.
+    #
+    # `backtest` is last on purpose: it reads the canonical `financial_periods`
+    # and `prices_daily` that the loaders above just refreshed, and writes only
+    # to `calc_backtest_cases`/`calc_backtest_methods`. It never touches
+    # `calc_valuation_*`, so running it after `valuation`/`daily-status` cannot
+    # change a valuation result - it only fills the Backtest tab and the market
+    # card's Win Rate from the data those steps already produced.
     'rebuild': (
         'load-identity', 'load-annual', 'load-quarterly', 'load-dividend',
         'load-prices', 'growth-quality', 'projection-reuse', 'classification',
-        'valuation', 'daily-status',
+        'valuation', 'daily-status', 'backtest',
     ),
     'fundamental': (
         'load-identity', 'load-annual', 'load-quarterly', 'load-dividend', 'load-prices',
         'growth-quality', 'projection', 'classification', 'valuation', 'daily-status',
+        'backtest',
     ),
+    # `daily` stays deliberately narrow: docs/PIPELINE_OPERATIONS_SCHEDULE.md §4
+    # and docs/VALUATION_FREQUENCY_ARCHITECTURE.md both require that a routine
+    # daily-price update never triggers the backtest. Add it to `daily` only if
+    # that scheduling rule is intentionally revised.
     'daily': ('load-prices', 'daily-status'),
+    # Standalone re-run: recompute the backtest without reloading any raw family.
     'backtest': ('backtest',),
 }
 
@@ -229,9 +247,15 @@ def require_local_raw(ticker: str) -> None:
 
 
 def require_storage_raw(ticker: str) -> None:
-    """Fail closed unless all existing raw Storage families have registered files."""
+    """Fail closed unless all existing raw Storage families have registered files.
+
+    Prints a progress line before the checks so the operator sees the pipeline is
+    alive: for a ticker whose raw is missing, the only output used to be the
+    error, which looked like a hang while the Storage requests were in flight.
+    """
     from raw_storage_source import BUCKET, RawStorageSource
 
+    print(f'Checking Storage raw families for {ticker} (bucket={BUCKET}) ...', flush=True)
     source = RawStorageSource(ticker)
     families = {
         'info': ('company_report_info.json',),
@@ -254,6 +278,12 @@ def require_storage_raw(ticker: str) -> None:
             'STORAGE_RAW_PREFLIGHT_FAILED (no API fallback): '
             + ', '.join(missing)
             + f'; bucket={BUCKET}; ticker={ticker}'
+            + '\n  The canonical loaders read raw from Storage and never call the '
+            'Sectors API as a fallback.'
+            + '\n  Fetch the raw into Storage first (needs SECTORS_API_KEY), then '
+            're-run this command:'
+            + f'\n    python run_pipeline.py {ticker} --only ingest-raw'
+            + f'\n    python run_pipeline.py {ticker}'
         )
     print(f'Storage preflight OK: ticker={ticker}; families={len(families)}; no Sectors API fallback.')
 
@@ -336,7 +366,10 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument('ticker', help='IDX ticker, e.g. SIDO')
     parser.add_argument(
         '--mode', choices=tuple(PIPELINE_MODE_STEPS), default='rebuild',
-        help='Pipeline frequency: rebuild, fundamental, daily, or backtest.',
+        help=(
+            'Pipeline frequency: rebuild or fundamental (both end with backtest), '
+            'daily (prices + daily status only), or backtest (backtest alone).'
+        ),
     )
     parser.add_argument(
         '--only',
@@ -394,7 +427,14 @@ def main(argv: Sequence[str] | None = None) -> int:
             )
             selected = selected[start:]
 
-    if args.mode in ('rebuild', 'fundamental') and not args.dry_run:
+    # Storage preflight only when a step that READS raw from Storage is about to
+    # run. `--only ingest-raw` / `--only upload-raw` are the steps that *populate*
+    # Storage, so they must never be blocked by the check that Storage is
+    # already populated - that would make fetching a new ticker impossible.
+    storage_reader_steps = {
+        'load-identity', 'load-annual', 'load-quarterly', 'load-dividend', 'load-prices',
+    }
+    if any(step['name'] in storage_reader_steps for step in selected) and not args.dry_run:
         require_storage_raw(ticker)
 
     # Decide the raw path before announcing the step list, so what is printed is

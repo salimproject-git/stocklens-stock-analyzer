@@ -1,5 +1,5 @@
 ﻿import React from "react";
-import { StockDetail } from "@/data/mock-stock-details";
+import { StockDetail } from "@/data/stock-detail-types";
 import { analyzeHistoricalGrowth } from "@/lib/analysis";
 import { ChartEmptyState } from "@/components/ui/chart-empty-state";
 import { formatDecimal } from "@/utils/currency";
@@ -412,3 +412,4 @@ export function HistoricalGrowthSection({ stock }: { stock: StockDetail }) {
     </div>
   );
 }
+

@@ -1,9 +1,22 @@
-import React from "react";
-import { StockDetail } from "@/data/mock-stock-details";
+﻿import React from "react";
+import { StockDetail } from "@/data/stock-detail-types";
 import { formatRupiah as formatCurrencyRupiah } from "@/utils/currency";
 import { toDayLabel } from "@/utils/dates";
 
 export function StockHeader({ stock }: { stock: StockDetail }) {
+  const valuationSignalTone = {
+    UNDERVALUED: "border-[#1fcf86]/35 bg-[#0d2b22]/90 text-[#3ef0a9]",
+    OVERVALUED: "border-[#ff4b5f]/35 bg-[#32161e]/90 text-[#ff8b82]",
+    MIXED: "border-[#c79d51]/40 bg-[#2f2717]/90 text-[#f1c56d]",
+    "NOT AVAILABLE": "border-white/10 bg-[#172334]/90 text-[#aebbd0]",
+  }[stock.valuationSignal];
+  const valuationIconTone = {
+    UNDERVALUED: "border-[#1fcf86]/40 bg-[#1fcf86]/10 text-[#3ef0a9]",
+    OVERVALUED: "border-[#ff4b5f]/35 bg-[#ff4b5f]/10 text-[#ff8b82]",
+    MIXED: "border-[#c79d51]/40 bg-[#f2bb5c]/10 text-[#f1c56d]",
+    "NOT AVAILABLE": "border-white/10 bg-white/[0.04] text-[#aebbd0]",
+  }[stock.valuationSignal];
+
   return (
     <section className="mb-6 flex flex-wrap items-start justify-between gap-6 rounded-[20px] border border-white/10 bg-[linear-gradient(180deg,_rgba(11,23,37,0.95),_rgba(7,16,28,0.97))] p-6 shadow-[0_24px_48px_rgba(0,0,0,0.28)]">
       {/* Left Identity Block */}
@@ -60,17 +73,17 @@ export function StockHeader({ stock }: { stock: StockDetail }) {
         </div>
 
         {/* Valuation Status Badge Box */}
-        <div className="flex items-center gap-3 rounded-xl border border-[#1fcf86]/35 bg-[#0d2b22]/90 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-[#1fcf86]/40 bg-[#1fcf86]/10 text-[#3ef0a9]">
+        <div className={`flex items-center gap-3 rounded-xl border p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] ${valuationSignalTone}`}>
+          <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border ${valuationIconTone}`}>
             <ShieldCheckIcon className="h-5 w-5" />
           </div>
           <div>
-            <div className="text-sm font-bold tracking-wider text-[#3ef0a9]">
-              {stock.verdict.toUpperCase()}
+            <div className="text-sm font-bold tracking-wider">
+              {stock.valuationSignal}
             </div>
-            <div className="mt-0.5 flex items-center gap-1.5 text-xs text-[#a3f3d3]">
+            <div className="mt-0.5 flex items-center gap-1.5 text-xs opacity-85">
               <span>{stock.verdictDescription}</span>
-              <InfoIcon className="h-3.5 w-3.5 text-[#3ef0a9]" />
+              <InfoIcon className="h-3.5 w-3.5" />
             </div>
           </div>
         </div>
@@ -136,4 +149,5 @@ function InfoIcon({ className }: { className?: string }) {
     </svg>
   );
 }
+
 

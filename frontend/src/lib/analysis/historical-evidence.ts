@@ -1,4 +1,4 @@
-import type { BacktestCase, EvidenceOutcomeBreakdown } from "@/data/mock-stock-details";
+﻿import type { BacktestCase, EvidenceOutcomeBreakdown } from "@/data/stock-detail-types";
 import { aggregateBacktestOverview } from "./backtest-overview";
 
 /**
@@ -32,7 +32,7 @@ export function formatEvidenceRate(value: number, total: number): string {
 
 /**
  * Compact percent for a single headline figure: `75` -> `75%`,
- * `66.666…` -> `66.7%`. Drops the decimal when it carries no information,
+ * `66.666â€¦` -> `66.7%`. Drops the decimal when it carries no information,
  * which is why the Key Metric card reads `75%` rather than `75.0%`.
  */
 export function formatEvidencePercent(value: number): string {
@@ -41,21 +41,19 @@ export function formatEvidencePercent(value: number): string {
 }
 
 /**
- * Shown when a rule flagged no Undervalued case, so its win rate is undefined
- * rather than 0%.
+ * Compact label shown when a rule's percentage denominator is unavailable.
  *
  * Exported so the Key Metric card can recognise the unavailable state and size
- * the text for a word instead of a figure, without duplicating the literal.
+ * the compact label consistently without duplicating the literal.
  */
-export const EVIDENCE_RATE_UNAVAILABLE = "Not available";
+export const EVIDENCE_RATE_UNAVAILABLE = "N/A";
 
 /**
  * Headline win rate for the Key Metric card: `(WIN + RECOVERED) / Undervalued`
  * for one classification rule, as a percentage number.
  *
  * Returns `null` when the rule flagged no Undervalued case. `0 of 0` is not a
- * 0% win rate, and printing one would claim the thesis failed every time it was
- * tested; "Not available" is the honest reading.
+ * 0% win rate; the UI shows `N/A` for the unavailable percentage.
  */
 export function evidenceWinRatePercent(
   breakdown: EvidenceOutcomeBreakdown,
@@ -113,3 +111,4 @@ export function buildHistoricalEvidencePreview(
     ),
   };
 }
+

@@ -15,8 +15,8 @@
 | Harga harian | Setelah raw daily terbaru masuk ke Storage dan hari perdagangan selesai; umumnya sekali per hari perdagangan | `--mode daily` |
 | Fundamental/kuartalan | Event-driven: setelah laporan kuartal/tahunan baru tersedia dan provenance Storage terverifikasi | Saat ini gunakan `--mode rebuild` dengan preflight dan backup; lihat catatan mode fundamental di bawah |
 | Backup dan manifest | Sebelum setiap rebuild/perubahan methodology; ditambah backup terjadwal sesuai kebijakan recovery | Prosedur backup §5 |
-| Rebuild menyeluruh | Hanya saat pemulihan/perbaikan dependency, perubahan pipeline/methodology, atau refresh terkontrol; bukan setiap hari/minggu | `--mode rebuild` |
-| Backtest | Manual atau event terjadwal yang disengaja, misalnya setelah revisi metodologi/backtest atau permintaan analisis | `--mode backtest` |
+| Rebuild menyeluruh | Hanya saat pemulihan/perbaikan dependency, perubahan pipeline/methodology, atau refresh terkontrol; bukan setiap hari/minggu | `--mode rebuild` (berakhir dengan backtest) |
+| Backtest | Otomatis sebagai langkah terakhir `--mode rebuild`/`--mode fundamental`; mode mandiri hanya bila backtest perlu dihitung ulang tanpa menyentuh data lain | `--mode backtest` |
 
 Tidak ada dasar untuk menjalankan fundamental “setiap tanggal tertentu” bila tidak ada input baru. Jadwalkan berdasarkan **ketersediaan data**, bukan sekadar tanggal kalender.
 
@@ -97,9 +97,10 @@ Storage canonical loaders
 -> classification
 -> fundamental intrinsic snapshot
 -> daily price status
+-> backtest
 ```
 
-Rebuild tidak menghapus/truncate tabel legacy, tidak menjalankan upload/ingest raw API, dan tidak menjalankan backtest. Gunakan hanya untuk:
+Rebuild tidak menghapus/truncate tabel legacy dan tidak menjalankan upload/ingest raw API. Sejak backtest digabungkan ke akhir urutan, satu perintah `--mode rebuild` mengisi **semua tab dan kartu market**. Backtest diletakkan paling akhir karena ia membaca `financial_periods` dan `prices_daily` yang baru saja dimuat langkah sebelumnya, dan hanya menulis ke `calc_backtest_cases` / `calc_backtest_methods` — tidak pernah menyentuh `calc_valuation_*`, jadi hasil kalkulasi valuasi tidak berubah. Gunakan rebuild hanya untuk:
 
 - perbaikan/recovery setelah masalah pipeline atau canonical data;
 - perubahan code/methodology/parameter yang memang mengubah dependency hasil;
@@ -110,7 +111,7 @@ Rebuild tidak menghapus/truncate tabel legacy, tidak menjalankan upload/ingest r
 
 ## 4. Backtest
 
-Backtest adalah pekerjaan tersendiri. Page view dan daily price update tidak boleh memanggilnya.
+Backtest adalah bagian akhir dari `--mode rebuild` dan `--mode fundamental`, jadi satu perintah operator sudah menghasilkan backtest terbaru. Ia tetap dapat dijalankan sendiri tanpa memuat ulang raw apa pun:
 
 ```powershell
 Set-Location 'D:\Stock Analyzer'
@@ -118,7 +119,7 @@ python .\run_pipeline.py AUTO --mode backtest --dry-run
 python .\run_pipeline.py AUTO --mode backtest
 ```
 
-Jalankan manual/terjadwal hanya jika ada permintaan analisis, horizon kasus baru perlu diperbarui, atau perubahan backtest methodology perlu dihitung ulang. Pertahankan `calculation_runs`, methodology version, input snapshot/hash, provenance, dan idempotency.
+Jalankan mode mandiri ini hanya jika backtest perlu dihitung ulang tanpa menyentuh data lain, misalnya horizon kasus baru atau perubahan metodologi backtest. Page view dan `--mode daily` **tidak boleh** memanggilnya: `daily` sengaja tetap hanya `load-prices` + `daily-status`. Pertahankan `calculation_runs`, methodology version, input snapshot/hash, provenance, dan idempotency.
 
 ## 5. Backup, manifest, dan retensi
 
@@ -166,7 +167,7 @@ Hentikan sebelum melanjutkan ticker lain apabila ada missing Storage object/chec
 1. **Hari perdagangan selesai + daily raw tersedia:** update `--mode daily` untuk ticker yang berubah.
 2. **Laporan kuartalan/tahunan baru ada + provenance valid:** backup, quarterly/loader preflight, lalu jalankan rebuild terkontrol untuk ticker itu; rekonsiliasi sebelum lanjut.
 3. **Methodology/code berubah atau recovery dibutuhkan:** backup penuh, migration additive yang direview, rebuild terkontrol, rekonsiliasi semua ticker terdampak.
-4. **Backtest diminta atau event backtest terdefinisi:** jalankan `--mode backtest` secara terpisah.
+4. **Backtest:** sudah otomatis sebagai langkah terakhir `--mode rebuild`/`--mode fundamental`. Mode mandiri `--mode backtest` hanya untuk menghitung ulang backtest tanpa menyentuh data lain.
 5. **Frontend dibuka:** tidak memicu kalkulasi; hanya membaca hasil melalui RPC.
 
 ## 8. Catatan hasil rollout 2026-10-03

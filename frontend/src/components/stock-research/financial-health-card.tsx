@@ -1,5 +1,5 @@
-import React from "react";
-import { StockDetail } from "@/data/mock-stock-details";
+﻿import React from "react";
+import { StockDetail } from "@/data/stock-detail-types";
 import { SectionCard } from "@/components/ui/section-card";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { UnavailableBadge } from "@/components/ui/unavailable-badge";

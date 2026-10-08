@@ -5,10 +5,10 @@ Panduan ini untuk menjalankan alur data StockLens secara **manual** dari Windows
 ## Jawaban singkat: metrik dan proyeksi sudah jalan?
 
 - **Semua 19 ticker sudah lengkap:** AMRT, ARII, AUTO, BIRD, DSSA, ERAA, GEMA, GOLD, INDF, INDS, INKP, IPOL, ITMG, JSMR, MIDI, PTBA, SIDO, WIFI. Masing-masing punya periode finansial, harga harian, growth/quality, skenario proyeksi aktif, tipe saham tersimpan, dan 5–15 metode valuasi.
-- **Satu perintah per ticker:** `python run_pipeline.py TICKER` menjalankan seluruh alur (upload raw, ingest, load canonical, growth, proyeksi, klasifikasi, valuasi).
+- **Satu perintah per ticker:** `python run_pipeline.py TICKER` menjalankan seluruh alur kalkulasi (load canonical, growth, proyeksi, klasifikasi, valuasi, daily status, **backtest**), sehingga semua tab dan kartu market terisi. Langkah raw (upload/ingest ke Storage) berjalan terpisah dan tidak dipanggil otomatis oleh mode ini; lihat bagian 3 untuk ticker yang raw-nya belum ada di Storage.
 - **Proyeksi:** skenario diturunkan dari actuals oleh `supabase/derive_projection_scenario.py` (rumus `DataInputProyeksi`), jadi setiap ticker yang actualnya sudah dimuat bisa punya skenario sendiri.
 - **Klasifikasi tipe saham:** sudah otomatis. `supabase/derive_classifier_inputs.py` menurunkan input classifier dari data canonical, `supabase/populate_metrics_classification.py` menyimpan hasilnya ke `calc_metrics_classification`, dan `calculate_valuation.py` membacanya sehingga `--stock-type` tidak lagi wajib.
-- **Belum berarti semua analisis lengkap atau otomatis:** workflow belum berjalan otomatis/scheduled. `report_date` dan `available_date` periode finansial juga masih kosong, sehingga hasil tidak boleh dianggap point-in-time/backtest-safe. Backtest belum dijalankan.
+- **Belum berarti semua analisis lengkap atau otomatis:** workflow belum berjalan otomatis/scheduled. `report_date` dan `available_date` periode finansial juga masih kosong, sehingga hasil tidak boleh dianggap point-in-time/backtest-safe. Backtest kini menjadi langkah terakhir `run_pipeline.py TICKER` dan sudah terisi untuk ticker yang diproses; `INDF` dan `GOLD` belum punya snapshot valuasi karena classifier-nya `UNCLASSIFIED` (lihat `docs/VALUATION_FREQUENCY_AUDIT.md`).
 - Data yang dimuat sudah lolos validasi skema/checksum dan perbandingan skenario historis yang dikerjakan. Ini bukan jaminan independen bahwa seluruh nilai sumber benar; tetap cocokkan raw/API dengan laporan emiten bila angka dipakai untuk keputusan.
 
 ## 1. Prasyarat sekali per sesi terminal
@@ -33,40 +33,38 @@ python -c "import requests; print('requests OK')"
 
 ## 1.5 Cara cepat: satu perintah untuk seluruh alur ticker
 
-Seluruh langkah di bagian 3 dan 4 sudah dibungkus menjadi satu perintah. Jalankan dari root repository:
+Seluruh langkah **kalkulasi** di bagian 3 dan 4 sudah dibungkus menjadi satu perintah. Jalankan dari root repository:
 
 ```powershell
 python run_pipeline.py TICKER
 ```
 
-Untuk ticker yang belum pernah diunduh sama sekali, perintah yang sama juga bekerja (langkah raw otomatis mengambil dari API):
-
-```powershell
-python run_pipeline.py AADI
-```
+Perintah ini menjalankan mode default `rebuild`: memuat raw **yang sudah ada di Storage** lewat canonical loader, lalu menghitung growth/quality, proyeksi, klasifikasi, valuasi, daily status, dan **backtest** — satu rangkaian berurutan. Langkah raw (upload/ingest) **tidak** dipanggil otomatis; untuk ticker yang raw-nya belum ada di Storage, jalankan dulu langkah raw (bagian 3), atau pakai `--only upload-raw` / `--only ingest-raw` bila raw lokal sudah ada dan hanya perlu diunggah.
 
 Orchestrator menjalankan langkah-langkah berikut secara berurutan, memakai script yang sama seperti jalur manual:
 
-| # | Step | Perintah yang dijalankan |
-|---|---|---|
-| 1 | `upload-raw` | `supabase/upload_raw_storage_only.py TICKER --yes` |
-| 2 | `ingest-raw` | `supabase/ingest_raw_history.py --symbol TICKER --apply` |
-| 3 | `load-identity` | `supabase/load_identity_to_supabase.py TICKER --ingestion-run-id ...` |
-| 4 | `load-annual` | `supabase/load_annual_financials_to_supabase.py TICKER` |
-| 5 | `load-quarterly` | `supabase/load_quarterly_financials_to_supabase.py TICKER` |
-| 6 | `load-dividend` | `supabase/load_dividend_to_supabase.py TICKER` |
-| 7 | `load-prices` | `supabase/load_daily_prices_to_supabase.py TICKER` |
-| 8 | `growth-quality` | `supabase/populate_growth_quality.py --ticker TICKER --apply` |
-| 9 | `projection` | `supabase/derive_projection_scenario.py TICKER --apply` |
-| 10 | `classification` | `supabase/populate_metrics_classification.py --ticker TICKER --apply` |
-| 11 | `valuation` | `supabase/calculate_valuation.py --ticker TICKER --risk-free-from-reference --apply` |
-| 12 | `backtest` | `supabase/run_backtest.py --ticker TICKER --apply` |
+| # | Step | Perintah yang dijalankan | Mode default? |
+|---|---|---|---|
+| 1 | `upload-raw` | `supabase/upload_raw_storage_only.py TICKER --yes` | Tidak (jalankan `--only upload-raw`) |
+| 2 | `ingest-raw` | `supabase/ingest_raw_history.py --symbol TICKER --apply` | Tidak (jalankan `--only ingest-raw`) |
+| 3 | `load-identity` | `supabase/load_identity_to_supabase.py TICKER --ingestion-run-id ...` | Ya |
+| 4 | `load-annual` | `supabase/load_annual_financials_to_supabase.py TICKER` | Ya |
+| 5 | `load-quarterly` | `supabase/load_quarterly_financials_to_supabase.py TICKER` | Ya |
+| 6 | `load-dividend` | `supabase/load_dividend_to_supabase.py TICKER` | Ya |
+| 7 | `load-prices` | `supabase/load_daily_prices_to_supabase.py TICKER` | Ya |
+| 8 | `growth-quality` | `supabase/populate_growth_quality.py --ticker TICKER --apply` | Ya |
+| 9 | `projection` | `supabase/derive_projection_scenario.py TICKER --apply` | Ya |
+| 10 | `classification` | `supabase/populate_metrics_classification.py --ticker TICKER --apply` | Ya |
+| 11 | `valuation` | `supabase/calculate_valuation.py --ticker TICKER --risk-free-from-reference --apply` | Ya |
+| 12 | `backtest` | `supabase/run_backtest.py --ticker TICKER --apply` | Ya (langkah terakhir) |
 
 Langkah 12 adalah backtest historis: daftar kasus, metrik harga murni
 (`Ret 3M`…`Ret 12M`, `Harga Peak`/`trough`, `Bln Peak`, `Ret Peak`/`Ret Down`),
 valuasi per kasus, konsensus, dan MoS dari lima metode workbook, lalu
 **verdict** (`Verdict by Method`) dan `verdict_mos` (`Verdict MoS`) dengan
 rumus workbook apa adanya (`docs/BACKTEST_ARCHITECTURE.md` bagian 5.4.1).
+
+Backtest diletakkan **paling akhir** karena ia membaca `financial_periods` dan `prices_daily` yang baru dimuat langkah 3–7, dan hanya menulis ke `calc_backtest_cases` / `calc_backtest_methods` — tidak pernah menyentuh `calc_valuation_*`. Jadi menjalankannya setelah `valuation`/`daily-status` **tidak mengubah** hasil kalkulasi valuasi; ia hanya mengisi tab Backtest dan kolom Win Rate di kartu market.
 
 Yang **belum** dikerjakan: tidak ada. Fase 4 (RPC + UI) selesai lewat
 `supabase/migrations/0026_stock_research_backtest_rpc.sql`.
@@ -268,7 +266,7 @@ Perbedaan terpenting yang perlu diketahui: `ingest_raw_history.py` **tidak** men
 
 Baris ketiga adalah yang mudah disalahpahami: kalau raw belum ada di Storage, script **tidak** memakai file lokal — ia memanggil API. Karena itu `run_pipeline.py` menjalankan `upload_raw_storage_only.py` lebih dulu, yang mengunggah byte lokal apa adanya ke Storage tanpa menyentuh API. Dengan begitu `ingest_raw_history.py` menemukan byte di Storage dan hanya meregistrasi provenance (tanpa API).
 
-**Perilaku otomatis berdasarkan ketersediaan raw lokal:**
+**Perilaku otomatis berdasarkan ketersediaan raw lokal** (berlaku ketika langkah raw dipilih, yaitu lewat `--only upload-raw` / `--only ingest-raw`; mode default `rebuild`/`fundamental`/`daily` tidak memilih langkah raw):
 
 | Raw lokal | Yang dilakukan `run_pipeline.py` |
 |---|---|
@@ -285,24 +283,89 @@ Orchestrator mencetak jalur mana yang dipakai sebelum menjalankan langkah apa pu
 | `daily` punya 0 window karena tidak ada raw lokal maupun Storage | Fallback ke rentang default collector (`2020-01-01` sampai hari ini, window 90 hari) saat belum ada window sama sekali. |
 | `manifest` di-fetch dari API padahal `endpoint=None` → 404 dan `FAILED=1` | `manifest` bertanda `local_only`, jadi dilaporkan sebagai skip, bukan kegagalan fetch. |
 
-**Untuk ticker yang raw-nya sudah ada di `Data\Raw\{TICKER}`** — cukup satu perintah, tanpa `SECTORS_API_KEY`:
+**Untuk ticker yang raw-nya sudah ada di Storage** — cukup satu perintah, tanpa `SECTORS_API_KEY` (langkah raw tidak dipanggil karena raw sudah di Storage):
 
 ```powershell
 python run_pipeline.py ERAA
 ```
 
-**Untuk ticker yang belum pernah diunduh** (misalnya AADI):
+### 1.5.2 Ticker baru: tarik raw dulu, baru jalankan pipeline
+
+Ticker yang belum pernah diunduh (misalnya AADI atau BSDE): tarik raw dari Sectors API ke Storage dulu, baru jalankan pipeline:
 
 ```powershell
-python run_pipeline.py AADI          # ambil dari API
+python run_pipeline.py AADI --only ingest-raw   # hit API -> simpan raw -> upload ke Storage (butuh SECTORS_API_KEY)
+python run_pipeline.py AADI                      # load canonical -> ... -> backtest
 ```
 
-Atau unduh dulu ke lokal, lalu jalankan:
+`--only ingest-raw` memanggil `supabase/ingest_raw_history.py --symbol AADI --apply`: untuk ticker baru ia mengambil dari API, menyimpan JSON mentah apa adanya, mengunggah ke bucket privat `stocklens_raw`, dan mencatat provenance di `ingestion_runs`/`ingestion_files` (CASE C: `FETCHED_AND_STORED`). Ia **tidak** menulis ke tabel canonical dan **tidak** menimpa objek Storage yang sudah ada.
+
+Bila raw lokal sudah ada dan hanya perlu diunggah ke Storage, jalankan langkah raw secara eksplisit:
 
 ```powershell
-python .\scripts\data_pipeline\01_download_sectors.py AADI --task all
-python run_pipeline.py AADI
+python run_pipeline.py AADI --only upload-raw
+python run_pipeline.py AADI --only ingest-raw
 ```
+
+> **Catatan (perbaikan hang).** Sebelumnya `run_pipeline.py TICKER` untuk ticker yang raw-nya belum ada bisa tampak menggantung tanpa output, karena preflight Storage menelusuri **seluruh** bucket (ratusan request) sebelum mencetak apa pun. Sekarang preflight mencetak `Checking Storage raw families for ...` lebih dulu, hanya membaca prefix ticker tersebut (jauh lebih cepat), dan berhenti dengan pesan yang menyuruh mengunduh raw dulu bila tidak ditemukan.
+
+> **Catatan (raw step yang gagal kini gagal keras).** `ingest-raw` dulu mencetak `STEP OK` walaupun ada request yang gagal, sehingga penyebabnya baru terlihat jauh di langkah berikutnya. Sekarang bila ada request gagal, langkahnya berhenti dengan `RAW_INGEST_INCOMPLETE: N request(s) failed; Storage does not hold the full raw set for this ticker` dan exit code non-zero (lihat §1.5.3).
+
+> **Catatan (window kosong tidak lagi memblokir).** Provider menjawab rentang 90 hari sebelum tanggal pencatatan dengan `[]`, dan arsip raw menyimpan respons itu apa adanya. Dulu window kosong seperti itu dianggap "harga sudah diunduh", sehingga harga ticker baru tidak pernah diambil. Sekarang window kosong tidak lagi menekan rentang default, dan `load-prices` berhenti dengan `NO_DAILY_PRICE_RECORDS` bila ternyata tidak ada satu pun baris harga — bukan melaporkan sukses dengan 0 baris.
+
+### 1.5.3 Akses Sectors API ditolak: masalah langganan, bukan ticker
+
+**Gejala.** `ingest-raw` gagal dengan `401 SUBSCRIPTION_DOES_NOT_ALLOW` pada banyak atau semua request, lalu `load-prices` menghasilkan 0 baris dan `classification` berhenti dengan `PRICE_HISTORY_MISSING`.
+
+**Ini bukan soal ticker tertentu.** Bukti dari probe langsung (2026-10-08 05:20 UTC):
+
+| Request | Status |
+|---|---|
+| `/daily/CMRY/` | `401 SUBSCRIPTION_DOES_NOT_ALLOW` |
+| `/daily/AMRT/`, `/daily/BRIS/`, `/daily/BSDE/`, `/daily/SIDO/` | `401` (sama) |
+| `/company/report/CMRY/`, `/financials/quarterly/CMRY/`, `/company/get_quarterly_financial_dates/CMRY/` | `401` (sama) |
+| `/screener/companies/`, `/companies/` | `401` (sama) |
+
+Ticker yang datanya sudah lengkap (AMRT/BRIS/BSDE/SIDO, ~1.600 baris harga) juga ditolak saat ini. Jadi pesan `SUBSCRIPTION_DOES_NOT_ALLOW` **tidak** berarti "paket tidak mencakup saham ini", melainkan **key/langganan sedang ditolak untuk seluruh API**. Retry, ganti ticker, atau ubah rentang tanggal tidak akan menolong.
+
+**Kapan mulai terjadi.** Key ini normal pada 2026-09-24/25/28/29 (1.113 request sukses, 4 gagal), lalu hari ini:
+
+| Waktu (UTC) | Hasil |
+|---|---|
+| 2026-10-08 04:16–04:19 | BSDE `--only ingest-raw` → 58 fetch sukses |
+| 2026-10-08 04:37–04:39 | BRIS `--only ingest-raw` → 58 fetch sukses |
+| 2026-10-08 04:51–04:52:22 | CMRY: 20 kuartal + 4 window kosong sukses |
+| **2026-10-08 04:52:24** | **request berikutnya → `401` dan seterusnya** |
+| 2026-10-08 05:20 | semua endpoint & semua ticker → `401` |
+
+Yang berubah hanya **waktu**, bukan kode: `.env` tidak tersentuh sejak 2026-09-24 dan kode ingest tidak berubah selama percobaan BRIS. Karena itu penyebab paling masuk akal adalah entitlement langganan (kadaluarsa, diturunkan, atau batas kuota paket) — bukan bug pipeline.
+
+**Yang bisa dilakukan.**
+
+1. Buka https://sectors.app/api dan pastikan paket masih aktif (API tersedia untuk plan **Insider**) serta key masih valid.
+2. Cek kuota pemakaian bulanan paket; 143 request berhasil pada 2026-10-08 sebelum ditolak.
+3. Kalau paket memang tidak lagi mencakup API, tidak ada jalan lewat pipeline. Semua ticker yang raw-nya **sudah** ada di Storage tetap bisa diproses ulang tanpa API:
+   ```powershell
+   python run_pipeline.py ERAA        # rebuild dari Storage, tanpa SECTORS_API_KEY
+   ```
+4. Setelah akses pulih, lanjutkan ticker yang tertunda:
+   ```powershell
+   python run_pipeline.py CMRY --only ingest-raw
+   python run_pipeline.py CMRY
+   ```
+
+**Perbaikan kode terkait.** `SectorsClient.get()` sekarang membedakan penolakan otorisasi dari error API biasa: status `401`/`403` melempar `SECTORS_SUBSCRIPTION_REFUSED` dengan pesan bahwa ini masalah akun, bukan data ticker. Sebelumnya pesannya hanya `API error (401) ...` yang mudah disalahartikan sebagai masalah ticker.
+
+### 1.5.4 Field yang bergantung sektor (bank)
+
+Bank tidak melaporkan `inventories`, `current_assets`, `capital_expenditure`, dan `non_current_liabilities` — provider **menghilangkan key**-nya, bukan mengirim `null`. Loader annual menerima bentuk itu dan menulis fakta kanonisnya sebagai `MISSING`. Loader kuartalan mentoleransi `realized_capital_goods_investment` sebagai alias capex untuk bank. Lihat `docs/BACKEND_SINGLE_SOURCE_OF_TRUTH.md` §3.1.1.
+
+```powershell
+python run_pipeline.py BRIS --only ingest-raw   # 58 fetch, 0 failed
+python run_pipeline.py BRIS                      # 11/11 step OK
+```
+
+Hasil BRIS: 1.628 baris harga, 8 periode annual, 26 kuartal, 144 baris growth, 21 kasus backtest; muncul di market card sebagai `Undervalued · MoS 66,6% · 4/5 metode · win rate 63,2% (19 kasus)`.
 
 `--task all` mencakup identity, annual, dividend, date index, quarterly statements, dan harga harian. Untuk update quarter baru pada ticker yang sudah ada, lihat bagian 4.
 
@@ -312,7 +375,7 @@ Bila raw sudah ada di Storage dan Anda ingin melewati kedua langkah raw:
 python run_pipeline.py ERAA --offline     # sama dengan --skip-raw
 ```
 
-### 1.5.3 Status 19 ticker (per verifikasi terakhir)
+### 1.5.5 Status 19 ticker (per verifikasi terakhir)
 
 | Ticker | Sektor | Tipe saham | Confidence | Metode valuasi |
 |---|---|---|---:|---:|
@@ -340,7 +403,7 @@ Catatan: jumlah metode bervariasi (5, 10, atau 15) karena hasil valuasi menumpuk
 
 `GOLD` dan `JSMR` sengaja disimpan sebagai `UNCLASSIFIED` (hasil workbook apa adanya) dan baru dipetakan ke `ASSET PLAY` pada saat valuasi. `INDF` tidak punya rule yang cocok, jadi valuasinya perlu `--stock-type` eksplisit.
 
-### 1.5.4 Jalankan manual (tanpa orchestrator)
+### 1.5.6 Jalankan manual (tanpa orchestrator)
 
 Setiap langkah tetap bisa dijalankan sendiri. Yang perlu diperhatikan:
 
@@ -1033,7 +1096,43 @@ select
 
 Catatan: migration `0027` **menghapus** signature lama `get_market_overview_page(integer)` sebelum membuat `(integer, integer)`. Kalau signature lama dibiarkan, PostgREST tidak bisa memilih kandidat saat pemanggil hanya mengirim `p_page`, dan gagal dengan `Could not choose the best candidate function`.
 
-### 10.2 Hasil audit: tabel vs yang tampil di UI
+### 10.2 Isi kartu Market Overview: Signal, Win Rate, MoS, Method
+
+Sebelum migration `0037_market_overview_valuation_and_evidence.sql`, RPC `get_market_overview_page` hanya mengembalikan identitas, harga, dan sparkline. `frontend/src/lib/stock-data.ts` karena itu **meng-hardcode** `verdict: "Not available"`, `mos: null`, `evidenceWins: null`, `evidenceTotal: null`, sehingga blok Valuation / MoS / Historical Evidence di setiap kartu selalu kosong.
+
+Migration `0037` menambah kolom per baris dari data yang sudah ada:
+
+| Kolom payload | Arti | Sumber |
+|---|---|---|
+| `signal` | `UNDERVALUED` / `OVERVALUED` / `MIXED` / `null` — kesepakatan dua aturan "murah" | `calc_valuation_daily_status.consensus_verdict` vs `based_mos_verdict` |
+| `mos_percent` | MoS metode utama sebagai persen (`based_mos` × 100) | `calc_valuation_daily_status.based_mos` |
+| `undervalued_method_count` / `valid_method_count` | rasio metode murah (`3 / 4`) | `calc_valuation_daily_status` |
+| `win_rate_percent` / `win_rate_cases` | win rate **tertinggi** dari dua aturan historis, plus jumlah kasusnya | agregat `calc_backtest_cases` pada run terbaru |
+| `evidence_wins` / `evidence_total` | WIN + RECOVERED atas seluruh kasus | agregat `calc_backtest_cases` |
+
+Aturan: method rule `>= 3` metode valid di atas harga, MoS rule `mos_main >= 0.30`, sukses = `WIN` atau `RECOVERED` (sama dengan tab Backtest). Dedup memakai "run terbaru menang" persis seperti `0026`, karena satu run berisi satu baris per kasus dan re-run membuat run baru.
+
+UI-nya jadi grid 2×2: **Signal** · **Win Rate** (`85,7% (7 Cases)`) / **MoS** (`35,9%`) · **Method** (`3 / 4`). Ticker yang aturannya tidak bisa mengklasifikasi (mis. `GEMA`, `consensus_verdict = N/A`) menampilkan `Not available`.
+
+Verifikasi cepat:
+
+```sql
+select
+  stock ->> 'ticker' as ticker,
+  stock ->> 'signal' as signal,
+  stock ->> 'mos_percent' as mos,
+  stock ->> 'undervalued_method_count' as uv,
+  stock ->> 'valid_method_count' as valid,
+  stock ->> 'win_rate_percent' as win_rate,
+  stock ->> 'win_rate_cases' as cases
+from jsonb_array_elements(public.get_market_overview_page(1, 20) -> 'stocks') as stock
+order by ticker;
+```
+
+Catatan least-privilege: migration ini menambah column-grant + RLS policy untuk `calc_valuation_daily_status` bagi `stocklens_market_reader`, supaya RPC tetap jalan setelah owner-transfer tertunda di `0019` diterapkan. Tabel mentah tetap tertutup untuk `anon`/`authenticated`.
+
+
+### 10.3 Hasil audit: tabel vs yang tampil di UI
 
 Audit membandingkan isi tabel Postgres dengan yang benar-benar dirender. Dua jenis masalah ditemukan dan sudah diperbaiki.
 
@@ -1064,7 +1163,7 @@ Verifikasi terhadap angka workbook: AUTO 2026-Q2 = `9.224.000.000` IDR → tampi
 
 Catatan: baris `MISSING` **sengaja disimpan** sebagai baris dengan `value_numeric` NULL, bukan dihapus. Jadi gap-nya terlihat dan bisa diisi nanti; UI menampilkannya sebagai `Belum Tersedia`, bukan `0`.
 
-### 10.3 Kartu "Workbook Sample vs Tabel" — **dihapus dari UI**
+### 10.4 Kartu "Workbook Sample vs Tabel" — **dihapus dari UI**
 
 Kartu **Workbook Sample vs Tabel** dulu ada di tab Overview untuk memverifikasi bahwa isi tabel sudah setara dengan sampel workbook. Kartu itu sudah **tidak dirender lagi** (dihapus dari `frontend/src/components/stock-research/overview-tab-content.tsx`), karena fungsinya hanya audit sementara saat migrasi data dan tidak berguna bagi pembaca laporan.
 

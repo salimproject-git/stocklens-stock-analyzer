@@ -221,17 +221,15 @@ def load_quarterly_records(
         if set(record) != expected_keys:
             missing = sorted(expected_keys - set(record))
             extra = sorted(set(record) - expected_keys)
-            raise LoaderError(f'QUARTERLY_FIELD_MISMATCH: {path.name} missing={missing} extra={extra}')
-        symbol = record.get('symbol')
-        if not isinstance(symbol, str) or symbol.upper() != f'{ticker}.JK':
-            raise LoaderError(f'QUARTERLY_SYMBOL_CONFLICT: {path.name} symbol={symbol!r}')
-        record_date = parse_iso_date(record.get('date'), f'{path.name}.date')
-        if record_date != period_end:
-            raise LoaderError(f'QUARTERLY_DATE_CONFLICT: {path.name} record_date={record_date}')
-        if record_date != date_index[period_end]['period_end']:
-            raise LoaderError(f'QUARTERLY_INDEX_DATE_CONFLICT: {path.name}')
+            # `capital_expenditure` and `realized_capital_goods_investment` are
+            # sector alternatives: a bank reports the latter, every other sector
+            # the former. Tolerate exactly that swap and nothing else, so an
+            # unannounced provider change still fails loudly.
+            swap = missing == ['capital_expenditure'] and extra == ['realized_capital_goods_investment']
+            if not swap:
+                raise LoaderError(f'QUARTERLY_FIELD_MISMATCH: {path.name} missing={missing} extra={extra}')
         for field in RAW_QUARTERLY_FIELDS:
-            value = record[field]
+            value = record.get(field)
             if value is not None and not is_number(value):
                 raise LoaderError(f'QUARTERLY_INVALID_VALUE: {path.name} field={field}')
         record_copy = dict(record)
@@ -265,7 +263,10 @@ def validate_quarterly_record(
     if set(record) != expected_keys:
         missing = sorted(expected_keys - set(record))
         extra = sorted(set(record) - expected_keys)
-        raise LoaderError(f'QUARTERLY_FIELD_MISMATCH: {label} missing={missing} extra={extra}')
+        # Same sector alternative as the local path: see validate_quarterly_record.
+        swap = missing == ['capital_expenditure'] and extra == ['realized_capital_goods_investment']
+        if not swap:
+            raise LoaderError(f'QUARTERLY_FIELD_MISMATCH: {label} missing={missing} extra={extra}')
     symbol = record.get('symbol')
     if not isinstance(symbol, str) or symbol.upper() != f'{ticker}.JK':
         raise LoaderError(f'QUARTERLY_SYMBOL_CONFLICT: {label} symbol={symbol!r}')
@@ -275,7 +276,7 @@ def validate_quarterly_record(
     if record_date != date_index[period_end]['period_end']:
         raise LoaderError(f'QUARTERLY_INDEX_DATE_CONFLICT: {label}')
     for field in RAW_QUARTERLY_FIELDS:
-        value = record[field]
+        value = record.get(field)
         if value is not None and not is_number(value):
             raise LoaderError(f'QUARTERLY_INVALID_VALUE: {label} field={field}')
 

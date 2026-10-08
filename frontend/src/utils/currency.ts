@@ -24,6 +24,27 @@ export function formatRupiahValue(value: string | number | null | undefined) {
   return formatRupiah(parseNumericValue(value));
 }
 
+/**
+ * Parse a display value into its signed numeric magnitude so a caller can pick a
+ * tone (red for negative, green for zero/positive) and an arrow direction.
+ *
+ * Handles the two shapes the UI produces: locale percentages (`"-51,9%"`, comma
+ * decimal) and plain amounts (`"19.07"`, dot decimal). Returns `NaN` for a value
+ * that carries no number (`"N/A"`, `"-"`, `"Not available"`), so callers can fall
+ * back to a neutral tone instead of guessing a sign.
+ */
+export function parseSignedNumber(value: string | null | undefined) {
+  if (value == null) return Number.NaN;
+  const isPercent = value.includes("%");
+  const cleaned = value.replace(/[^0-9.,-]/g, "");
+  if (!cleaned || cleaned === "-") return Number.NaN;
+  const normalized = isPercent
+    ? cleaned.replace(/\./g, "").replace(",", ".")
+    : cleaned.replace(/,/g, "");
+  const numeric = Number(normalized);
+  return Number.isNaN(numeric) ? Number.NaN : numeric;
+}
+
 const decimalFormatters = new Map<number, Intl.NumberFormat>();
 
 function getDecimalFormatter(maximumFractionDigits: number) {

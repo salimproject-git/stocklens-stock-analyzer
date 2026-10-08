@@ -1,7 +1,7 @@
-"use client";
+﻿"use client";
 
 import React, { useState } from "react";
-import { StockDetail } from "@/data/mock-stock-details";
+import { StockDetail } from "@/data/stock-detail-types";
 import { FinancialTrendCard } from "./financial-trend-card";
 import { FinancialMetricsSummary } from "./financial-metrics-summary";
 import { HistoricalFinancialTable } from "./historical-financial-table";
@@ -165,3 +165,4 @@ export function FinancialsTabContent({ stock }: { stock: StockDetail }) {
     </div>
   );
 }
+

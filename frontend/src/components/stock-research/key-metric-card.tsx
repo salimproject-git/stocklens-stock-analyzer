@@ -1,7 +1,6 @@
-import React from "react";
-import { StockDetail } from "@/data/mock-stock-details";
+﻿import React from "react";
+import { StockDetail } from "@/data/stock-detail-types";
 import { formatRupiah } from "@/utils/currency";
-import { EVIDENCE_RATE_UNAVAILABLE } from "@/lib/analysis";
 import { valuationMethodLabel } from "@/lib/valuation-methods";
 export function KeyMetricSummary({ stock }: { stock: StockDetail }) {
   // The label follows the row that actually supplies the headline figures, not
@@ -18,6 +17,14 @@ export function KeyMetricSummary({ stock }: { stock: StockDetail }) {
   const mos = stock.mos;
   const mosTone: "green" | "slate" | "red" = mos == null ? "slate" : mos >= 0 ? "green" : "red";
   const mosSubtext = mos == null ? "Not available" : mos >= 0 ? "Below intrinsic value" : "Above intrinsic value";
+  const undervaluedTone: "green" | "red" | "slate" = stock.undervaluedMethodsVerdict == null
+    ? "slate"
+    : stock.undervaluedMethodsVerdict === "UNDERVALUED" ? "green" : "red";
+  const undervaluedSubtext = stock.undervaluedMethodsVerdict == null
+    ? "No valid methods"
+    : stock.undervaluedMethodsVerdict === "UNDERVALUED"
+      ? "Most methods indicate undervaluation"
+      : "Most methods indicate overvaluation";
 
   return (
     <section className="mb-6 grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-5">
@@ -32,7 +39,17 @@ export function KeyMetricSummary({ stock }: { stock: StockDetail }) {
         iconTone="blue"
       />
 
-      {/* 2. Margin of Safety */}
+      {/* 2. Stock Character */}
+      <KeyMetricCard
+        label="Stock Character"
+        value={stock.stockCharacter}
+        subtext={stock.stockCharacterDesc}
+        subtextTone="slate"
+        icon={<ActivityIcon className="h-4 w-4" />}
+        iconTone="blue"
+      />
+
+      {/* 3. Margin of Safety */}
       <KeyMetricCard
         label="Margin of Safety"
         value={mos != null ? `${mos.toFixed(1).replace(".", ",")}%` : "Not available"}
@@ -43,22 +60,12 @@ export function KeyMetricSummary({ stock }: { stock: StockDetail }) {
         iconTone={mosTone === "red" ? "gold" : "green"}
       />
 
-      {/* 3. Stock Character */}
-      <KeyMetricCard
-        label="Stock Character"
-        value={stock.stockCharacter}
-        subtext={stock.stockCharacterDesc}
-        subtextTone="slate"
-        icon={<ActivityIcon className="h-4 w-4" />}
-        iconTone="blue"
-      />
-
       {/* 4. Undervalued Methods */}
       <KeyMetricCard
         label="Undervalued Methods"
         value={stock.undervaluedMethods}
-        subtext="Active methods indicating undervalued"
-        subtextTone="slate"
+        subtext={undervaluedSubtext}
+        subtextTone={undervaluedTone}
         icon={<LayersIcon className="h-4 w-4" />}
         iconTone="gold"
       />
@@ -107,19 +114,9 @@ function EvidenceRate({
   value: string;
   className?: string;
 }) {
-  // "Not available" is a word, not a figure. At `text-xl` it wraps to two lines
-  // in a half-width column and makes this card taller than the other four, so
-  // the unavailable state drops a size and stays on one line.
-  const isUnavailable = value === EVIDENCE_RATE_UNAVAILABLE;
-
   return (
     <div className={["min-w-0", className].join(" ")}>
-      <div
-        className={[
-          "mt-1 font-bold tracking-tight",
-          isUnavailable ? "text-[11px] text-[#8e9bb0]" : "text-xl text-white",
-        ].join(" ")}
-      >
+      <div className="mt-1 text-xl font-bold tracking-tight text-white">
         {value}
       </div>
       <div className="text-[10px] font-medium uppercase tracking-[0.08em] text-[#7f8c9f]">
@@ -289,4 +286,5 @@ function LayersIcon({ className }: { className?: string }) {
     </svg>
   );
 }
+
 

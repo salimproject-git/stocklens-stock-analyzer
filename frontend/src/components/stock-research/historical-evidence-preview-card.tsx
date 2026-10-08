@@ -1,5 +1,5 @@
-import React from "react";
-import { StockDetail, type EvidenceOutcomeBreakdown } from "@/data/mock-stock-details";
+﻿import React from "react";
+import { StockDetail, type EvidenceOutcomeBreakdown } from "@/data/stock-detail-types";
 import { SectionCard } from "@/components/ui/section-card";
 import { UnavailableBadge } from "@/components/ui/unavailable-badge";
 import { DemoDataBadge } from "@/components/ui/demo-data-badge";
@@ -14,11 +14,14 @@ export function HistoricalEvidencePreviewCard({
       <SectionCard
         icon={<HistoryIcon className="h-4 w-4" />}
         title="Historical Evidence"
-        subtitle="Similar valuation conditions · historical outcomes"
+        subtitle="Similar valuation conditions Â· historical outcomes"
         actionSlot={
-          <span className="text-xs font-semibold text-[#f4d18b]">
+          <a
+            href="#backtest"
+            className="text-xs font-semibold text-[#f4d18b] transition hover:text-[#ffd68a]"
+          >
             View Backtest →
-          </span>
+          </a>
         }
         paddingClassName="p-5"
       >
@@ -38,11 +41,14 @@ export function HistoricalEvidencePreviewCard({
     <SectionCard
       icon={<HistoryIcon className="h-4 w-4" />}
       title="Historical Evidence"
-      subtitle={`Similar valuation conditions · historical outcomes · ${evidence.totalCases} Cases`}
+      subtitle={`Similar valuation conditions Â· historical outcomes Â· ${evidence.totalCases} Cases`}
       actionSlot={
-        <span className="text-xs font-semibold text-[#f4d18b]">
+        <a
+          href="#backtest"
+          className="text-xs font-semibold text-[#f4d18b] transition hover:text-[#ffd68a]"
+        >
           View Backtest →
-        </span>
+        </a>
       }
       paddingClassName="p-5"
     >
@@ -180,3 +186,4 @@ function HistoryIcon({ className }: { className?: string }) {
     </svg>
   );
 }
+

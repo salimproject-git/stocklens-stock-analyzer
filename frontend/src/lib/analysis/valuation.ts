@@ -1,4 +1,4 @@
-import { VALUATION_METHOD_LABELS, type ValuationMethodCode } from "@/lib/valuation-methods";
+﻿import { VALUATION_METHOD_LABELS, type ValuationMethodCode } from "@/lib/valuation-methods";
 
 /**
  * Which rule acts as the main rule, per `SUMMARY!B69`: stalwart / fast grower use
@@ -20,7 +20,7 @@ export function getMainValuationMethod(stockType: string) {
 }
 
 export type FinancialMetricStatus = "EXPANDING" | "CONTRACTING" | "STABLE_MARGIN" | "IMPROVING" | "DECLINING" | "STRONG_CASH_CONVERSION" | "MODERATE_CASH_CONVERSION" | "WEAK_CASH_CONVERSION" | "ABOVE_AVERAGE" | "BELOW_AVERAGE" | "IN_LINE_WITH_AVERAGE";
-type FinancialHistory = NonNullable<import("@/data/mock-stock-details").StockDetail["financialHistory"]>;
+type FinancialHistory = NonNullable<import("@/data/stock-detail-types").StockDetail["financialHistory"]>;
 type FinancialMetric = FinancialHistory["annualMetrics"][number];
 type FinancialTable = FinancialHistory["annualTable"];
 
@@ -73,3 +73,4 @@ export function financialMetricStatusLabel(status: FinancialMetricStatus) {
   };
   return labels[status];
 }
+

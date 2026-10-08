@@ -66,7 +66,7 @@ from urllib.parse import quote
 
 import requests
 
-from upload_raw_storage_only import StorageClient
+from upload_raw_storage_only import PAGE_LIMIT, StorageClient
 
 # ============================================================================
 # CONFIG
@@ -373,6 +373,19 @@ class SectorsClient:
                 )
                 time.sleep(delay)
                 continue
+
+            if response.status_code in (401, 403):
+                # Not a ticker problem: the whole subscription is being refused.
+                # Every endpoint answers this way at once (verified: /daily/,
+                # /company/report/, /financials/quarterly/, /screener/), so a
+                # retry or a different ticker cannot help.
+                raise RuntimeError(
+                    'SECTORS_SUBSCRIPTION_REFUSED (%s) %s: %s. '
+                    'The API key is being rejected for every endpoint, so this is an '
+                    'account/subscription problem, not a data problem with this ticker. '
+                    'Check the plan and the key at https://sectors.app/api.'
+                    % (response.status_code, response.url, response.text[:400])
+                )
 
             if not response.ok:
                 raise RuntimeError(
@@ -987,12 +1000,62 @@ def reconcile_target(
 # ============================================================================
 
 def storage_names_for(storage: StorageClient, symbol: str, category: str) -> list[str]:
+    """Object names directly under sectors/{symbol}/{category}/.
+
+    Lists the category prefix instead of walking the whole bucket: a walk costs
+    one request per folder and the bucket holds ~130 ticker folders, so every
+    ticker paid for the entire bucket.
+    """
     prefix = f'sectors/{symbol.upper()}/{category}/'
-    return sorted(
-        path.split('/')[-1]
-        for path in storage.walk(BUCKET)
-        if path.startswith(prefix)
-    )
+    names: list[str] = []
+    offset = 0
+    while True:
+        page = storage.list_page(BUCKET, prefix, offset)
+        for entry in page:
+            name = entry.get('name')
+            if not name:
+                continue
+            # A folder is an entry without an object id and is never a file.
+            if entry.get('id') is None:
+                continue
+            if name.endswith('.json'):
+                names.append(name)
+        if len(page) < PAGE_LIMIT:
+            break
+        offset += PAGE_LIMIT
+    return sorted(names)
+
+
+def window_has_no_records(
+    symbol: str,
+    raw_root: Path,
+    storage: StorageClient,
+    name: str,
+) -> bool:
+    """True when a daily window payload is an empty array (no trading days).
+
+    The provider answers a 90-day range that predates a listing with `[]`, and
+    the raw archive keeps that response verbatim. Such a window is real history
+    of nothing, so it must not be mistaken for "this ticker's prices are already
+    downloaded".
+    """
+    local = raw_root / symbol.upper() / 'daily' / name
+
+    if local.is_file():
+        raw = local.read_bytes()
+    else:
+        storage_path = f'sectors/{symbol.upper()}/daily/{name}'
+        if storage.object_info(BUCKET, storage_path) is None:
+            return False
+        raw = storage.download(BUCKET, storage_path)
+
+    try:
+        payload = json.loads(raw.decode('utf-8'))
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        # Unreadable payloads are reported by the loader, not silently dropped.
+        return False
+
+    return isinstance(payload, list) and not payload
 
 
 def load_report_dates(
@@ -1044,6 +1107,14 @@ def daily_window_names(
         names.update(path.name for path in local_dir.glob('*.json'))
 
     names.update(storage_names_for(storage, symbol, 'daily'))
+
+    # An empty window (a 90-day range before the listing) is still a fetched
+    # window, so it must not suppress the default range. A ticker whose only
+    # windows are empty would otherwise never have its prices fetched.
+    if names and all(
+        window_has_no_records(symbol, raw_root, storage, name) for name in names
+    ):
+        names.clear()
 
     if not names and include_default_range:
         names.update(_default_daily_windows())
@@ -1219,6 +1290,16 @@ def main() -> None:
     print('=' * 78)
     print('  ' + counters.line())
     print(f'  Canonical tables touched: NO')
+
+    # A failed fetch must not be reported as a successful step. Without this the
+    # orchestrator prints "STEP OK: ingest-raw" while a whole family is missing
+    # (e.g. every daily window rejected by the API plan), and the next step then
+    # fails far away from the real cause.
+    if counters.failed:
+        raise SystemExit(
+            f'RAW_INGEST_INCOMPLETE: {counters.failed} request(s) failed; '
+            'Storage does not hold the full raw set for this ticker'
+        )
 
 
 if __name__ == '__main__':

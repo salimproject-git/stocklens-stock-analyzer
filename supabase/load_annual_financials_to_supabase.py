@@ -28,17 +28,30 @@ STATEMENT_SCOPE = 'UNKNOWN'
 PERIOD_BASIS = 'UNKNOWN'
 REVISION_KEY = 'CURRENT'
 
-RAW_MONETARY_FIELDS = (
+#: Fields every row must carry regardless of sector. These are the line items the
+#: provider reports for every IDX company.
+REQUIRED_SOURCE_FIELDS = (
     'tax', 'ebit', 'ebitda', 'revenue', 'earnings', 'net_debt', 'cash_only',
-    'total_debt', 'inventories', 'fixed_assets', 'gross_profit', 'total_assets',
-    'total_equity', 'net_cash_flow', 'operating_pnl', 'current_assets',
-    'free_cash_flow', 'long_term_debt', 'prepaid_assets', 'cost_of_revenue',
-    'short_term_debt', 'operating_expense', 'retained_earnings',
-    'total_liabilities', 'capital_expenditure', 'current_liabilities',
+    'total_debt', 'fixed_assets', 'gross_profit', 'total_assets',
+    'total_equity', 'net_cash_flow', 'operating_pnl', 'free_cash_flow',
+    'long_term_debt', 'prepaid_assets', 'cost_of_revenue', 'short_term_debt',
+    'operating_expense', 'retained_earnings', 'total_liabilities',
     'earnings_before_tax', 'financing_cash_flow', 'investing_cash_flow',
-    'operating_cash_flow', 'cash_and_equivalents', 'non_current_liabilities',
+    'operating_cash_flow', 'cash_and_equivalents',
     'non_operating_income_or_loss', 'interest_expense_non_operating',
 )
+#: Fields the provider omits for a whole sector, so their absence is a sector
+#: shape and not a defective file. A bank (BRIS) reports no `inventories`,
+#: `current_assets`, `capital_expenditure` or `non_current_liabilities`; all 23
+#: non-financial tickers in Data/Raw carry every one of them. An absent field
+#: means the company has no such line item, which is recorded as MISSING rather
+#: than failing the ticker.
+SECTOR_DEPENDENT_SOURCE_FIELDS = (
+    'inventories', 'current_assets', 'capital_expenditure', 'non_current_liabilities',
+)
+#: Every raw field the loader knows about. Kept as the union of the two groups
+#: above so the full contract stays documented in one place.
+RAW_MONETARY_FIELDS = REQUIRED_SOURCE_FIELDS + SECTOR_DEPENDENT_SOURCE_FIELDS
 SHARES_FIELD = 'outstanding_shares'
 #: Fields mapped into canonical `financial_facts`.
 #:
@@ -139,16 +152,20 @@ def validate_source(payload: dict[str, Any], ticker: str) -> tuple[list[dict[str
         if isinstance(year, bool) or not isinstance(year, int):
             raise LoaderError(f'ANNUAL_SOURCE_INVALID_YEAR: row {index} year must be an integer')
         years.append(year)
-        for field in RAW_MONETARY_FIELDS + (SHARES_FIELD,):
+        for field in REQUIRED_SOURCE_FIELDS + (SHARES_FIELD,):
             if field not in row:
                 raise LoaderError(f'ANNUAL_SOURCE_MISSING_FIELD: row {index} missing {field}')
+        # `SECTOR_DEPENDENT_SOURCE_FIELDS` is deliberately NOT required: the
+        # provider drops line items a sector does not have (a bank has no
+        # inventories), and the loader records the canonical fact as MISSING
+        # instead of rejecting the whole ticker.
         # Only the fields this loader actually consumes are validated. The source
         # also carries descriptive fields such as `industry_breakdown`, which
         # ITMG 2025 populates with an object (coal reserves) rather than a
         # number. Rejecting the whole file over a field no canonical metric maps
         # from would be stricter than the contract requires.
         for field in ANNUAL_FIELDS + (SHARES_FIELD,):
-            value = row[field]
+            value = row.get(field)
             if value is None:
                 continue
             if not is_number(value):
@@ -182,7 +199,10 @@ def make_fact_plans(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     plans: list[dict[str, Any]] = []
     for row in rows:
         for source_field in ANNUAL_FIELDS:
-            value = row[source_field]
+            # `.get` because `SECTOR_DEPENDENT_SOURCE_FIELDS` are absent from the
+            # raw row when the company has no such line item (a bank has no
+            # inventories); the canonical fact is then recorded as MISSING.
+            value = row.get(source_field)
             plans.append({
                 'period_year': row['year'], 'metric_code': METRIC_CODES[source_field],
                 'value_numeric': value, 'unit_code': 'IDR', 'currency_code': 'IDR',
@@ -190,7 +210,7 @@ def make_fact_plans(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 'quality_status': 'MISSING' if value is None else 'VALID',
                 'source_payload_id': None,
             })
-        value = row[SHARES_FIELD]
+        value = row.get(SHARES_FIELD)
         plans.append({
             'period_year': row['year'], 'metric_code': 'OUTSTANDING_SHARES',
             'value_numeric': value, 'unit_code': 'SHARES', 'currency_code': None,

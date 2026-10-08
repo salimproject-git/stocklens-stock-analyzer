@@ -1,4 +1,4 @@
-import type { BacktestCase } from "@/data/mock-stock-details";
+﻿import type { BacktestCase } from "@/data/stock-detail-types";
 
 export const backtestMethodology = {
   observationMonths: 12,
@@ -12,7 +12,7 @@ export type ValuationClassification = "UNDERVALUED" | "OVERVALUED";
 /**
  * Classification from a list of intrinsic values.
  *
- * **`IV = 0` is not a valid method.** The workbook marks it `⚪ N/A (Skip)`
+ * **`IV = 0` is not a valid method.** The workbook marks it `âšª N/A (Skip)`
  * (`=IF(B25=0, "N/A (Skip)", ...)`) and removes it from the denominator, so a
  * stock without dividends yields `3|4`, not `3|5`. `null` is skipped too.
  *
@@ -108,3 +108,4 @@ export function countMethodsAboveAnalysisPrice(testCase: BacktestCase, analysisP
   const result = classifyMethodsAbovePrice(testCase.methods, analysisPrice);
   return `${result.undervaluedMethods}/${result.totalMethods}`;
 }
+

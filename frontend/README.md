@@ -1,36 +1,64 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# StockLens frontend
 
-## Getting Started
+Next.js 16 (App Router) + React 19 + Tailwind CSS 4 application for StockLens.
 
-First, run the development server:
+The frontend is a **read-only consumer of the database**. It holds no market data of
+its own and recomputes no business metric: every figure on screen either arrives from
+a Supabase RPC or is a presentation-only transform (rounding, locale, unit label,
+colour). See the root [`README.md`](../README.md) for the full data flow.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## Run
+
+```powershell
+Set-Location 'D:\Stock Analyzer\frontend'
+Copy-Item .env.example .env.local   # then fill in the two values
+npm install
+npm run dev                         # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Environment
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| Variable | Required | Notes |
+|---|---|---|
+| `SUPABASE_URL` | yes | Supabase project URL |
+| `SUPABASE_PUBLISHABLE_KEY` | yes | Publishable (`sb_publishable_...`) or legacy `anon` key |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Both are read inside `src/lib/stock-data.ts`, which begins with `import "server-only"`.
+That guard is what keeps the client out of the browser bundle, so the keys must stay
+**unprefixed** — do not rename them to `NEXT_PUBLIC_*`. The Supabase `service_role`
+key must never be added here at all.
 
-## Learn More
+## Structure
 
-To learn more about Next.js, take a look at the following resources:
+```text
+src/app/
+  page.tsx                     redirects to /market
+  market/page.tsx              server component; calls get_market_overview_page
+  market/[ticker]/page.tsx     server component; calls the three per-ticker RPCs
+src/lib/
+  stock-data.ts                the only module that talks to Supabase
+  stock-detail-adapter.ts      maps RPC payload -> view model
+  stock-types.ts               market row types
+  analysis/                    classification rules (signals, MoS, growth labels)
+src/components/
+  app-shell.tsx                sidebar + layout
+  market-overview-page.tsx     screener: filters, sorting, grid/table views
+  stock-research/              the five research tabs
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Scripts
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```powershell
+npm run dev      # development server
+npm run build    # production build
+npm run start    # serve the production build
+npm run lint     # eslint
+```
 
-## Deploy on Vercel
+## Notes
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- `src/data/mock-stock-details.ts` is a **retired sample-data fixture** kept only so the
+  offline frontend tests still resolve. No application route imports it; the live pages
+  read Supabase exclusively.
+- There is no client-side data fetching and no Supabase call from the browser. The
+  publishable key is used from the server only.

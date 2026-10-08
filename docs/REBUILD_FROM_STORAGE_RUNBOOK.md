@@ -42,7 +42,7 @@ python .\run_pipeline.py AUTO --mode backtest --dry-run
 python .\run_pipeline.py AUTO --mode backtest
 ```
 
-`daily` must not run intrinsic valuation, growth, projection, classification, or backtest. A page view only invokes bounded read RPCs. Rebuild uses `--reuse-equivalent-active`: it must prove exact projected-value equivalence and reuse the existing active scenario without mutation, otherwise stop and investigate rather than auto-versioning it.
+`daily` must not run intrinsic valuation, growth, projection, classification, or backtest. A page view only invokes bounded read RPCs. `rebuild` and `fundamental` both end with the backtest step, so a single operator command refreshes every tab and the market card; the backtest reads the canonical periods/prices those steps just loaded and writes only `calc_backtest_*`, never `calc_valuation_*`. Use `--mode backtest` on its own only to recompute the backtest without reloading raw data. Rebuild uses `--reuse-equivalent-active`: it must prove exact projected-value equivalence and reuse the existing active scenario without mutation, otherwise stop and investigate rather than auto-versioning it.
 
 ## Reconciliation and validation
 

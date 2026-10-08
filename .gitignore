@@ -8,6 +8,10 @@ __pycache__/
 *.log
 *.xlsm
 
+
+# Local database/Storage exports used before a rebuild. These are operational
+# artifacts (hundreds of MB of JSON), not source; keep them out of Git.
+/backups/
 /Data/
 /Phyton/
 /Testing/

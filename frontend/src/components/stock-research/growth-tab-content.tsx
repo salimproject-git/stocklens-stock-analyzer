@@ -1,7 +1,7 @@
-'use client';
+﻿'use client';
 
 import React, { useLayoutEffect, useRef } from 'react';
-import { StockDetail } from '@/data/mock-stock-details';
+import { StockDetail } from '@/data/stock-detail-types';
 import { SectionCard } from '@/components/ui/section-card';
 import { ChartEmptyState } from '@/components/ui/chart-empty-state';
 import { formatRupiah, parseNumericValue } from '@/utils/currency';
@@ -28,12 +28,19 @@ function SectionIcon({ icon }: { icon: string }) {
   return <svg {...props}><path d='M4 17 9 12l3 3 7-8' /><path d='M15 7h4v4' /><path d='M4 20h16' /></svg>;
 }
 
-function Arrow() {
-  return <svg viewBox='0 0 22 16' fill='none' className='h-4 w-5 text-[#2ee6ae]' aria-hidden='true'><path d='M1 14 8 7l4 4 8-9M14 2h6v6' stroke='currentColor' strokeWidth='2' strokeLinecap='round' strokeLinejoin='round' /></svg>;
+function GrowthArrow({ direction, tone }: { direction: 'up' | 'down'; tone: Tone }) {
+  const color = tone === 'positive' ? 'text-[#2ee6ae]' : tone === 'negative' ? 'text-[#ff8b82]' : 'text-[#aebbd0]';
+  return direction === 'up'
+    ? <svg viewBox='0 0 22 16' fill='none' className={'h-4 w-5 ' + color} aria-hidden='true'><path d='M1 14 8 7l4 4 8-9M14 2h6v6' stroke='currentColor' strokeWidth='2' strokeLinecap='round' strokeLinejoin='round' /></svg>
+    : <svg viewBox='0 0 22 16' fill='none' className={'h-4 w-5 ' + color} aria-hidden='true'><path d='m1 2 7 7 4-4 8 9M14 14h6V8' stroke='currentColor' strokeWidth='2' strokeLinecap='round' strokeLinejoin='round' /></svg>;
 }
 
 function GrowthMetric({ label, value, period, arrow = false, className = '', valueClass = '' }: { label: string; value: string; period?: string; arrow?: boolean; className?: string; valueClass?: string }) {
-  return <div className={'min-w-0 border-r border-white/[0.08] px-4 py-3 last:border-r-0 ' + className}><div className='text-[11px] leading-[1.35] text-[#aebbd0]'>{label}</div><div className='mt-2 flex items-center gap-3'><span className={'font-semibold tracking-[-0.02em] text-[#2ee6ae] ' + (valueClass || 'text-[23px]')}>{value}</span>{arrow && <Arrow />}</div>{period && <div className='mt-1 text-[11px] text-[#8090a7]'>{period}</div>}</div>;
+  const numericValue = Number(value.replace(/%/g, '').replace(/\s/g, '').replace(',', '.'));
+  const hasDirection = arrow && Number.isFinite(numericValue) && numericValue !== 0;
+  const tone: Tone = !Number.isFinite(numericValue) || numericValue === 0 ? 'neutral' : numericValue > 0 ? 'positive' : 'negative';
+  const toneClass = tone === 'positive' ? 'text-[#2ee6ae]' : tone === 'negative' ? 'text-[#ff8b82]' : 'text-[#aebbd0]';
+  return <div className={'min-w-0 border-r border-white/[0.08] px-4 py-3 last:border-r-0 ' + className}><div className='text-[11px] leading-[1.35] text-[#aebbd0]'>{label}</div><div className='mt-2 flex items-center gap-3'><span className={'font-semibold tracking-[-0.02em] ' + toneClass + ' ' + (valueClass || 'text-[23px]')}>{value}</span>{hasDirection && <GrowthArrow direction={numericValue > 0 ? 'up' : 'down'} tone={tone} />}</div>{period && <div className='mt-1 text-[11px] text-[#8090a7]'>{period}</div>}</div>;
 }
 
 function Momentum({ value, tone }: { value: string; tone: Tone }) {
@@ -101,7 +108,7 @@ function parseDividendValue(value: string) {
 function parseDividendValueOrNull(value: string | undefined): number | null {
   if (value == null) return null;
   const trimmed = value.trim();
-  if (!trimmed || trimmed === '-' || trimmed === '—') return null;
+  if (!trimmed || trimmed === '-' || trimmed === 'â€”') return null;
   const cleaned = trimmed.replace(/[^0-9.,-]/g, '');
   if (!cleaned) return null;
   const parsed = parseNumericValue(cleaned);
@@ -152,7 +159,7 @@ function DividendTrendChart({ periods, dpsValues, yieldValues }: { periods: stri
     return <ChartEmptyState title='Dividend Trend' subtitle='DPS and yield, each on its own scale' hint='Dividend history is not stored in the database yet, so the DPS and yield trend cannot be drawn.' height={250} />;
   }
 
-  return <div className='flex h-full min-w-0 flex-col rounded-xl border border-white/[0.09] bg-[#081523]/75 p-4'><div className='text-sm font-semibold text-white'>Dividend Trend</div><div className='mt-1 text-[11px] text-[#8e9db3]'>DPS and yield, each on its own scale</div><div className='mt-3 flex flex-wrap gap-x-4 gap-y-2 text-[10px] text-[#b6c5d8]'><span className='flex items-center gap-2'><svg viewBox='0 0 28 8' className='h-2 w-7' aria-hidden='true'><path d='M1 4h26' stroke='#f2bb5c' strokeWidth='2' /><circle cx='14' cy='4' r='2.5' fill='#f2bb5c' /></svg>DPS (Rp) Â· left axis</span><span className='flex items-center gap-2'><svg viewBox='0 0 28 8' className='h-2 w-7' aria-hidden='true'><path d='M1 4h26' stroke='#2ee6ae' strokeWidth='2' strokeDasharray='3 2' /><rect x='11.5' y='1.5' width='5' height='5' fill='#2ee6ae' /></svg>Yield (%) Â· right axis</span></div><svg viewBox={`0 0 ${width} ${height}`} preserveAspectRatio='xMidYMid meet' className='mt-2 block h-auto min-w-0 w-full' role='img' aria-label='Dividend per share and dividend yield trend'>
+  return <div className='flex h-full min-w-0 flex-col rounded-xl border border-white/[0.09] bg-[#081523]/75 p-4'><div className='text-sm font-semibold text-white'>Dividend Trend</div><div className='mt-1 text-[11px] text-[#8e9db3]'>DPS and yield, each on its own scale</div><div className='mt-3 flex flex-wrap gap-x-4 gap-y-2 text-[10px] text-[#b6c5d8]'><span className='flex items-center gap-2'><svg viewBox='0 0 28 8' className='h-2 w-7' aria-hidden='true'><path d='M1 4h26' stroke='#f2bb5c' strokeWidth='2' /><circle cx='14' cy='4' r='2.5' fill='#f2bb5c' /></svg>DPS (Rp) Ã‚Â· left axis</span><span className='flex items-center gap-2'><svg viewBox='0 0 28 8' className='h-2 w-7' aria-hidden='true'><path d='M1 4h26' stroke='#2ee6ae' strokeWidth='2' strokeDasharray='3 2' /><rect x='11.5' y='1.5' width='5' height='5' fill='#2ee6ae' /></svg>Yield (%) Ã‚Â· right axis</span></div><svg viewBox={`0 0 ${width} ${height}`} preserveAspectRatio='xMidYMid meet' className='mt-2 block h-auto min-w-0 w-full' role='img' aria-label='Dividend per share and dividend yield trend'>
     {[0, 1, 2, 3].map((level) => { const dpsValue = maxDps * (1 - level / 3); const yieldValue = maxYield * (1 - level / 3); const y = padding.top + (plotHeight * level) / 3; return <g key={level}><line x1={padding.left} x2={width - padding.right} y1={y} y2={y} stroke='rgba(255,255,255,0.08)' /><text x={padding.left - 8} y={y + 4} textAnchor='end' fill='#8e9db3' fontSize='10'>{formatRupiah(dpsValue).replace(/^Rp/, '')}</text><text x={width - padding.right + 8} y={y + 4} textAnchor='start' fill='#8e9db3' fontSize='10'>{yieldValue.toFixed(0)}%</text></g>; })}
     <polyline points={dpsLine} fill='none' stroke='#f2bb5c' strokeWidth='2.5' strokeLinejoin='round' />
     <polyline points={yieldLine} fill='none' stroke='#2ee6ae' strokeWidth='2.5' strokeDasharray='6 4' strokeLinejoin='round' />
@@ -191,7 +198,7 @@ function DividendGrowthSection({ dividend }: { dividend: DividendData }) {
         <div className='flex min-w-0 flex-col gap-3'>
           <div className='grid grid-cols-1 gap-3 sm:grid-cols-2'>
             {dividendProfileSections.map((section) => <div key={section.period} className='overflow-hidden rounded-lg border border-white/[0.09] bg-[#081523]/70'>
-              <div className='border-b border-white/[0.08] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-[#8fa0b8]'>{section.period === 'Avg (4Y)' ? <>Historical Performance Â· Avg (4Y)</> : '2026 Projection'}</div>
+              <div className='border-b border-white/[0.08] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-[#8fa0b8]'>{section.period === 'Avg (4Y)' ? <>Historical Performance Ã‚Â· Avg (4Y)</> : '2026 Projection'}</div>
               <div className='grid grid-cols-1 sm:grid-cols-3'>
                 {dividendMetrics.map((metric) => <GrowthMetric key={metric.label} label={metric.label} value={metric.row ? (metric.row.item === 'DPS [Rp]' ? formatRupiah(parseDividendValue(metric.row[dividendPeriodKeys[section.period]] ?? '0')) : formatDividendMetricValue(metric.row, section.period)) : '-'} className='px-2' valueClass='whitespace-nowrap text-[14px]' />)}
               </div>
@@ -301,3 +308,4 @@ export function GrowthTabContent({ stock }: { stock: StockDetail }) {
   const visuals = data.growthVisuals;
   return <div className='space-y-6'><header className='flex flex-col justify-between gap-4 md:flex-row md:items-center'><div><h2 className='text-3xl font-bold tracking-tight text-white'>Growth</h2><p className='mt-1 text-sm text-[#aeb9ca]'>Understand the company&apos;s growth trajectory, momentum, growth quality, and recent operating performance.</p></div></header><GrowthSection data={data.growth} visuals={visuals} /><HealthSection icon='forensic' title='Growth Quality / Forensic Growth' subtitle='Supporting evidence for the quality and sustainability of reported growth.'><MetricGrid metrics={data.forensic.metrics} /></HealthSection><QuarterlyGrowthCheck stock={stock} /><DividendGrowthSection dividend={stock.dividendConsistency} /></div>;
 }
+

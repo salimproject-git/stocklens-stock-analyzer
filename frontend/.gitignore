@@ -32,6 +32,9 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+# ...except the placeholder template. It contains no real values and is the
+# only way a reviewer learns which variables the server-only data layer needs.
+!.env.example
 
 # vercel
 .vercel

@@ -1,5 +1,5 @@
-import React from "react";
-import { StockDetail } from "@/data/mock-stock-details";
+﻿import React from "react";
+import { StockDetail } from "@/data/stock-detail-types";
 import { SectionCard } from "@/components/ui/section-card";
 
 export function ThesisValidatorCard({
@@ -47,7 +47,7 @@ export function ThesisValidatorCard({
     row: StockDetail["thesisValidator"]["rows"][number] | undefined,
   ) => {
     if (!row) {
-      return <span className="font-semibold text-white">—</span>;
+      return <span className="font-semibold text-white">â€”</span>;
     }
 
     return (
@@ -61,7 +61,7 @@ export function ThesisValidatorCard({
     <SectionCard
       icon={<SparklesIcon className="h-4 w-4" />}
       title="Thesis Validator"
-      subtitle={`Latest Quarter · ${latestQuarter}`}
+      subtitle={`Latest Quarter Â· ${latestQuarter}`}
       actionSlot={
         <span className="text-xs font-semibold text-[#f4d18b]">
           Growth

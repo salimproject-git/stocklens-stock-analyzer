@@ -31,6 +31,45 @@ class ValuationFrequencyMigrationTests(unittest.TestCase):
         self.assertIn("'backtest': ('backtest',)", pipeline)
         self.assertIn("'fundamental': (", pipeline)
 
+    def test_rebuild_and_fundamental_end_with_backtest(self) -> None:
+        # The backtest was folded into the two full-operator modes so one command
+        # produces every tab and the market card. It must run last, because it
+        # reads the canonical periods/prices the earlier loaders refreshed and
+        # writes only calc_backtest_* (never calc_valuation_*).
+        import importlib.util
+
+        spec = importlib.util.spec_from_file_location('run_pipeline', ROOT / 'run_pipeline.py')
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        modes = module.PIPELINE_MODE_STEPS
+        self.assertEqual(modes['rebuild'][-1], 'backtest')
+        self.assertEqual(modes['fundamental'][-1], 'backtest')
+        # A routine daily price update must never trigger the backtest.
+        self.assertNotIn('backtest', modes['daily'])
+        # The backtest reads these; both full modes must load them before it runs.
+        for mode in ('rebuild', 'fundamental'):
+            self.assertIn('load-prices', modes[mode])
+            self.assertLess(
+                modes[mode].index('valuation'), modes[mode].index('backtest')
+            )
+
+    def test_storage_preflight_is_scoped_to_reader_steps(self) -> None:
+        # The bug this guards: the preflight that requires raw to already be in
+        # Storage used to run for every `rebuild`/`fundamental` invocation,
+        # including `--only ingest-raw` - the very step that POPULATES Storage.
+        # That made fetching a brand-new ticker impossible: the fetch was blocked
+        # by the check that the fetch had not run yet. The preflight must key off
+        # the selected steps that READ raw, not the mode name.
+        pipeline = (ROOT / 'run_pipeline.py').read_text(encoding='utf-8')
+        self.assertIn('storage_reader_steps', pipeline)
+        # The reader steps are exactly the canonical loaders that read Storage.
+        for step in ('load-identity', 'load-annual', 'load-quarterly', 'load-dividend', 'load-prices'):
+            self.assertIn(f"'{step}'", pipeline)
+        # The old mode-based guard must be gone.
+        self.assertNotIn("if args.mode in ('rebuild', 'fundamental') and not args.dry_run:", pipeline)
+        # The preflight must not fire for the raw-populating steps.
+        self.assertNotIn("'ingest-raw', 'load-identity'", pipeline)
+
 
 if __name__ == '__main__':
     unittest.main()

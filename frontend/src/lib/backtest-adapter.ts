@@ -1,7 +1,7 @@
-import "server-only";
+﻿import "server-only";
 
 import type { BacktestCaseData } from "@/lib/stock-data";
-import type { BacktestCase, BacktestVerdict } from "@/data/mock-stock-details";
+import type { BacktestCase, BacktestVerdict } from "@/data/stock-detail-types";
 import { valuationMethodLabel } from "@/lib/valuation-methods";
 
 /**
@@ -163,3 +163,4 @@ export function buildBacktestCase(
     pricePath: buildPricePath(testCase),
   };
 }
+

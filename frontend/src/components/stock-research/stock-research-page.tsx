@@ -1,7 +1,7 @@
-"use client";
+﻿"use client";
 
 import React, { useEffect, useState } from "react";
-import type { StockDetail } from "@/data/mock-stock-details";
+import type { StockDetail } from "@/data/stock-detail-types";
 import { Breadcrumb } from "./breadcrumb";
 import { StockHeader } from "./stock-header";
 import { KeyMetricSummary } from "./key-metric-card";
@@ -73,3 +73,4 @@ function SparklesIcon({ className }: { className?: string }) {
     </svg>
   );
 }
+

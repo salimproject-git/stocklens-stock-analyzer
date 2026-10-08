@@ -52,11 +52,20 @@ export const VALUATION_METHOD_ORDER: ValuationMethodCode[] = [
  * qualifier inside every label only made the method names harder to scan.
  */
 export const VALUATION_METHOD_LABELS: Record<ValuationMethodCode, string> = {
-  PETER_LYNCH: "Peter Lynch",
-  TYPE_SECTOR_WEIGHTED: "Weighted IV",
-  MEAN_REVERSION_PBV: "Mean Reversion PBV [Asset]",
-  DDM: "Dividend Discount Model (Cash Flow)",
-  DISCOUNTED_EARNINGS: "Discounted Earnings Model (Growth)",
+  PETER_LYNCH: "Peter Lynch / Adaptive",
+  TYPE_SECTOR_WEIGHTED: "Type & Sector Weighted",
+  MEAN_REVERSION_PBV: "Mean Reversion PBV",
+  DDM: "Dividend Discount Model",
+  DISCOUNTED_EARNINGS: "Discounted Earnings",
+};
+
+/** Short, user-facing explanation shown in the Valuation Methods table. */
+export const VALUATION_METHOD_DESCRIPTIONS: Record<ValuationMethodCode, string> = {
+  PETER_LYNCH: "Asset-based (PEG + growth)",
+  TYPE_SECTOR_WEIGHTED: "Blended (sector & type multiple)",
+  MEAN_REVERSION_PBV: "Historical asset valuation (PBV)",
+  DDM: "Dividend-based (Dividend Discount Model)",
+  DISCOUNTED_EARNINGS: "Earnings-based (DCF)",
 };
 
 /**
@@ -67,11 +76,11 @@ export const VALUATION_METHOD_SHORT_LABELS: Record<
   ValuationMethodCode,
   { first: string; second: string }
 > = {
-  PETER_LYNCH: { first: "Peter Lynch", second: "" },
-  TYPE_SECTOR_WEIGHTED: { first: "Weighted IV", second: "" },
-  MEAN_REVERSION_PBV: { first: "Mean Reversion", second: "PBV [Asset]" },
-  DDM: { first: "Dividend Discount", second: "Model (Cash Flow)" },
-  DISCOUNTED_EARNINGS: { first: "Discounted Earnings", second: "Model (Growth)" },
+  PETER_LYNCH: { first: "Peter Lynch", second: "Adaptive" },
+  TYPE_SECTOR_WEIGHTED: { first: "Type & Sector", second: "Weighted" },
+  MEAN_REVERSION_PBV: { first: "Mean Reversion", second: "PBV" },
+  DDM: { first: "Dividend Discount", second: "Model" },
+  DISCOUNTED_EARNINGS: { first: "Discounted Earnings", second: "" },
 };
 
 /** Dot colours for the spectrum chart, keyed by method code. */
@@ -95,6 +104,10 @@ export function isValuationMethodCode(code: string): code is ValuationMethodCode
  */
 export function valuationMethodLabel(code: string): string {
   return isValuationMethodCode(code) ? VALUATION_METHOD_LABELS[code] : code;
+}
+
+export function valuationMethodDescription(code: string): string {
+  return isValuationMethodCode(code) ? VALUATION_METHOD_DESCRIPTIONS[code] : code;
 }
 
 /** Position in the fixed order; unknown codes sort after every known method. */

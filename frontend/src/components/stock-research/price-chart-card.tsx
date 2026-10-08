@@ -1,7 +1,7 @@
-"use client";
+﻿"use client";
 
 import React, { useState } from "react";
-import { StockDetail } from "@/data/mock-stock-details";
+import { StockDetail } from "@/data/stock-detail-types";
 import { SectionCard } from "@/components/ui/section-card";
 import { ChartEmptyState } from "@/components/ui/chart-empty-state";
 import { formatRupiah } from "@/utils/currency";
@@ -221,4 +221,5 @@ function TrendingUpIcon({ className }: { className?: string }) {
     </svg>
   );
 }
+
 

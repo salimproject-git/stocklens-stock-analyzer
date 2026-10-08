@@ -1,5 +1,5 @@
-import React from "react";
-import { StockDetail } from "@/data/mock-stock-details";
+﻿import React from "react";
+import { StockDetail } from "@/data/stock-detail-types";
 import { SectionCard } from "@/components/ui/section-card";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { UnavailableBadge } from "@/components/ui/unavailable-badge";
@@ -59,9 +59,12 @@ export function CurrentValuationCard({
       title="Current Valuation"
       subtitle="Based on multiple valuation methods and margin of safety"
       actionSlot={
-        <span className="text-xs font-semibold text-[#f4d18b]">
+        <a
+          href="#valuation"
+          className="text-xs font-semibold text-[#f4d18b] transition hover:text-[#ffd68a]"
+        >
           View Valuation →
-        </span>
+        </a>
       }
     >
       <div className="grid gap-4 lg:grid-cols-3">
@@ -196,3 +199,4 @@ function LayersIcon({ className }: { className?: string }) {
     </svg>
   );
 }
+

@@ -1,5 +1,5 @@
-import React from "react";
-import { StockDetail } from "@/data/mock-stock-details";
+﻿import React from "react";
+import { StockDetail } from "@/data/stock-detail-types";
 import { SectionCard } from "@/components/ui/section-card";
 
 export function CompanyProfileCard({
@@ -153,4 +153,5 @@ function GlobeIcon({ className }: { className?: string }) {
     </svg>
   );
 }
+
 

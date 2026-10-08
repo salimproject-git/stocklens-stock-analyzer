@@ -1,4 +1,6 @@
 import type { aggregateBacktestOverview } from "@/lib/analysis/backtest-overview";
+import type { BeginnerBacktestSummary, BeginnerSignalSummary } from "@/lib/analysis";
+import { SignalParagraph } from "./backtest-beginner-guide";
 
 type Aggregates = ReturnType<typeof aggregateBacktestOverview>;
 type SignalView = {
@@ -10,6 +12,8 @@ type SignalView = {
   overvalued: number;
   undervaluedOutcomes: Record<"WIN" | "RECOVERED" | "FLAT" | "RISK", number>;
   overvaluedOutcomes: Record<"REPRICE" | "CONFIRMED" | "OBSERVE", number>;
+  /** The plain-language summary paragraph for this signal (rendered under the card). */
+  summary: BeginnerSignalSummary;
 };
 
 const undervaluedColors = { WIN: "#36d991", RECOVERED: "#55c7f2", FLAT: "#8290a4", RISK: "#ff827d" };
@@ -25,6 +29,7 @@ function makeSignalView(
   title: string,
   subtitle: string,
   icon: SignalView["icon"],
+  summary: BeginnerSignalSummary,
 ): SignalView {
   return {
     title,
@@ -35,6 +40,7 @@ function makeSignalView(
     overvalued: aggregate.valuationSignal.overvaluedMixed,
     undervaluedOutcomes,
     overvaluedOutcomes,
+    summary,
   };
 }
 
@@ -56,10 +62,10 @@ function OutcomePanel({ title, total, values, colors }: { title: string; total: 
 
 function SignalCard({ view }: { view: SignalView }) {
   const undervaluedShare = percentage(view.undervalued, view.total);
-  return <article className="flex flex-col rounded-[20px] border border-white/10 bg-[linear-gradient(180deg,rgba(11,23,37,0.92),rgba(7,16,28,0.94))] p-5 shadow-[0_24px_48px_rgba(0,0,0,0.28)] transition-colors hover:border-white/20 md:p-6"><header className="mb-5 flex items-start justify-between gap-4"><div className="flex items-center gap-3"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-[#d6a24d]/40 bg-[#f2bb5c]/10 text-[#f2bb5c]"><BacktestOverviewIcon kind={view.icon} /></span><div><h3 className="text-[17px] font-semibold tracking-[-0.01em] text-white">{view.title}</h3><p className="mt-0.5 text-xs text-[#9aa9bf]">{view.subtitle}</p></div></div></header><section><h4 className="mb-3 flex items-center gap-2 text-[13px] font-semibold text-[#e7edf7]">Valuation Signal <small className="text-[11px] font-normal text-[#74839a]">({view.total} cases)</small></h4><div className="flex h-[34px] overflow-hidden rounded-lg bg-[#172536] text-[10px] font-semibold text-white"><div className="flex items-center justify-center bg-[#219d71]" style={{ width: `${undervaluedShare}%` }}>{view.undervalued} ({formatPercentage(view.undervalued, view.total)})</div><div className="flex items-center justify-center bg-[#3892d0]" style={{ width: `${100 - undervaluedShare}%` }}>{view.overvalued} ({formatPercentage(view.overvalued, view.total)})</div></div><div className="mt-2 flex gap-4 text-[10px]"><span className="text-[#219d71]">● Undervalued</span><span className="text-[#3892d0]">● Overvalued</span></div></section><div className="my-4 border-t border-white/[0.08]" /><div className="grid gap-3 xl:grid-cols-2"><OutcomePanel title="Undervalued Outcome" total={view.undervalued} values={view.undervaluedOutcomes} colors={undervaluedColors} /><OutcomePanel title="Overvalued Outcome" total={view.overvalued} values={view.overvaluedOutcomes} colors={overvaluedColors} /></div></article>;
+  return <article className="flex flex-col rounded-[20px] border border-white/10 bg-[linear-gradient(180deg,rgba(11,23,37,0.92),rgba(7,16,28,0.94))] p-5 shadow-[0_24px_48px_rgba(0,0,0,0.28)] transition-colors hover:border-white/20 md:p-6"><header className="mb-5 flex items-start justify-between gap-4"><div className="flex items-center gap-3"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-[#d6a24d]/40 bg-[#f2bb5c]/10 text-[#f2bb5c]"><BacktestOverviewIcon kind={view.icon} /></span><div><h3 className="text-[17px] font-semibold tracking-[-0.01em] text-white">{view.title}</h3><p className="mt-0.5 text-xs text-[#9aa9bf]">{view.subtitle}</p></div></div></header><section><h4 className="mb-3 flex items-center gap-2 text-[13px] font-semibold text-[#e7edf7]">Valuation Signal <small className="text-[11px] font-normal text-[#74839a]">({view.total} cases)</small></h4><div className="flex h-[34px] overflow-hidden rounded-lg bg-[#172536] text-[10px] font-semibold text-white"><div className="flex items-center justify-center bg-[#219d71]" style={{ width: `${undervaluedShare}%` }}>{view.undervalued} ({formatPercentage(view.undervalued, view.total)})</div><div className="flex items-center justify-center bg-[#3892d0]" style={{ width: `${100 - undervaluedShare}%` }}>{view.overvalued} ({formatPercentage(view.overvalued, view.total)})</div></div><div className="mt-2 flex gap-4 text-[10px]"><span className="text-[#219d71]">● Undervalued</span><span className="text-[#3892d0]">● Overvalued</span></div></section><div className="my-4 border-t border-white/[0.08]" /><div className="grid gap-3 xl:grid-cols-2"><OutcomePanel title="Undervalued Outcome" total={view.undervalued} values={view.undervaluedOutcomes} colors={undervaluedColors} /><OutcomePanel title="Overvalued Outcome" total={view.overvalued} values={view.overvaluedOutcomes} colors={overvaluedColors} /></div><div className="my-4 border-t border-white/[0.08]" /><SignalParagraph methodPhrase={view.icon === "mos" ? "MoS main method" : "combined valuation methods"} signal={view.summary} /></article>;
 }
 
-export function BacktestOverview({ aggregates }: { aggregates: Aggregates }) {
+export function BacktestOverview({ aggregates, summary }: { aggregates: Aggregates; summary: BeginnerBacktestSummary }) {
   const method = makeSignalView(aggregates.byMethod, {
     WIN: aggregates.undervaluedCases.byMethod.outcomes.WIN,
     RECOVERED: aggregates.undervaluedCases.byMethod.outcomes.RECOVERED,
@@ -69,7 +75,7 @@ export function BacktestOverview({ aggregates }: { aggregates: Aggregates }) {
     REPRICE: aggregates.overvaluedCases.byMethod.outcomes.REPRICE,
     CONFIRMED: aggregates.overvaluedCases.byMethod.outcomes.CONFIRMED,
     OBSERVE: aggregates.overvaluedCases.byMethod.outcomes.OBSERVE,
-  }, "By Method", "Historical results based on the combined valuation methods.", "method");
+  }, "By Method", "Historical results based on the combined valuation methods.", "method", summary.variation);
   const mos = makeSignalView(aggregates.byMosMain, {
     WIN: aggregates.undervaluedCases.byMosMain.outcomes.WIN,
     RECOVERED: aggregates.undervaluedCases.byMosMain.outcomes.RECOVERED,
@@ -79,6 +85,6 @@ export function BacktestOverview({ aggregates }: { aggregates: Aggregates }) {
     REPRICE: aggregates.overvaluedCases.byMosMain.outcomes.REPRICE,
     CONFIRMED: aggregates.overvaluedCases.byMosMain.outcomes.CONFIRMED,
     OBSERVE: aggregates.overvaluedCases.byMosMain.outcomes.OBSERVE,
-  }, "By MoS Main", "Historical results based on the main Margin of Safety signal.", "mos");
+  }, "By MoS Main", "Historical results based on the main Margin of Safety signal.", "mos", summary.mos);
   return <div className="grid items-stretch gap-4 md:grid-cols-2"><SignalCard view={method} /><SignalCard view={mos} /></div>;
 }

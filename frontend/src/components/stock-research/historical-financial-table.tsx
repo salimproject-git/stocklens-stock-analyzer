@@ -1,8 +1,21 @@
-import React from "react";
-import { StockDetail } from "@/data/mock-stock-details";
+﻿import React from "react";
+import { StockDetail } from "@/data/stock-detail-types";
 import { SectionCard } from "@/components/ui/section-card";
+import { parseSignedNumber } from "@/utils/currency";
 
 type FinancialTableData = NonNullable<StockDetail["financialHistory"]>["annualTable"];
+
+/**
+ * The right-hand column holds a CAGR, so it is signed: negative reads red,
+ * zero or positive reads green, and a value with no number (`-`, `Not
+ * available`) stays neutral instead of borrowing a green that would imply
+ * growth.
+ */
+function changeToneClass(change: string) {
+  const numeric = parseSignedNumber(change);
+  if (!Number.isFinite(numeric)) return "text-[#9aa9bf]";
+  return numeric < 0 ? "text-[#ff8b82]" : "text-[#3ef0a9]";
+}
 
 export function HistoricalFinancialTable({ table }: { table: FinancialTableData }) {
   const latestPeriodIndex = table.periods.length - 1;
@@ -46,7 +59,7 @@ export function HistoricalFinancialTable({ table }: { table: FinancialTableData 
                     {row.values[index] ?? "-"}
                   </td>
                 ))}
-                <td className="px-4 py-3 text-right font-semibold text-[#3ef0a9]">
+                <td className={`px-4 py-3 text-right font-semibold ${changeToneClass(row.change)}`}>
                   {row.change}
                 </td>
               </tr>
@@ -68,3 +81,4 @@ function TableIcon({ className }: { className?: string }) {
     </svg>
   );
 }
+

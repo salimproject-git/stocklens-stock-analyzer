@@ -1,10 +1,10 @@
-import "server-only";
+﻿import "server-only";
 
 import type { BacktestData, StockResearchData, FinancialPeriod, ValuationMethod, StockPrice, AnnualRatioMetric, QuarterlyQualityMetric, ValuationSummary } from "@/lib/stock-data";
-import type { BacktestCase, EvidenceOutcomeBreakdown, StockDetail } from "@/data/mock-stock-details";
+import type { BacktestCase, EvidenceOutcomeBreakdown, StockDetail } from "@/data/stock-detail-types";
 import { toMonthIndex, toMonthLabel } from "@/utils/dates";
 import { formatRupiah } from "@/utils/currency";
-import { sortValuationMethods, valuationMethodLabel, type ValuationMethodCode } from "@/lib/valuation-methods";
+import { sortValuationMethods, valuationMethodDescription, valuationMethodLabel, type ValuationMethodCode } from "@/lib/valuation-methods";
 import { buildBacktestCase } from "@/lib/backtest-adapter";
 import {
   buildHistoricalEvidencePreview,
@@ -45,8 +45,8 @@ function mapSummaryVerdict(
  * documented rule set rather than inventing a new one.
  *
  * GEMA is the case that motivated this: it is a `TURN AROUND`, so Peter Lynch is
- * its main rule, but Peter Lynch values it at `−22`. Its headline therefore comes
- * from Weighted IV (`32.74`), and the badge moves with it — otherwise the table
+ * its main rule, but Peter Lynch values it at `âˆ’22`. Its headline therefore comes
+ * from Weighted IV (`32.74`), and the badge moves with it â€” otherwise the table
  * would show "Main" on a row whose number nothing else uses.
  *
  * A stock with no usable value from either candidate keeps `null`, so the screen
@@ -55,7 +55,7 @@ function mapSummaryVerdict(
 /**
  * Margin of safety for one method, **read from the stored row**.
  *
- * The backend computes `(IV − price) / IV` (workbook `SUMMARY`, D6) and stores it
+ * The backend computes `(IV âˆ’ price) / IV` (workbook `SUMMARY`, D6) and stores it
  * on `calc_valuation_methods.mos`. The UI used to recompute it here, which meant
  * two implementations of one rule and a figure n8n could not see. The stored
  * value is used as-is; when it is `null` the row's `flags` say why
@@ -93,22 +93,22 @@ function methodDisplayName(methodCode: string): string {
  * The two non-positive cases are treated **differently on purpose**, mirroring
  * the backtest engine (decision D5 in `docs/BACKTEST_ARCHITECTURE.md`):
  *
- *   * `IV = 0` — the model produced nothing (DDM for a company that has never
+ *   * `IV = 0` â€” the model produced nothing (DDM for a company that has never
  *     paid a dividend), so it is `SKIPPED` and kept out of the comparison. The
  *     backtest drops these rows from its consensus denominator for the same
  *     reason: a stock without dividends yields `3|4`, not `3|5`.
- *   * `IV < 0` — the model *did* produce a value, and a negative one is a real
+ *   * `IV < 0` â€” the model *did* produce a value, and a negative one is a real
  *     statement (the company is worth less than nothing by that model), so it
  *     stays `OVERVALUED`. The backtest keeps these rows valid and counts them
  *     the same way.
  *
- * Only the margin of safety is withheld for `IV < 0`, because `(IV − price)/IV`
+ * Only the margin of safety is withheld for `IV < 0`, because `(IV âˆ’ price)/IV`
  * flips sign when the divisor is negative. The status is not withheld.
  */
 function methodStatus(
   intrinsicValue: number,
   storedVerdict: string,
-): import("@/data/mock-stock-details").ValuationMethodStatus {
+): import("@/data/stock-detail-types").ValuationMethodStatus {
   if (intrinsicValue === 0) return "SKIPPED";
   if (intrinsicValue < 0) return "OVERVALUED";
   if (storedVerdict === "NOT_APPLICABLE") return "SKIPPED";
@@ -144,8 +144,8 @@ function formatCagr(value: number | null): string {
 /**
  * Interest expense is stored in full IDR. The workbook's "M Rp" columns are
  * actually **billions** of IDR (see docs/reference/EXCEL_POSTGRES_VALIDATION.md
- * §"Unit reality check": `1 template unit = 1,000,000,000 IDR`), so the value is
- * scaled by 1e9 to reproduce the workbook number exactly — e.g. AUTO 2026-Q2
+ * Â§"Unit reality check": `1 template unit = 1,000,000,000 IDR`), so the value is
+ * scaled by 1e9 to reproduce the workbook number exactly â€” e.g. AUTO 2026-Q2
  * 9,224,000,000 IDR -> 9,224.
  */
 function formatInterestExpense(value: number | null): string {
@@ -193,6 +193,7 @@ const METRIC_LABELS: Record<string, string> = {
   OPERATING_CASH_FLOW: "Operating Cash Flow",
   TOTAL_CURRENT_ASSET: "Total Current Assets",
   CURRENT_LIABILITIES: "Current Liabilities",
+  TOTAL_ASSETS: "Total Assets",
   TOTAL_LIABILITIES: "Total Liabilities",
   TOTAL_EQUITY: "Total Equity",
   OUTSTANDING_SHARES: "Outstanding Shares",
@@ -400,13 +401,36 @@ function buildFinancialHistory(
       ? {
           periods: quarterlyPeriods.map(yearLabel),
           changeLabel: "QoQ Change",
-          rows: (["REVENUE", "EARNINGS"] as const).map((code) => {
-            const values = quarterlyPeriods.map((p) => {
-              const v = factValue(p, code);
-              return v == null ? UNAVAILABLE : toRpTrillion(v).toFixed(2);
-            });
-            return { metric: METRIC_LABELS[code] ?? code, values, change: UNAVAILABLE };
-          }),
+          rows: ([
+            "REVENUE",
+            "GROSS_PROFIT",
+            "EARNINGS",
+            "OPERATING_CASH_FLOW",
+            "TOTAL_ASSETS",
+            "TOTAL_LIABILITIES",
+            "TOTAL_EQUITY",
+          ] as const)
+            .map((code) => {
+              const rawValues = quarterlyPeriods.map((p) => factValue(p, code));
+              const previousValue = rawValues.at(-2);
+              const latestValue = rawValues.at(-1);
+              const change =
+                latestValue == null || previousValue == null || previousValue === 0
+                  ? UNAVAILABLE
+                  : formatPercentSigned(
+                      ((latestValue - previousValue) / Math.abs(previousValue)) * 100,
+                    );
+              return {
+                metric: METRIC_LABELS[code] ?? code,
+                values: rawValues.map((value) =>
+                  value == null ? UNAVAILABLE : toRpTrillion(value).toFixed(2),
+                ),
+                change,
+                hasValue: rawValues.some((value) => value != null),
+              };
+            })
+            .filter((row) => row.hasValue)
+            .map(({ metric, values, change }) => ({ metric, values, change })),
         }
       : undefined;
 
@@ -686,7 +710,7 @@ function buildThesisValidator(data: StockResearchData): StockDetail["thesisValid
       // Interest expense is a quarterly fact; missing quarters are reported as
       // unavailable rather than omitted, so the row always stays visible.
       // Unit is BILLIONS of IDR: the workbook's "M Rp" label is misleading (see
-      // docs/reference/EXCEL_POSTGRES_VALIDATION.md §"Unit reality check").
+      // docs/reference/EXCEL_POSTGRES_VALIDATION.md Â§"Unit reality check").
       item: "Interest Expense (Rp Bn)",
       q3: interestExpenseFor(q(0)),
       q4: interestExpenseFor(q(1)),
@@ -858,6 +882,24 @@ function buildGrowthSummary(data: StockResearchData): StockDetail["growthSummary
   const netIncomeCagr = latestEarnings != null && startingEarnings != null && startingEarnings > 0 && latestEarnings > 0
     ? (latestEarnings / startingEarnings) ** (1 / 3) - 1
     : null;
+  const annualPeriods = data.financialPeriods
+    .filter((period) => period.periodType === "ANNUAL")
+    .sort((left, right) => left.periodEnd.localeCompare(right.periodEnd));
+  const previousAnnualPeriod = annualPeriods.at(-2);
+  const latestRevenue = factValue(latestAnnualPeriod, "REVENUE");
+  const previousRevenue = factValue(previousAnnualPeriod, "REVENUE");
+  const previousEarnings = factValue(previousAnnualPeriod, "EARNINGS");
+  const latestOcf = factValue(latestAnnualPeriod, "OPERATING_CASH_FLOW");
+  const annualGrowth = (latest: number | null, previous: number | null) =>
+    latest != null && previous != null && previous !== 0
+      ? formatPercentSigned(((latest - previous) / Math.abs(previous)) * 100)
+      : UNAVAILABLE;
+  const latestAnnualGrossMargin = data.annualRatios
+    .filter((row) => row.metricCode === "GROSS_MARGIN")
+    .at(-1)?.value ?? null;
+  const latestAnnualOcfNi = latestEarnings != null && latestOcf != null && latestEarnings !== 0
+    ? `${(latestOcf / latestEarnings).toFixed(2).replace(".", ",")}x`
+    : UNAVAILABLE;
 
   const metrics: StockDetail["growthSummary"]["metrics"] = [
     {
@@ -871,7 +913,7 @@ function buildGrowthSummary(data: StockResearchData): StockDetail["growthSummary
       value: formatCagr(netIncomeCagr),
       badge: badgeFromGrowth(netIncomeCagr),
       subtext: previousThreeYearPeriod && latestAnnualPeriod
-        ? `Calculated from ${previousThreeYearPeriod.periodLabel}–${latestAnnualPeriod.periodLabel} net income`
+        ? `Calculated from ${previousThreeYearPeriod.periodLabel}â€“${latestAnnualPeriod.periodLabel} net income`
         : "Requires positive net income across the three-year period",
     },
     {
@@ -882,7 +924,20 @@ function buildGrowthSummary(data: StockResearchData): StockDetail["growthSummary
     },
   ];
 
-  return { metrics };
+  return {
+    metrics,
+    annualPerformance: {
+      revenueGrowth: annualGrowth(latestRevenue, previousRevenue),
+      netIncomeGrowth: annualGrowth(latestEarnings, previousEarnings),
+      grossMargin: latestAnnualGrossMargin == null
+        ? UNAVAILABLE
+        : `${(latestAnnualGrossMargin * 100).toFixed(1).replace(".", ",")}%`,
+      ocfNetIncome: latestAnnualOcfNi,
+      period: latestAnnualPeriod && previousAnnualPeriod
+        ? `FY${latestAnnualPeriod.periodLabel} vs FY${previousAnnualPeriod.periodLabel}`
+        : "Annual data unavailable",
+    },
+  };
 }
 
 function buildFinancialHealth(data: StockResearchData): StockDetail["financialHealth"] {
@@ -958,57 +1013,195 @@ function buildBacktest(data: BacktestData | null | undefined): StockDetail["back
  * stored path uses instead of being a second set of hand-written numbers that
  * could drift from the tab next to it.
  */
-/** Growth-quality / forensic cards from the stored annual growth metrics. */
+/**
+ * Growth-quality / forensic cards from the stored annual metrics and facts.
+ *
+ * Ten cards mirror the workbook's business-quality and forensic-check groups:
+ * profitability (ROE, gross margin, cash-conversion quality), trend quality
+ * (ROE trend, equity growth consistency) and balance-sheet forensics (current
+ * asset growth, asset growth gap, NWC intensity and the cash-flow check). Every
+ * card reads or derives from stored rows; a missing input renders
+ * "Not available" instead of a fabricated value.
+ */
 function buildForensicMetrics(
   data: StockResearchData,
 ): StockDetail["healthGrowth"]["forensic"]["metrics"] {
-  const latest = (code: string) => findAnnualMetric(data, code);
+  const annualPeriods = data.financialPeriods
+    .filter((period) => period.periodType === "ANNUAL")
+    .sort((left, right) => left.periodEnd.localeCompare(right.periodEnd));
 
-  const revenueCov = latest("GROWTH_REVENUE_COV");
-  const assetGap = latest("GROWTH_ASSET_GROWTH_GAP");
-  const debtGap = latest("FORENSIC_DEBT_GROWTH_GAP");
-  const marginSpike = latest("FORENSIC_MARGIN_SPIKE");
+  // A stored annual ratio (ROE, gross margin) per year, keyed by period label.
+  const ratioByYear = (metricCode: string): Map<string, number | null> => {
+    const map = new Map<string, number | null>();
+    for (const row of data.annualRatios) {
+      if (row.metricCode === metricCode) map.set(row.periodLabel, row.value);
+    }
+    return map;
+  };
+
+  const seriesOf = (metricCode: string): (number | null)[] => {
+    const byYear = ratioByYear(metricCode);
+    return annualPeriods.map((period) => byYear.get(period.periodLabel) ?? null);
+  };
+
+  const defined = (series: (number | null)[]): number[] =>
+    series.filter((value): value is number => value != null);
 
   const percent = (value: number | null) =>
     value == null ? UNAVAILABLE : `${(value * 100).toFixed(2).replace(".", ",")}%`;
+  const ppt = (value: number | null) =>
+    value == null
+      ? UNAVAILABLE
+      : `${value >= 0 ? "+" : ""}${(value * 100).toFixed(2).replace(".", ",")} ppt`;
 
-  // Revenue coverage is a coverage ratio (revenue growth / asset growth), so it
-  // reads as a multiple; the gap metrics are differences of growth ratios and
-  // read as percentage points.
-  const multiple = (value: number | null) =>
-    value == null ? UNAVAILABLE : `${value.toFixed(2).replace(".", ",")}x`;
+  // --- Profitability quality -------------------------------------------------
+  const roeSeries = defined(seriesOf("ROE"));
+  const latestRoe = roeSeries.at(-1) ?? null;
+  const priorRoe = roeSeries.slice(0, -1);
+  const priorRoeAverage =
+    priorRoe.length > 0 ? priorRoe.reduce((sum, value) => sum + value, 0) / priorRoe.length : null;
 
-  const tone = (value: number | null): "positive" | "neutral" | "negative" => {
-    if (value == null) return "neutral";
-    if (value > 0) return "positive";
-    if (value < 0) return "negative";
-    return "neutral";
-  };
+  // The quarterly margin is fresher; fall back to the latest annual margin when
+  // no quarterly row is stored.
+  const grossMargin =
+    findQuarterlyMetric(data, "QUALITY_GROSS_MARGIN").value ??
+    (defined(seriesOf("GROSS_MARGIN")).at(-1) ?? null);
+
+  const latestAnnual = annualPeriods.at(-1);
+  const latestOcf = factValue(latestAnnual, "OPERATING_CASH_FLOW");
+  const latestNetIncome = factValue(latestAnnual, "EARNINGS");
+  const ocfNi =
+    latestOcf != null && latestNetIncome != null && latestNetIncome !== 0
+      ? latestOcf / latestNetIncome
+      : null;
+  const cashConversion =
+    ocfNi == null ? UNAVAILABLE : ocfNi >= 1 ? "Strong" : ocfNi >= 0.5 ? "Moderate" : "Weak";
+
+  // --- Trend quality ---------------------------------------------------------
+  const roeTrend =
+    latestRoe == null || priorRoeAverage == null
+      ? UNAVAILABLE
+      : latestRoe > priorRoeAverage + 0.005
+        ? "Improving"
+        : latestRoe < priorRoeAverage - 0.005
+          ? "Declining"
+          : "Stable";
+
+  const equitySeries = defined(annualPeriods.map((period) => factValue(period, "TOTAL_EQUITY")));
+  const latestEquity = equitySeries.at(-1) ?? null;
+  const previousEquity = equitySeries.at(-2) ?? null;
+  const equityGrowth =
+    latestEquity != null && previousEquity != null && previousEquity !== 0
+      ? (latestEquity - previousEquity) / Math.abs(previousEquity)
+      : null;
+  const equityConsistency = equitySeries.some((value) => value < 0)
+    ? "Negative Equity"
+    : equityGrowth == null
+      ? UNAVAILABLE
+      : equityGrowth > 0.05
+        ? "Consistent"
+        : "Stagnant / Erosion";
+
+  // --- Balance-sheet forensics ----------------------------------------------
+  const currentAssetYoY = findAnnualMetric(data, "GROWTH_CURRENT_ASSET_YOY").value;
+  const revenueYoY = findAnnualMetric(data, "GROWTH_REVENUE_YOY").value;
+  const assetGrowthGap = findAnnualMetric(data, "GROWTH_ASSET_GROWTH_GAP").value;
+  const nwcToRevenue = findAnnualMetric(data, "QUALITY_NWC_TO_REVENUE").value;
+  const nwcChange = findAnnualMetric(data, "QUALITY_NWC_INTENSITY_CHANGE").value;
+
+  // Projected operating cash flow against projected net income (workbook `B69`).
+  const projected = (metricCode: string) =>
+    data.projection?.values.find((value) => value.metricCode === metricCode)?.value ?? null;
+  const projectedOcf = projected("OPERATING_CASH_FLOW");
+  const projectedNetIncome = projected("EARNINGS");
+  const cashFlowCheck =
+    projectedOcf == null || projectedNetIncome == null
+      ? UNAVAILABLE
+      : projectedOcf < 0.5 * projectedNetIncome
+        ? "Warning: Low Cash"
+        : "OK";
+
+  const assetOutpacesRevenue =
+    currentAssetYoY != null && revenueYoY != null && currentAssetYoY > revenueYoY;
 
   return [
     {
-      label: "Revenue Coverage",
-      value: multiple(revenueCov.value),
-      context: `Periode ${revenueCov.periodLabel}: rasio pertumbuhan revenue terhadap pertumbuhan aset.`,
-      tone: tone(revenueCov.value),
+      label: "Return on Equity (ROE)",
+      value: percent(latestRoe),
+      context: "Latest reported return on equity",
+      tone: latestRoe == null ? "neutral" : latestRoe > 0 ? "positive" : "negative",
     },
     {
-      label: "Asset Growth Gap",
-      value: percent(assetGap.value),
-      context: `Periode ${assetGap.periodLabel}: selisih pertumbuhan aset terhadap revenue.`,
-      tone: tone(assetGap.value),
+      label: "Gross Margin",
+      value: percent(grossMargin),
+      context: "Latest reported gross margin",
+      tone: "neutral",
     },
     {
-      label: "Debt Growth Gap",
-      value: percent(debtGap.value),
-      context: `Periode ${debtGap.periodLabel}: pertumbuhan liabilitas terhadap revenue.`,
-      tone: tone(debtGap.value),
+      label: "Quality: CF vs Net Income",
+      value: cashConversion,
+      context: "Operating cash flow versus reported earnings",
+      tone:
+        ocfNi == null ? "neutral" : ocfNi >= 1 ? "positive" : ocfNi >= 0.5 ? "neutral" : "negative",
     },
     {
-      label: "Margin Spike",
-      value: percent(marginSpike.value),
-      context: `Periode ${marginSpike.periodLabel}: perubahan margin terhadap rata-rata historis.`,
-      tone: tone(marginSpike.value),
+      label: "ROE Trend",
+      value: roeTrend,
+      context: "Latest return on equity versus its historical average",
+      tone: roeTrend === "Improving" ? "positive" : roeTrend === "Declining" ? "negative" : "neutral",
+    },
+    {
+      label: "Equity Growth Consistency",
+      value: equityConsistency,
+      context: "Year-over-year change in total equity",
+      tone:
+        equityConsistency === "Consistent"
+          ? "positive"
+          : equityConsistency === UNAVAILABLE
+            ? "neutral"
+            : "negative",
+    },
+    {
+      label: "Current Asset Growth (YoY)",
+      value: percent(currentAssetYoY),
+      context: assetOutpacesRevenue
+        ? "Current assets grew faster than revenue"
+        : "Current asset growth is in line with revenue",
+      tone: currentAssetYoY == null ? "neutral" : assetOutpacesRevenue ? "negative" : "positive",
+    },
+    {
+      label: "Asset Growth Gap (YoY)",
+      value: percent(assetGrowthGap),
+      context:
+        assetGrowthGap == null
+          ? "Revenue growth versus current-asset growth"
+          : assetGrowthGap >= 0
+            ? "Revenue is keeping pace with asset growth"
+            : "Current assets grew faster than revenue",
+      tone: assetGrowthGap == null ? "neutral" : assetGrowthGap >= 0 ? "positive" : "negative",
+    },
+    {
+      label: "NWC / Revenue (Latest)",
+      value: percent(nwcToRevenue),
+      context: "Net working capital intensity",
+      tone: "neutral",
+    },
+    {
+      label: "NWC Intensity Change (YoY)",
+      value: ppt(nwcChange),
+      context:
+        nwcChange == null
+          ? "Change in net working capital intensity"
+          : nwcChange > 0
+            ? "Working capital intensity needs monitoring"
+            : "Working capital intensity is easing",
+      tone: nwcChange == null ? "neutral" : nwcChange > 0 ? "negative" : "positive",
+    },
+    {
+      label: "Cash Flow Check",
+      value: cashFlowCheck,
+      context: "Projected operating cash flow versus projected earnings",
+      tone: cashFlowCheck === "OK" ? "positive" : cashFlowCheck === UNAVAILABLE ? "neutral" : "negative",
     },
   ];
 }
@@ -1049,12 +1242,12 @@ function buildValuationMetrics(
     {
       label: "EPS (TTM)",
       value: eps ?? notAvailable,
-      note: "Earnings / outstanding shares",
+      note: "Net income / share",
     },
     {
       label: "BVPS",
       value: bvps ?? notAvailable,
-      note: "Total equity / outstanding shares",
+      note: "Book equity / share",
     },
     { label: "P/E Ratio", value: multiple(currentPrice, eps), note: "Price / EPS" },
     { label: "P/BV Ratio", value: multiple(currentPrice, bvps), note: "Price / BVPS" },
@@ -1128,6 +1321,7 @@ export function buildStockDetail(
     : valuationSummary?.methods?.length
       ? null
       : legacyMainMethod(data.valuationMethods, stockType);
+  const mosVerdict = mapSummaryVerdict(valuationSummary?.mosVerdict);
   const latestPrice = data.prices.at(-1);
   const previousPrice = data.prices.at(-2);
 
@@ -1143,14 +1337,13 @@ export function buildStockDetail(
   const mos = mainMethod ? formatStoredMos(mainMethod) : null;
   const verdict = mapVerdict(mainMethod?.verdict);
   const methodVerdict = mapSummaryVerdict(valuationSummary?.methodVerdict);
-  const mosVerdict = mapSummaryVerdict(valuationSummary?.mosVerdict);
 
   const prices52w = data.prices.filter((p) => p.closePrice != null).map((p) => p.closePrice as number);
   const low52W = prices52w.length > 0 ? Math.min(...prices52w) : null;
   const high52W = prices52w.length > 0 ? Math.max(...prices52w) : null;
   const latestMarketCap = latestPrice?.marketCap ?? null;
 
-  const methods: import("@/data/mock-stock-details").ValuationMethodResult[] = sortValuationMethods(
+  const methods: import("@/data/stock-detail-types").ValuationMethodResult[] = sortValuationMethods(
     valuationMethods
       // `APPROXIMATED` rows carry a real computed intrinsic value (the engine only
       // proxied an input, e.g. quarterly shares -> latest annual figure), so they
@@ -1172,13 +1365,38 @@ export function buildStockDetail(
       // so it is read rather than re-derived. Forcing the leftover values to
       // OVERVALUED is what used to label a skipped DDM as "overvalued".
       status: methodStatus(m.intrinsicValue as number, m.verdict),
-      description: methodDisplayName(m.methodCode),
+      description: valuationMethodDescription(m.methodCode),
     };
   });
   const consensusMethods = methods.filter((method) => method.status !== "SKIPPED");
   const undervaluedMethodCount = consensusMethods.filter(
     (method) => method.status === "UNDERVALUED",
   ).length;
+  const undervaluedConsensus = consensusMethods.length > 0 && undervaluedMethodCount >= 3;
+  const methodSignal = methodVerdict === "UNDERVALUED" || methodVerdict === "OVERVALUED"
+    ? methodVerdict
+    : null;
+  const marginSignal = mosVerdict === "UNDERVALUED" || mosVerdict === "OVERVALUED"
+    ? mosVerdict
+    : null;
+  const valuationSignal: StockDetail["valuationSignal"] = methodSignal && marginSignal
+    ? methodSignal === marginSignal ? methodSignal : "MIXED"
+    : methodSignal
+      ? methodSignal
+      : marginSignal
+        ? marginSignal
+        : "NOT AVAILABLE";
+  const valuationSignalDescription = valuationSignal === "UNDERVALUED"
+    ? methodSignal && marginSignal
+      ? "Both valuation signals indicate undervaluation."
+      : "Available valuation signal indicates undervaluation."
+    : valuationSignal === "OVERVALUED"
+      ? methodSignal && marginSignal
+        ? "Both valuation signals indicate overvaluation."
+        : "Available valuation signal indicates overvaluation."
+      : valuationSignal === "MIXED"
+        ? "Valuation signals point in different directions."
+        : "Valuation signals are not available.";
   const comparableMethods = methods.filter(
     (method) => method.intrinsicValue !== 0 && method.status !== "SKIPPED",
   );
@@ -1206,21 +1424,25 @@ export function buildStockDetail(
     changePercent,
     updatedAt: latestPrice?.tradingDate ?? UNAVAILABLE,
     verdict,
-    verdictDescription: mainMethod ? "Based on the database valuation model" : "No stored valuation result yet",
+    valuationSignal,
+    verdictDescription: valuationSignalDescription,
     intrinsicValue,
     mos,
     stockCharacter: stockType,
-    stockCharacterDesc: stockType !== UNAVAILABLE ? "Stock type classification from the database" : UNAVAILABLE,
+    stockCharacterDesc: stockType !== UNAVAILABLE ? "Stock type classification" : UNAVAILABLE,
     undervaluedMethods: consensusMethods.length > 0
       ? `${undervaluedMethodCount}/${consensusMethods.length}`
       : UNAVAILABLE,
+    undervaluedMethodsVerdict: consensusMethods.length > 0
+      ? undervaluedConsensus ? "UNDERVALUED" : "OVERVALUED"
+      : null,
     evidenceWinRates,
     researchSummary: mainMethod
       ? `${data.instrument.ticker} was evaluated using the ${methodDisplayName(mainMethod.methodCode)} valuation model based on the latest database data.`
       : `No stored valuation result for ${data.instrument.ticker} in the database.`,
     methodologyUrl: "#",
     companyProfile: {
-      description: `${data.instrument.companyName ?? data.instrument.ticker} — the full company description is not available in the database yet.`,
+      description: `${data.instrument.companyName ?? data.instrument.ticker} â€” the full company description is not available in the database yet.`,
       sector: data.instrument.sectorName ?? UNAVAILABLE,
       stockType,
       listedDate: UNAVAILABLE,
@@ -1310,3 +1532,4 @@ export function buildStockDetail(
     ),
   };
 }
+

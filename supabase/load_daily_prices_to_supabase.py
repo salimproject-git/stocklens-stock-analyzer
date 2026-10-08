@@ -121,6 +121,17 @@ def collect_daily_from_storage(
             elif any(previous[field] != row[field] for field in ('date',) + EXPECTED_FIELDS):
                 raise RuntimeError(f'SOURCE_CONFLICT: duplicate date {row["date"]} has different values')
 
+    # An empty window is normal, not a defect: the API returns `[]` for a 90-day
+    # range that predates the listing, and the ingest step keeps that payload
+    # verbatim because the raw archive mirrors the API. Seeing no price at all,
+    # though, means the ticker's history is genuinely absent and must not be
+    # reported as a successful load of zero rows.
+    if not dates:
+        raise RuntimeError(
+            f'NO_DAILY_PRICE_RECORDS: {BUCKET}/sectors/{ticker}/{DAILY_CATEGORY}/ '
+            f'holds {len(names)} object(s) and {total_records} record(s), all empty'
+        )
+
     return dates, len(names), checksums
 
 class Supabase:

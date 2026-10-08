@@ -1,4 +1,4 @@
-import type { BacktestCase, BacktestVerdict } from "@/data/mock-stock-details";
+﻿import type { BacktestCase, BacktestVerdict } from "@/data/stock-detail-types";
 import { classifyMethodsAbovePrice, classifyMosMain, type ValuationClassification } from "./backtest";
 
 type OutcomeCounts = Record<BacktestVerdict, number>;
@@ -59,3 +59,65 @@ export function buildHistoricalBacktestReadout(total: number, outcomes: Pick<Out
   else for (const [verdict, count] of recorded) lines.push(`${verdict}: ${count}.`);
   return lines;
 }
+
+/**
+ * One signal's numbers, shaped for the beginner summary paragraph.
+ *
+ * The paragraph reads the two sides of the same signal: how often the framework
+ * was right when it called a stock **cheap** (WIN / RECOVERED / RISK) and how
+ * often it was right when it called one **expensive** (CONFIRMED / REPRICE).
+ * `winPercent` is `WIN / cheapCount` — the share of "cheap" calls that rose to
+ * target — matching the historical-evidence win rate the Overview already shows.
+ */
+export type BeginnerSignalSummary = {
+  cheapCount: number;
+  win: number;
+  recovered: number;
+  risk: number;
+  winPercent: number;
+  expensiveCount: number;
+  confirmed: number;
+  repriced: number;
+};
+
+export type BeginnerBacktestSummary = {
+  totalCases: number;
+  /** The "With variation method" paragraph (consensus of the five estimators). */
+  variation: BeginnerSignalSummary;
+  /** The "With MoS method" paragraph (the main method's margin of safety). */
+  mos: BeginnerSignalSummary;
+};
+
+/**
+ * Build the two beginner paragraphs from the aggregates the Overview cards use,
+ * so the sentence and the cards can never disagree. Every figure is derived from
+ * stored outcomes; nothing is hardcoded (docs/BACKTEST_BEGINNER_CONCEPT.md §6).
+ */
+export function buildBeginnerBacktestSummary(
+  aggregates: ReturnType<typeof aggregateBacktestOverview>,
+): BeginnerBacktestSummary {
+  const signal = (
+    undervalued: { totalCases: number; outcomes: OutcomeCounts },
+    overvalued: { totalCases: number; outcomes: OutcomeCounts },
+  ): BeginnerSignalSummary => {
+    const win = undervalued.outcomes.WIN;
+    const cheapCount = undervalued.totalCases;
+    return {
+      cheapCount,
+      win,
+      recovered: undervalued.outcomes.RECOVERED,
+      risk: undervalued.outcomes.RISK,
+      winPercent: cheapCount > 0 ? Math.round((win / cheapCount) * 100) : 0,
+      expensiveCount: overvalued.totalCases,
+      confirmed: overvalued.outcomes.CONFIRMED,
+      repriced: overvalued.outcomes.REPRICE,
+    };
+  };
+
+  return {
+    totalCases: aggregates.byMethod.totalCases,
+    variation: signal(aggregates.undervaluedCases.byMethod, aggregates.overvaluedCases.byMethod),
+    mos: signal(aggregates.undervaluedCases.byMosMain, aggregates.overvaluedCases.byMosMain),
+  };
+}
+

@@ -20,7 +20,7 @@ from __future__ import annotations
 import os
 from typing import Any
 
-from upload_raw_storage_only import StorageClient
+from upload_raw_storage_only import PAGE_LIMIT, StorageClient
 
 BUCKET = 'stocklens_raw'
 
@@ -53,18 +53,34 @@ class RawStorageSource:
         return f'sectors/{self.ticker}/{category}/{name}'
 
     def names(self, category: str, suffix: str = '.json') -> list[str]:
-        """Sorted object names directly under sectors/{ticker}/{category}/."""
+        """Sorted object names directly under sectors/{ticker}/{category}/.
+
+        Lists the prefix directly instead of walking the whole bucket: a walk
+        issues one request per folder (the bucket holds ~130 ticker folders), so
+        the old implementation made every loader pay for the entire bucket. A
+        prefix listing returns exactly this ticker's category in one page, and
+        the `id is None` folder entries are skipped because a folder name never
+        ends in the file suffix.
+        """
         prefix = f'sectors/{self.ticker}/{category}/'
-        names = []
-        for path in self.client.walk(self.bucket):
-            if not path.startswith(prefix):
-                continue
-            remainder = path[len(prefix):]
-            if '/' in remainder:
-                continue
-            if suffix and not remainder.endswith(suffix):
-                continue
-            names.append(remainder)
+        names: list[str] = []
+        offset = 0
+        while True:
+            page = self.client.list_page(self.bucket, prefix, offset)
+            for entry in page:
+                name = entry.get('name')
+                if not name:
+                    continue
+                # Storage has no real folders: a folder is an entry without an
+                # object id, and it never carries the file suffix.
+                if entry.get('id') is None:
+                    continue
+                if suffix and not name.endswith(suffix):
+                    continue
+                names.append(name)
+            if len(page) < PAGE_LIMIT:
+                break
+            offset += PAGE_LIMIT
         return sorted(names)
 
     def exists(self, category: str, name: str) -> bool:

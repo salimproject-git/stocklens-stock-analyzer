@@ -6,6 +6,10 @@ import {
   DEFAULT_MARKET_PAGE_SIZE,
   type MarketPageSize,
 } from "@/lib/market-page-size";
+import {
+  DEFAULT_MARKET_SORT,
+  type MarketFilterSelection,
+} from "@/lib/market-filters";
 
 type JsonObject = Record<string, unknown>;
 
@@ -318,6 +322,19 @@ function asFiniteNumber(value: unknown): number | null {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
+function mapMarketOverviewSignal(value: unknown): MarketOverviewStock["signal"] {
+  if (value === "UNDERVALUED") return "Undervalued";
+  if (value === "OVERVALUED") return "Overvalued";
+  if (value === "MIXED") return "Mixed";
+  return "Not available";
+}
+
+function mapMarketOverviewVerdict(value: unknown): MarketOverviewStock["verdict"] {
+  if (value === "UNDERVALUED") return "Undervalued";
+  if (value === "OVERVALUED") return "Overvalued";
+  return "Not available";
+}
+
 function mapMarketOverviewRow(value: unknown): MarketOverviewStock | null {
   const row = asObject(value);
   if (!row || typeof row.ticker !== "string") return null;
@@ -330,17 +347,22 @@ function mapMarketOverviewRow(value: unknown): MarketOverviewStock | null {
     ticker: row.ticker,
     companyName: asString(row.company_name, row.ticker),
     sector: asString(row.sector_name, "Not available"),
-    stockType: "Not available",
+    stockType: asString(row.stock_type, "Not available"),
     currencyCode: asString(row.currency_code, "IDR"),
     price: asFiniteNumber(row.latest_close),
     change: asFiniteNumber(row.price_change),
     changePercent: asFiniteNumber(row.change_percent),
     sparkline: prices,
-    verdict: "Not available",
+    verdict: mapMarketOverviewVerdict(row.consensus_verdict),
+    signal: mapMarketOverviewSignal(row.signal),
     recommendationAvailable: false,
-    mos: null,
-    evidenceWins: null,
-    evidenceTotal: null,
+    mos: asFiniteNumber(row.mos_percent),
+    methodUndervalued: asFiniteNumber(row.undervalued_method_count),
+    methodValid: asFiniteNumber(row.valid_method_count),
+    winRatePercent: asFiniteNumber(row.win_rate_percent),
+    winRateCases: asFiniteNumber(row.win_rate_cases),
+    evidenceWins: asFiniteNumber(row.evidence_wins),
+    evidenceTotal: asFiniteNumber(row.evidence_total),
     updatedAt: asNullableString(row.latest_trading_date),
   };
 }
@@ -725,15 +747,38 @@ function isTickerExistsResponse(value: unknown): boolean {
 export async function getMarketOverviewData(
   page: number,
   pageSize: MarketPageSize = DEFAULT_MARKET_PAGE_SIZE,
+  filters: Partial<MarketFilterSelection> = {},
 ): Promise<MarketOverviewData> {
   const supabase = getSupabaseClient();
   const { data, error } = await supabase.rpc("get_market_overview_page", {
     p_page: Math.max(1, Math.floor(page)),
     p_page_size: pageSize,
+    // The RPC re-validates every one of these; sending the raw selection keeps
+    // the query params and the request in step.
+    p_sector: filters.sector ? filters.sector : null,
+    p_stock_type: filters.stockType ? filters.stockType : null,
+    p_sort: filters.sort ?? DEFAULT_MARKET_SORT,
   });
 
   if (error) throw new Error("Unable to load market data from Supabase.");
   return mapMarketOverview(data);
+}
+
+/**
+ * Sector options for the market screener.
+ *
+ * Read from the database rather than hardcoded, because the list has to match
+ * the stored `sector_name` values exactly or the filter would offer options that
+ * return nothing. A failure here degrades to "no sector filter" instead of
+ * taking the whole page down.
+ */
+export async function getMarketSectors(): Promise<string[]> {
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase.rpc("get_market_sectors");
+  if (error) return [];
+  return asArray(data)
+    .map((value) => asNullableString(value))
+    .filter((value): value is string => value !== null);
 }
 
 export async function getStockResearchData(ticker: string): Promise<StockResearchData | null> {
